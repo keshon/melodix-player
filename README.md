@@ -53,6 +53,7 @@ There are several scripts provided for building Melodix:
   - `build-release.bat` (or `.sh` for Linux): Build the release version. Note: The UPX packer is called as a final step; if not installed, comment it out.
 
 For local usage, run these scripts for your operating system and rename `.env.example` to `.env`, storing your Discord Bot Token in the `DISCORD_BOT_TOKEN` variable.
+Install [FFMPEG](https://ffmpeg.org/) (only recent version is supported). If your FFMPEG installation is portable specify path in the `DCA_FFMPEG_BINARY_PATH` variable.
 
 **Server Usage**
 To build and deploy the bot in a Docker environment refer to the `deploy/README.md` for specific instructions.
