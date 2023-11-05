@@ -1,0 +1,42 @@
+version: '3.3'
+services:
+  app:
+    networks:
+      - proxy
+    ports:
+      - 3033:8080      
+    labels:
+      # HTTP to HTTPS redirection and middleware assignment
+      - traefik.enable=true
+      - traefik.http.routers.${ALIAS}-http.entrypoints=http
+      - traefik.http.routers.${ALIAS}-http.rule=Host(`${HOST}`)
+      - traefik.http.routers.${ALIAS}-http.middlewares=${ALIAS}-to-https,${ALIAS}-headers
+
+      # HTTPS routing and TLS configuration
+      - traefik.http.routers.${ALIAS}.entrypoints=https
+      - traefik.http.routers.${ALIAS}.rule=Host(`${HOST}`)
+      - traefik.http.routers.${ALIAS}.tls=true
+      - traefik.http.routers.${ALIAS}.tls.certresolver=letsencrypt
+
+      # Middleware for redirecting HTTP to HTTPS
+      - traefik.http.middlewares.${ALIAS}-to-https.redirectscheme.scheme=https
+
+      # Header middleware configuration
+      - traefik.http.routers.${ALIAS}.middlewares=${ALIAS}-headers
+
+      # Security headers configuration
+      - traefik.http.middlewares.${ALIAS}-headers.headers.browserXSSFilter=true
+      - traefik.http.middlewares.${ALIAS}-headers.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.${ALIAS}-headers.headers.frameDeny=true
+      - traefik.http.middlewares.${ALIAS}-headers.headers.referrerPolicy=no-referrer
+      - traefik.http.middlewares.${ALIAS}-headers.headers.customFrameOptionsValue=SAMEORIGIN
+
+      # Strict Transport Security (HSTS) configuration
+      - traefik.http.middlewares.${ALIAS}-headers.headers.stsSeconds=15552000
+      - traefik.http.middlewares.${ALIAS}-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.${ALIAS}-headers.headers.stsPreload=true
+      - traefik.http.middlewares.${ALIAS}-headers.headers.forceSTSHeader=true
+
+networks:
+  proxy:
+    external: true  # Assume the 'proxy' network is created externally

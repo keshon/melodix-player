@@ -1,0 +1,31 @@
+version: '3.3'
+services:
+  app:
+    container_name: ${ALIAS}
+    restart: always
+    image: '${ALIAS}-image'
+    volumes:
+      - ./data/melodix.sqlite3:/melodix.db
+      - ./data/all-levels.log:/usr/project/logs/all-levels.log
+    environment:
+      - DISCORD_COMMAND_PREFIX
+      - DISCORD_BOT_TOKEN
+      - REST_ENABLED
+      - REST_GIN_RELEASE
+      - DCA_FRAME_DURATION
+      - DCA_BITRATE
+      - DCA_PACKET_LOSS
+      - DCA_RAW_OUTPUT
+      - DCA_APPLICATION
+      - DCA_COMPRESSION_LEVEL
+      - DCA_BUFFERED_FRAMES
+      - DCA_VBR
+      - DCA_RECONNECT_AT_EOF
+      - DCA_RECONNECT_STREAMED
+      - DCA_RECONNECT_ON_NETWORK_ERROR
+      - DCA_RECONNECT_ON_HTTTP_ERROR
+      - DCA_RECONNECT_MAX
+      - DCA_ENCODING_LINE_LOG
+      - DCA_USER_AGENT
+
+    entrypoint: /usr/project/app

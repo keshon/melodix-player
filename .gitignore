@@ -1,0 +1,7 @@
+/.VSCodeCounter
+main.exe
+melodix.exe
+*.db
+/.env
+*.upx
+logs/*
