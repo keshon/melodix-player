@@ -1,6 +1,7 @@
 package melodix
 
 import (
+	"io"
 	"math/rand"
 	"net/http"
 	"os"
@@ -30,6 +31,11 @@ func (r *Rest) Start(router *gin.Engine) {
 		toc := generateTableOfContents(router)
 		ctx.JSON(http.StatusOK, gin.H{"api_methods": toc})
 	})
+
+	logRoutes := router.Group("/log")
+	{
+		r.registerLogRoutes(logRoutes)
+	}
 
 	guildRoutes := router.Group("/guild")
 	{
@@ -83,9 +89,101 @@ func generateTableOfContents(router *gin.Engine) []map[string]string {
 	return toc
 }
 
+// registerLogRoutes operates log file
+// http://localhost:8080/log
+// http://localhost:8080/log/download
+// http://localhost:8080/log/clear
+func (r *Rest) registerLogRoutes(router *gin.RouterGroup) {
+
+	router.GET("/", func(ctx *gin.Context) {
+		file, err := os.Open("./logs/all-levels.log")
+		if err != nil {
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Error(err)
+			return
+		}
+		defer func() {
+			if err = file.Close(); err != nil {
+				ctx.Status(http.StatusInternalServerError)
+				ctx.Error(err)
+			}
+		}()
+
+		b, err := io.ReadAll(file)
+		if err != nil {
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Error(err)
+			return
+		}
+
+		// Set the Content-Type header to text/plain to indicate plain text content
+		ctx.Header("Content-Type", "text/plain")
+
+		// Write the log content to the response body
+		ctx.String(http.StatusOK, string(b))
+	})
+
+	router.GET("/download", func(ctx *gin.Context) {
+		file, err := os.Open("./logs/all-levels.log")
+		if err != nil {
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Error(err)
+			return
+		}
+		defer func() {
+			if err = file.Close(); err != nil {
+				ctx.Status(http.StatusInternalServerError)
+				ctx.Error(err)
+			}
+		}()
+
+		// Set the headers for a file download
+		ctx.Header("Content-Description", "File Transfer")
+		ctx.Header("Content-Disposition", "attachment; filename=all-levels.log")
+		ctx.Header("Content-Type", "application/octet-stream")
+		ctx.Header("Content-Transfer-Encoding", "binary")
+		ctx.Header("Expires", "0")
+		ctx.Header("Cache-Control", "must-revalidate")
+		ctx.Header("Pragma", "public")
+
+		// Copy the file content to the response body
+		_, err = io.Copy(ctx.Writer, file)
+		if err != nil {
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Error(err)
+			return
+		}
+
+		ctx.Status(http.StatusOK)
+	})
+
+	router.GET("/clear", func(ctx *gin.Context) {
+		logFilePath := "./logs/all-levels.log"
+
+		// Truncate the log file to clear its content
+		err := os.Truncate(logFilePath, 0)
+		if err != nil {
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Error(err)
+			return
+		}
+
+		// Optionally, you can also flush the logger after truncating the file
+		err = slog.Flush()
+		if err != nil {
+			ctx.Status(http.StatusInternalServerError)
+			ctx.Error(err)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, "Log file cleared")
+	})
+
+}
+
 // registerGuildRoutes registers guild-related routes.
-// http://127.0.0.1:8080/guild/info/897053062030585916
-// http://127.0.0.1:8080/guild/playing/897053062030585916
+// http://localhost:8080/guild/info/897053062030585916
+// http://localhost:8080/guild/playing/897053062030585916
 func (r *Rest) registerGuildRoutes(router *gin.RouterGroup) {
 	router.GET("/ids", func(ctx *gin.Context) {
 		activeSessions := []GuildInfo{}
@@ -122,9 +220,9 @@ func (r *Rest) registerGuildRoutes(router *gin.RouterGroup) {
 }
 
 // registerPlayerRoutes registers player-related routes.
-// http://127.0.0.1:8080/player/play/897053062030585916?url=https://www.com/watch?v=ipFaubyDUT4
-// http://127.0.0.1:8080/player/pause/897053062030585916
-// http://127.0.0.1:8080/player/resume/897053062030585916
+// http://localhost:8080/player/play/897053062030585916?url=https://www.com/watch?v=ipFaubyDUT4
+// http://localhost:8080/player/pause/897053062030585916
+// http://localhost:8080/player/resume/897053062030585916
 func (r *Rest) registerPlayerRoutes(router *gin.RouterGroup) {
 	router.GET("/play/:guild_id", func(ctx *gin.Context) {
 		guildID := ctx.Param("guild_id")
@@ -185,8 +283,8 @@ func (r *Rest) registerPlayerRoutes(router *gin.RouterGroup) {
 }
 
 // registerHistoryRoutes registers history-related routes.
-// http://127.0.0.1:8080/history
-// http://127.0.0.1:8080/history/897053062030585916
+// http://localhost:8080/history
+// http://localhost:8080/history/897053062030585916
 func (r *Rest) registerHistoryRoutes(router *gin.RouterGroup) {
 	router.GET("/", func(ctx *gin.Context) {
 
@@ -221,8 +319,8 @@ func (r *Rest) registerHistoryRoutes(router *gin.RouterGroup) {
 }
 
 // registerAvatarRoutes registers avatar-related routes.
-// http://127.0.0.1:8080/avatar
-// http://127.0.0.1:8080/avatar/random
+// http://localhost:8080/avatar
+// http://localhost:8080/avatar/random
 func (r *Rest) registerAvatarRoutes(router *gin.RouterGroup) {
 	router.GET("/", func(ctx *gin.Context) {
 

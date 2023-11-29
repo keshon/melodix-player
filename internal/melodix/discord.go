@@ -3,9 +3,6 @@ package melodix
 import (
 	"app/internal/config"
 	"app/internal/version"
-	"encoding/base64"
-	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -413,7 +410,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 		AddField("", "*General*\n"+stop+help+about).
 		AddField("", "").
 		AddField("", "*Adinistration*\n"+register+unregister).
-		SetThumbnail("https://cdn.discordapp.com/app-icons/1137135371705122940/994ef64a83dd04d80c095efeb1dfdd2a.png?size=512").
+		SetThumbnail("https://melodix-bot.keshon.ru/avatar/random"). // TODO: move out to config .env file
 		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
 
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg)
@@ -470,12 +467,13 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 		AddField("```"+version.GoVersion+"```", "Go version").
 		AddField("```Created by Innokentiy Sokolov```", "[Linkedin](https://www.linkedin.com/in/keshon), [GitHub](https://github.com/keshon), [Homepage](https://keshon.ru)").
 		InlineAllFields().
+		SetImage("https://melodix-bot.keshon.ru/avatar/random"). // TODO: move out to config .env file
 		SetColor(0x9f00d4).SetFooter(version.AppFullName + " <" + d.Player.GetCurrentStatus().String() + ">").MessageEmbed
 
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg)
 }
 
-// changeAvatar changes bot avatar image withing allowed rate limit
+// changeAvatar changes bot avatar with randomly picked avatar image within allowed rate limit
 func (d *Discord) changeAvatar(s *discordgo.Session) {
 	// Check if the rate limit duration has passed since the last execution
 	if time.Since(d.lastChangeAvatarTime) < d.rateLimitDuration {
@@ -483,21 +481,17 @@ func (d *Discord) changeAvatar(s *discordgo.Session) {
 		return
 	}
 
-	imgPath, err := getRandomAvatarPath("./assets/avatars")
+	imgPath, err := getRandomImagePathFromPath("./assets/avatars")
 	if err != nil {
 		slog.Errorf("Error getting avatar path: %v", err)
 		return
 	}
 
-	img, err := os.ReadFile(imgPath)
+	avatar, err := readFileToBase64(imgPath)
 	if err != nil {
-		slog.Errorf("Error reading the response: %v", err)
+		fmt.Printf("Error preparing avatar: %v\n", err)
 		return
 	}
-
-	base64Img := base64.StdEncoding.EncodeToString(img)
-
-	avatar := fmt.Sprintf("data:%s;base64,%s", http.DetectContentType(img), base64Img)
 
 	_, err = s.UserUpdate("", avatar)
 	if err != nil {
@@ -507,4 +501,21 @@ func (d *Discord) changeAvatar(s *discordgo.Session) {
 
 	// Update the last execution time
 	d.lastChangeAvatarTime = time.Now()
+}
+
+// createThumbnail returns encoded randomly picked avatar image
+func createThumbnail() (string, error) {
+	imgPath, err := getRandomImagePathFromPath("./assets/avatars")
+	if err != nil {
+		slog.Errorf("Error getting avatar path: %v", err)
+		return "", err
+	}
+
+	avatar, err := readFileToBase64(imgPath)
+	if err != nil {
+		fmt.Printf("Error preparing avatar: %v\n", err)
+		return "", err
+	}
+
+	return avatar, nil
 }

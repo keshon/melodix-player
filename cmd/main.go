@@ -106,8 +106,8 @@ func startBotInstances(session *discordgo.Session, guildID string) {
 	botInstances[guildID].Melodix.Start(guildID)
 }
 
-func startRestServer(ginMode bool) {
-	if ginMode {
+func startRestServer(isReleaseMode bool) {
+	if isReleaseMode {
 		gin.SetMode("release")
 	}
 
@@ -117,7 +117,7 @@ func startRestServer(ginMode bool) {
 	restAPI.Start(router)
 
 	go func() {
-		port := "8080"
+		port := "8080" // TODO: move out port number to .env file
 		slog.Infof("REST API server started on port %v\n", port)
 		if err := router.Run(":" + port); err != nil {
 			slog.Fatalf("Error starting REST API server: %v", err)

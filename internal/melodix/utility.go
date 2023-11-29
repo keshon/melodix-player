@@ -1,11 +1,13 @@
 package melodix
 
 import (
+	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"math/rand"
+	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -146,10 +148,10 @@ func formatDuration(seconds float64) string {
 }
 
 // getRandomAvatarPath returns path to randomly selected file in specified folder
-func getRandomAvatarPath(folderPath string) (string, error) {
+func getRandomImagePathFromPath(folderPath string) (string, error) {
 
 	var validFiles []string
-	files, err := ioutil.ReadDir(folderPath)
+	files, err := os.ReadDir(folderPath)
 	if err != nil {
 		return "", err
 	}
@@ -171,4 +173,14 @@ func getRandomAvatarPath(folderPath string) (string, error) {
 	imagePath := filepath.Join(folderPath, randomImage)
 
 	return imagePath, nil
+}
+
+func readFileToBase64(imgPath string) (string, error) {
+	img, err := os.ReadFile(imgPath)
+	if err != nil {
+		return "", fmt.Errorf("error reading the response: %v", err)
+	}
+
+	base64Img := base64.StdEncoding.EncodeToString(img)
+	return fmt.Sprintf("data:%s;base64,%s", http.DetectContentType(img), base64Img), nil
 }

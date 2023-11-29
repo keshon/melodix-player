@@ -21,5 +21,7 @@ RUN apk update && \
 
 COPY --from=mybuildstage /usr/project /usr/project
 
+WORKDIR /usr/project
+
 # Set the entrypoint to run the app
 ENTRYPOINT ["/usr/project/app"]
