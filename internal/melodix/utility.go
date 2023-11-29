@@ -2,8 +2,11 @@ package melodix
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math"
+	"math/rand"
 	"net/url"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -140,4 +143,32 @@ func formatDuration(seconds float64) string {
 	minutes := totalSeconds / 60
 	seconds = math.Mod(float64(totalSeconds), 60)
 	return fmt.Sprintf("%02d:%02d:%02.0f", hours, minutes, seconds)
+}
+
+// getRandomAvatarPath returns path to randomly selected file in specified folder
+func getRandomAvatarPath(folderPath string) (string, error) {
+
+	var validFiles []string
+	files, err := ioutil.ReadDir(folderPath)
+	if err != nil {
+		return "", err
+	}
+
+	// Filter only files with certain extensions (you can modify this if needed)
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".jpg" || filepath.Ext(file.Name()) == ".png" {
+			validFiles = append(validFiles, file.Name())
+		}
+	}
+
+	if len(validFiles) == 0 {
+		return "", fmt.Errorf("no valid images found")
+	}
+
+	// Get a random index
+	randomIndex := rand.Intn(len(validFiles))
+	randomImage := validFiles[randomIndex]
+	imagePath := filepath.Join(folderPath, randomImage)
+
+	return imagePath, nil
 }

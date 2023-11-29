@@ -3,7 +3,11 @@ package melodix
 import (
 	"app/internal/config"
 	"app/internal/version"
+	"encoding/base64"
+	"io/ioutil"
+	"net/http"
 	"strconv"
+	"time"
 
 	"fmt"
 
@@ -19,11 +23,13 @@ type BotInstance struct {
 
 // DiscordMelodix represents the Melodix instance for Discord.
 type DiscordMelodix struct {
-	Player         IMelodixPlayer
-	Session        *discordgo.Session
-	GuildID        string
-	InstanceActive bool
-	prefix         string
+	Player               IMelodixPlayer
+	Session              *discordgo.Session
+	GuildID              string
+	InstanceActive       bool
+	prefix               string
+	lastChangeAvatarTime time.Time
+	rateLimitDuration    time.Duration
 }
 
 // NewDiscordMelodix creates a new instance of DiscordMelodix.
@@ -34,10 +40,11 @@ func NewDiscordMelodix(session *discordgo.Session, guildID string) *DiscordMelod
 	}
 
 	return &DiscordMelodix{
-		Player:         NewPlayer(guildID),
-		Session:        session,
-		InstanceActive: true,
-		prefix:         config.DiscordCommandPrefix,
+		Player:            NewPlayer(guildID),
+		Session:           session,
+		InstanceActive:    true,
+		prefix:            config.DiscordCommandPrefix,
+		rateLimitDuration: time.Minute / 4,
 	}
 }
 
@@ -118,6 +125,8 @@ func (dm *DiscordMelodix) Commands(s *discordgo.Session, m *discordgo.MessageCre
 
 // handlePlayCommand handles the play command for DiscordMelodix.
 func (dm *DiscordMelodix) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string, enqueueOnly bool) {
+	dm.changeAvatar(s)
+
 	paramType, songsList := parseSongsAndTypeInParameter(param)
 
 	if len(songsList) <= 0 {
@@ -233,6 +242,7 @@ func enqueuePlaylist(dm *DiscordMelodix, playlist []*Song, s *discordgo.Session,
 								}
 
 								embedMsg.SetDescription(playlistStr)
+
 								_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, message.ID, embedMsg.MessageEmbed)
 								if err != nil {
 									slog.Warnf("Error updating message: %v", err)
@@ -253,6 +263,8 @@ func enqueuePlaylist(dm *DiscordMelodix, playlist []*Song, s *discordgo.Session,
 
 // handlePauseCommand handles the pause command for DiscordMelodix.
 func (dm *DiscordMelodix) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+	dm.changeAvatar(s)
+
 	if dm.Player.GetCurrentSong().ID == "" {
 		return
 	}
@@ -267,6 +279,8 @@ func (dm *DiscordMelodix) handlePauseCommand(s *discordgo.Session, m *discordgo.
 
 // handleResumeCommand handles the resume command for DiscordMelodix.
 func (dm *DiscordMelodix) handleResumeCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+	dm.changeAvatar(s)
+
 	c, _ := s.State.Channel(m.Message.ChannelID)
 	g, _ := s.State.Guild(c.GuildID)
 
@@ -306,6 +320,8 @@ func (dm *DiscordMelodix) handleStopCommand(s *discordgo.Session, m *discordgo.M
 
 // handleSkipCommand handles the skip command for DiscordMelodix.
 func (dm *DiscordMelodix) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+	dm.changeAvatar(s)
+
 	embedStr := "⏩ **Skip track**"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
@@ -317,6 +333,8 @@ func (dm *DiscordMelodix) handleSkipCommand(s *discordgo.Session, m *discordgo.M
 
 // handleShowQueueCommand handles the show queue command for DiscordMelodix.
 func (dm *DiscordMelodix) handleShowQueueCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+	dm.changeAvatar(s)
+
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetFooter(version.AppFullName)
@@ -367,6 +385,8 @@ func (dm *DiscordMelodix) handleShowQueueCommand(s *discordgo.Session, m *discor
 
 // handleHelpCommand handles the help command for DiscordMelodix.
 func (dm *DiscordMelodix) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+	dm.changeAvatar(s)
+
 	play := fmt.Sprintf("**Play**: `%vplay [title/url/id]` \nAliases: `%vp [title/url/id]`, `%v> [title/url/id]`\n", dm.prefix, dm.prefix, dm.prefix)
 	pause := fmt.Sprintf("**Pause** / **resume**: `%vpause`, `%vplay` \nAliases: `%v!`, `%v>`\n", dm.prefix, dm.prefix, dm.prefix, dm.prefix)
 	queue := fmt.Sprintf("**Add track**: `%vadd [title/url/id]` \nAliases: `%va [title/url/id]`, `%v+ [title/url/id]`\n", dm.prefix, dm.prefix, dm.prefix)
@@ -401,6 +421,8 @@ func (dm *DiscordMelodix) handleHelpCommand(s *discordgo.Session, m *discordgo.M
 
 // handleHistoryCommand handles the history command for DiscordMelodix.
 func (dm *DiscordMelodix) handleHistoryCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {
+	dm.changeAvatar(s)
+
 	var sortBy string
 	var title string
 
@@ -436,9 +458,12 @@ func (dm *DiscordMelodix) handleHistoryCommand(s *discordgo.Session, m *discordg
 
 // handleAboutCommand handles the about command for DiscordMelodix.
 func (dm *DiscordMelodix) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+	dm.changeAvatar(s)
+
 	content := version.AppName + " is a simple music bot that allows you to play music in voice channels on a Discord server."
 
 	embedStr := fmt.Sprintf("📻 **About %v**\n\n%v", version.AppName, content)
+
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		AddField("```"+version.BuildDate+"```", "Build date").
@@ -446,5 +471,39 @@ func (dm *DiscordMelodix) handleAboutCommand(s *discordgo.Session, m *discordgo.
 		AddField("```Created by Innokentiy Sokolov```", "[Linkedin](https://www.linkedin.com/in/keshon), [GitHub](https://github.com/keshon), [Homepage](https://keshon.ru)").
 		InlineAllFields().
 		SetColor(0x9f00d4).SetFooter(version.AppFullName + " <" + dm.Player.GetCurrentStatus().String() + ">").MessageEmbed
+
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+}
+
+func (dm *DiscordMelodix) changeAvatar(s *discordgo.Session) {
+	// Check if the rate limit duration has passed since the last execution
+	if time.Since(dm.lastChangeAvatarTime) < dm.rateLimitDuration {
+		fmt.Println("Rate-limited. Skipping changeAvatar.")
+		return
+	}
+
+	imgPath, err := getRandomAvatarPath("./assets/avatars")
+	if err != nil {
+		fmt.Println("Error getting avatar path:", err)
+		return
+	}
+
+	img, err := ioutil.ReadFile(imgPath)
+	if err != nil {
+		fmt.Println("Error reading the response:", err)
+		return
+	}
+
+	base64Img := base64.StdEncoding.EncodeToString(img)
+
+	avatar := fmt.Sprintf("data:%s;base64,%s", http.DetectContentType(img), base64Img)
+
+	_, err = s.UserUpdate("", avatar)
+	if err != nil {
+		fmt.Println("Error setting the avatar:", err)
+		return
+	}
+
+	// Update the last execution time
+	dm.lastChangeAvatarTime = time.Now()
 }

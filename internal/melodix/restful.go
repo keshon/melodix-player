@@ -1,7 +1,10 @@
 package melodix
 
 import (
+	"io/ioutil"
+	"math/rand"
 	"net/http"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
@@ -41,6 +44,11 @@ func (rm *RestfulMelodix) Start(router *gin.Engine) {
 	playlistRoutes := router.Group("/history")
 	{
 		rm.registerHistoryRoutes(playlistRoutes)
+	}
+
+	avatarRoutes := router.Group("/avatar")
+	{
+		rm.registerAvatarRoutes(avatarRoutes)
 	}
 }
 
@@ -209,5 +217,63 @@ func (rm *RestfulMelodix) registerHistoryRoutes(router *gin.RouterGroup) {
 
 		// Respond with the history for the guild
 		ctx.JSON(http.StatusOK, history)
+	})
+}
+
+// registerAvatarRoutes registers avatar-related routes.
+// http://127.0.0.1:8080/avatar
+// http://127.0.0.1:8080/avatar/random
+func (rm *RestfulMelodix) registerAvatarRoutes(router *gin.RouterGroup) {
+	router.GET("/", func(ctx *gin.Context) {
+
+		folderPath := "./assets/avatars"
+
+		var imageList []string
+		files, err := ioutil.ReadDir(folderPath)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		for _, file := range files {
+			// Filter only files with certain extensions (you can modify this if needed)
+			if filepath.Ext(file.Name()) == ".jpg" || filepath.Ext(file.Name()) == ".png" {
+				imageList = append(imageList, file.Name())
+			}
+		}
+
+		ctx.JSON(http.StatusOK, imageList)
+	})
+
+	router.GET("/random", func(ctx *gin.Context) {
+
+		folderPath := "./assets/avatars"
+
+		var validFiles []string
+		files, err := ioutil.ReadDir(folderPath)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Filter only files with certain extensions (you can modify this if needed)
+		for _, file := range files {
+			if filepath.Ext(file.Name()) == ".jpg" || filepath.Ext(file.Name()) == ".png" {
+				validFiles = append(validFiles, file.Name())
+			}
+		}
+
+		if len(validFiles) == 0 {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "no valid images found"})
+			return
+		}
+
+		// Get a random index
+		randomIndex := rand.Intn(len(validFiles))
+		randomImage := validFiles[randomIndex]
+		imagePath := filepath.Join(folderPath, randomImage)
+
+		// Return the image file
+		ctx.File(imagePath)
 	})
 }
