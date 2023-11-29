@@ -117,7 +117,7 @@ func (gm *GuildManager) handleUnregisterCommand(s *discordgo.Session, m *discord
 // setupBotInstance sets up a new BotInstance for a guild.
 func (gm *GuildManager) setupBotInstance(botInstances map[string]*melodix.BotInstance, session *discordgo.Session, guildID string) {
 	botInstances[guildID] = &melodix.BotInstance{
-		Melodix: melodix.NewDiscordMelodix(session, guildID),
+		Melodix: melodix.NewDiscord(session, guildID),
 	}
 	botInstances[guildID].Melodix.Start(guildID)
 }

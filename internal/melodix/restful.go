@@ -1,29 +1,29 @@
 package melodix
 
 import (
-	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
 )
 
-// RestfulMelodix is a struct representing the restful API for Melodix.
-type RestfulMelodix struct {
+// Rest is a struct representing the restful API for Melodix.
+type Rest struct {
 	BotInstances map[string]*BotInstance
 }
 
-// NewRestfulMelodix creates a new instance of RestfulMelodix.
-func NewRestfulMelodix(botInstances map[string]*BotInstance) *RestfulMelodix {
-	return &RestfulMelodix{
+// NewRest creates a new instance of Rest.
+func NewRest(botInstances map[string]*BotInstance) *Rest {
+	return &Rest{
 		BotInstances: botInstances,
 	}
 }
 
 // Start registers the API routes using the provided gin.Engine.
-func (rm *RestfulMelodix) Start(router *gin.Engine) {
+func (r *Rest) Start(router *gin.Engine) {
 	slog.Info("REST API routes started")
 
 	router.GET("/", func(ctx *gin.Context) {
@@ -33,31 +33,31 @@ func (rm *RestfulMelodix) Start(router *gin.Engine) {
 
 	guildRoutes := router.Group("/guild")
 	{
-		rm.registerGuildRoutes(guildRoutes)
+		r.registerGuildRoutes(guildRoutes)
 	}
 
 	playerRoutes := router.Group("/player")
 	{
-		rm.registerPlayerRoutes(playerRoutes)
+		r.registerPlayerRoutes(playerRoutes)
 	}
 
 	playlistRoutes := router.Group("/history")
 	{
-		rm.registerHistoryRoutes(playlistRoutes)
+		r.registerHistoryRoutes(playlistRoutes)
 	}
 
 	avatarRoutes := router.Group("/avatar")
 	{
-		rm.registerAvatarRoutes(avatarRoutes)
+		r.registerAvatarRoutes(avatarRoutes)
 	}
 }
 
-// GuildInfo represents information about a guild.
+// GuildInfo represents inforation about a guild.
 type GuildInfo struct {
 	GuildID string
 }
 
-// GuildSession represents the session information for a guild.
+// GuildSession represents the session inforation for a guild.
 type GuildSession struct {
 	GuildID          string
 	GuildActive      bool
@@ -86,11 +86,11 @@ func generateTableOfContents(router *gin.Engine) []map[string]string {
 // registerGuildRoutes registers guild-related routes.
 // http://127.0.0.1:8080/guild/info/897053062030585916
 // http://127.0.0.1:8080/guild/playing/897053062030585916
-func (rm *RestfulMelodix) registerGuildRoutes(router *gin.RouterGroup) {
+func (r *Rest) registerGuildRoutes(router *gin.RouterGroup) {
 	router.GET("/ids", func(ctx *gin.Context) {
 		activeSessions := []GuildInfo{}
 
-		for guildID := range rm.BotInstances {
+		for guildID := range r.BotInstances {
 			activeSessions = append(activeSessions, GuildInfo{GuildID: guildID})
 		}
 
@@ -100,7 +100,7 @@ func (rm *RestfulMelodix) registerGuildRoutes(router *gin.RouterGroup) {
 	router.GET("/playing", func(ctx *gin.Context) {
 		activeSessions := []GuildSession{}
 
-		for guildID, bot := range rm.BotInstances {
+		for guildID, bot := range r.BotInstances {
 			if bot.Melodix.Player.GetStreamingSession() == nil {
 				continue
 			}
@@ -125,7 +125,7 @@ func (rm *RestfulMelodix) registerGuildRoutes(router *gin.RouterGroup) {
 // http://127.0.0.1:8080/player/play/897053062030585916?url=https://www.com/watch?v=ipFaubyDUT4
 // http://127.0.0.1:8080/player/pause/897053062030585916
 // http://127.0.0.1:8080/player/resume/897053062030585916
-func (rm *RestfulMelodix) registerPlayerRoutes(router *gin.RouterGroup) {
+func (r *Rest) registerPlayerRoutes(router *gin.RouterGroup) {
 	router.GET("/play/:guild_id", func(ctx *gin.Context) {
 		guildID := ctx.Param("guild_id")
 		songURL := ctx.Query("url")
@@ -135,7 +135,7 @@ func (rm *RestfulMelodix) registerPlayerRoutes(router *gin.RouterGroup) {
 			return
 		}
 
-		melodixInstance, exists := rm.BotInstances[guildID]
+		melodixInstance, exists := r.BotInstances[guildID]
 		if !exists {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Guild not found"})
 			return
@@ -158,7 +158,7 @@ func (rm *RestfulMelodix) registerPlayerRoutes(router *gin.RouterGroup) {
 	router.GET("/pause/:guild_id", func(ctx *gin.Context) {
 		guildID := ctx.Param("guild_id")
 
-		melodixInstance, exists := rm.BotInstances[guildID]
+		melodixInstance, exists := r.BotInstances[guildID]
 		if !exists {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Guild not found"})
 			return
@@ -172,7 +172,7 @@ func (rm *RestfulMelodix) registerPlayerRoutes(router *gin.RouterGroup) {
 	router.GET("/resume/:guild_id", func(ctx *gin.Context) {
 		guildID := ctx.Param("guild_id")
 
-		melodixInstance, exists := rm.BotInstances[guildID]
+		melodixInstance, exists := r.BotInstances[guildID]
 		if !exists {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "Guild not found"})
 			return
@@ -187,7 +187,7 @@ func (rm *RestfulMelodix) registerPlayerRoutes(router *gin.RouterGroup) {
 // registerHistoryRoutes registers history-related routes.
 // http://127.0.0.1:8080/history
 // http://127.0.0.1:8080/history/897053062030585916
-func (rm *RestfulMelodix) registerHistoryRoutes(router *gin.RouterGroup) {
+func (r *Rest) registerHistoryRoutes(router *gin.RouterGroup) {
 	router.GET("/", func(ctx *gin.Context) {
 
 		h := NewHistory()
@@ -223,13 +223,13 @@ func (rm *RestfulMelodix) registerHistoryRoutes(router *gin.RouterGroup) {
 // registerAvatarRoutes registers avatar-related routes.
 // http://127.0.0.1:8080/avatar
 // http://127.0.0.1:8080/avatar/random
-func (rm *RestfulMelodix) registerAvatarRoutes(router *gin.RouterGroup) {
+func (r *Rest) registerAvatarRoutes(router *gin.RouterGroup) {
 	router.GET("/", func(ctx *gin.Context) {
 
 		folderPath := "./assets/avatars"
 
 		var imageList []string
-		files, err := ioutil.ReadDir(folderPath)
+		files, err := os.ReadDir(folderPath)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -250,7 +250,7 @@ func (rm *RestfulMelodix) registerAvatarRoutes(router *gin.RouterGroup) {
 		folderPath := "./assets/avatars"
 
 		var validFiles []string
-		files, err := ioutil.ReadDir(folderPath)
+		files, err := os.ReadDir(folderPath)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

@@ -12,7 +12,7 @@ import (
 	"github.com/gookit/slog"
 )
 
-// Status represents the playback status of the MelodixPlayer.
+// Status represents the playback status of the Player.
 type Status int32
 
 const (
@@ -22,8 +22,8 @@ const (
 	StatusError
 )
 
-// MelodixPlayer manages audio playback and song queue.
-type MelodixPlayer struct {
+// Player manages audio playback and song queue.
+type Player struct {
 	sync.Mutex
 	VoiceConnection  *discordgo.VoiceConnection
 	StreamingSession *dca.StreamingSession
@@ -33,8 +33,8 @@ type MelodixPlayer struct {
 	SkipInterrupt    chan bool
 }
 
-// IMelodixPlayer defines the interface for managing audio playback and song queue.
-type IMelodixPlayer interface {
+// IPlayer defines the interface for managing audio playback and song queue.
+type IPlayer interface {
 	Play(startAt int, song *Song)
 	Skip()
 	Enqueue(song *Song)
@@ -52,9 +52,9 @@ type IMelodixPlayer interface {
 	GetCurrentSong() *Song
 }
 
-// NewPlayer creates a new MelodixPlayer instance.
-func NewPlayer(guildID string) IMelodixPlayer {
-	return &MelodixPlayer{
+// NewPlayer creates a new Player instance.
+func NewPlayer(guildID string) IPlayer {
+	return &Player{
 		SongQueue:     make([]*Song, 0),
 		SkipInterrupt: make(chan bool, 1),
 		CurrentStatus: StatusResting,
@@ -62,123 +62,123 @@ func NewPlayer(guildID string) IMelodixPlayer {
 }
 
 // Skip skips to the next song in the queue.
-func (mp *MelodixPlayer) Skip() {
+func (p *Player) Skip() {
 	slog.Info("Skipping to next song")
 
-	if mp.VoiceConnection == nil {
+	if p.VoiceConnection == nil {
 		return
 	}
 
-	mp.CurrentStatus = StatusResting
+	p.CurrentStatus = StatusResting
 
-	if len(mp.SkipInterrupt) == 0 {
+	if len(p.SkipInterrupt) == 0 {
 		history := NewHistory()
-		history.AddPlaybackCountStats(mp.VoiceConnection.GuildID, mp.CurrentSong.ID)
+		history.AddPlaybackCountStats(p.VoiceConnection.GuildID, p.CurrentSong.ID)
 
-		mp.SkipInterrupt <- true
-		mp.Play(0, nil)
+		p.SkipInterrupt <- true
+		p.Play(0, nil)
 	}
 }
 
 // Enqueue adds a song to the queue.
-func (mp *MelodixPlayer) Enqueue(song *Song) {
+func (p *Player) Enqueue(song *Song) {
 	slog.Infof("Enqueuing song to queue: %v", song.Name)
 
-	mp.Lock()
-	defer mp.Unlock()
+	p.Lock()
+	defer p.Unlock()
 
-	mp.SongQueue = append(mp.SongQueue, song)
+	p.SongQueue = append(p.SongQueue, song)
 }
 
 // Dequeue removes and returns the first song from the queue.
-func (mp *MelodixPlayer) Dequeue() *Song {
+func (p *Player) Dequeue() *Song {
 	slog.Info("Dequeuing song and returning it from queue")
 
-	mp.Lock()
-	defer mp.Unlock()
+	p.Lock()
+	defer p.Unlock()
 
-	if len(mp.SongQueue) == 0 {
+	if len(p.SongQueue) == 0 {
 		return nil
 	}
 
-	firstSong := mp.SongQueue[0]
-	mp.SongQueue = mp.SongQueue[1:]
+	firstSong := p.SongQueue[0]
+	p.SongQueue = p.SongQueue[1:]
 
 	return firstSong
 }
 
 // ClearQueue clears the song queue.
-func (mp *MelodixPlayer) ClearQueue() {
+func (p *Player) ClearQueue() {
 	slog.Info("Clearing song queue")
-	mp.SongQueue = make([]*Song, 0)
+	p.SongQueue = make([]*Song, 0)
 }
 
 // Stop stops audio playback and disconnects from the voice channel.
-func (mp *MelodixPlayer) Stop() {
+func (p *Player) Stop() {
 	slog.Info("Stopping audio playback and disconnecting from voice channel")
 
-	mp.CurrentStatus = StatusResting
+	p.CurrentStatus = StatusResting
 
-	if mp.VoiceConnection == nil {
+	if p.VoiceConnection == nil {
 		return
 	}
 
-	err := mp.VoiceConnection.Disconnect()
+	err := p.VoiceConnection.Disconnect()
 	if err != nil {
 		slog.Errorf("Error disconnecting voice connection: %v", err)
 	}
 
-	mp.VoiceConnection = nil
-	mp.StreamingSession = nil
-	mp.CurrentSong = nil
+	p.VoiceConnection = nil
+	p.StreamingSession = nil
+	p.CurrentSong = nil
 }
 
 // Pause pauses audio playback.
-func (mp *MelodixPlayer) Pause() {
+func (p *Player) Pause() {
 	slog.Info("Pausing audio playback")
 
-	if mp.VoiceConnection == nil {
+	if p.VoiceConnection == nil {
 		return
 	}
 
-	if mp.StreamingSession == nil {
+	if p.StreamingSession == nil {
 		return
 	}
 
-	if mp.CurrentStatus == StatusPlaying {
-		mp.StreamingSession.SetPaused(true)
-		mp.CurrentStatus = StatusPaused
+	if p.CurrentStatus == StatusPlaying {
+		p.StreamingSession.SetPaused(true)
+		p.CurrentStatus = StatusPaused
 	}
 }
 
 // Unpause resumes audio playback.
-func (mp *MelodixPlayer) Unpause() {
+func (p *Player) Unpause() {
 	slog.Info("Resuming playback")
 
-	if mp.StreamingSession != nil {
-		if mp.CurrentStatus != StatusPlaying {
-			mp.StreamingSession.SetPaused(false)
-			mp.CurrentStatus = StatusPlaying
+	if p.StreamingSession != nil {
+		if p.CurrentStatus != StatusPlaying {
+			p.StreamingSession.SetPaused(false)
+			p.CurrentStatus = StatusPlaying
 		}
 	} else {
-		mp.Play(0, nil)
-		mp.CurrentStatus = StatusPlaying
+		p.Play(0, nil)
+		p.CurrentStatus = StatusPlaying
 	}
 }
 
 // Play starts playing the current or specified song.
-func (mp *MelodixPlayer) Play(startAt int, song *Song) {
+func (p *Player) Play(startAt int, song *Song) {
 
 	if song == nil {
-		mp.CurrentSong = mp.Dequeue()
-		if mp.CurrentSong == nil {
+		p.CurrentSong = p.Dequeue()
+		if p.CurrentSong == nil {
 			slog.Info("No songs in queue")
-			mp.CurrentStatus = StatusResting
+			p.CurrentStatus = StatusResting
 			return
 		}
 	}
 
-	slog.Infof("Playing song: %v", mp.CurrentSong.Name)
+	slog.Infof("Playing song: %v", p.CurrentSong.Name)
 	slog.Infof("Playing song at: %v", time.Duration(startAt)*time.Second)
 
 	config, err := config.NewConfig()
@@ -207,33 +207,33 @@ func (mp *MelodixPlayer) Play(startAt int, song *Song) {
 		UserAgent:               config.DcaUserAgent,
 	}
 
-	encodingSession, err := dca.EncodeFile(mp.CurrentSong.DownloadURL, options)
+	encodingSession, err := dca.EncodeFile(p.CurrentSong.DownloadURL, options)
 	if err != nil {
 		slog.Errorf("Error encoding song: %v", err)
 		return
 	}
 	defer encodingSession.Cleanup()
 
-	for mp.VoiceConnection == nil || !mp.VoiceConnection.Ready {
+	for p.VoiceConnection == nil || !p.VoiceConnection.Ready {
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	err = mp.VoiceConnection.Speaking(true)
+	err = p.VoiceConnection.Speaking(true)
 	if err != nil {
 		slog.Errorf("Error connecting to Discord voice: %v", err)
-		mp.VoiceConnection.Speaking(false)
+		p.VoiceConnection.Speaking(false)
 		return
 	}
 
 	done := make(chan error)
-	mp.StreamingSession = dca.NewStream(encodingSession, mp.VoiceConnection, done)
+	p.StreamingSession = dca.NewStream(encodingSession, p.VoiceConnection, done)
 
 	slog.Info("Stream is created, waiting for finish or error")
 
-	mp.CurrentStatus = StatusPlaying
+	p.CurrentStatus = StatusPlaying
 
 	history := NewHistory()
-	history.AddTrackToHistory(mp.VoiceConnection.GuildID, mp.CurrentSong)
+	history.AddTrackToHistory(p.VoiceConnection.GuildID, p.CurrentSong)
 
 	interval := 2 * time.Second
 	ticker := time.NewTicker(interval)
@@ -244,9 +244,9 @@ func (mp *MelodixPlayer) Play(startAt int, song *Song) {
 		for {
 			select {
 			case <-ticker.C:
-				if mp.VoiceConnection != nil && mp.StreamingSession != nil && mp.CurrentSong != nil {
-					if !mp.StreamingSession.Paused() {
-						err := history.AddPlaybackDurationStats(mp.VoiceConnection.GuildID, mp.CurrentSong.ID, float64(interval.Seconds()))
+				if p.VoiceConnection != nil && p.StreamingSession != nil && p.CurrentSong != nil {
+					if !p.StreamingSession.Paused() {
+						err := history.AddPlaybackDurationStats(p.VoiceConnection.GuildID, p.CurrentSong.ID, float64(interval.Seconds()))
 						if err != nil {
 							slog.Warnf("Error adding playback duration stats to history: %v", err)
 						}
@@ -260,22 +260,22 @@ func (mp *MelodixPlayer) Play(startAt int, song *Song) {
 
 	select {
 	case <-done:
-		if mp.VoiceConnection != nil && mp.StreamingSession != nil && mp.CurrentSong != nil {
-			songDuration, songPosition := mp.metrics(encodingSession, mp.StreamingSession, mp.CurrentSong)
-			if mp.CurrentStatus == StatusPlaying && encodingSession.Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 {
+		if p.VoiceConnection != nil && p.StreamingSession != nil && p.CurrentSong != nil {
+			songDuration, songPosition := p.metrics(encodingSession, p.StreamingSession, p.CurrentSong)
+			if p.CurrentStatus == StatusPlaying && encodingSession.Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 {
 				if songPosition < songDuration {
 					slog.Warn("Song is done but still unfinished. Restarting from interrupted position...")
 
 					encodingSession.Cleanup()
-					mp.VoiceConnection.Speaking(false)
-					go mp.Play(int(songPosition.Seconds()), mp.CurrentSong)
+					p.VoiceConnection.Speaking(false)
+					go p.Play(int(songPosition.Seconds()), p.CurrentSong)
 
 					return
 				}
 			}
 		}
 
-		err = history.AddPlaybackCountStats(mp.VoiceConnection.GuildID, mp.CurrentSong.ID)
+		err = history.AddPlaybackCountStats(p.VoiceConnection.GuildID, p.CurrentSong.ID)
 		if err != nil {
 			slog.Warnf("Error adding stats count stats to history: %v", err)
 		}
@@ -284,10 +284,10 @@ func (mp *MelodixPlayer) Play(startAt int, song *Song) {
 			slog.Warnf("Song is done but an unexpected error occurred: %v", err)
 
 			time.Sleep(250 * time.Millisecond)
-			if mp.VoiceConnection != nil {
-				mp.VoiceConnection.Speaking(false)
+			if p.VoiceConnection != nil {
+				p.VoiceConnection.Speaking(false)
 			}
-			mp.CurrentStatus = StatusError
+			p.CurrentStatus = StatusError
 			encodingSession.Cleanup()
 
 			return
@@ -295,12 +295,12 @@ func (mp *MelodixPlayer) Play(startAt int, song *Song) {
 
 		slog.Info("Song is done")
 
-		if len(mp.SongQueue) == 0 {
+		if len(p.SongQueue) == 0 {
 			slog.Info("Queue is done")
 
 			time.Sleep(250 * time.Millisecond)
-			mp.Stop()
-			mp.CurrentStatus = StatusResting
+			p.Stop()
+			p.CurrentStatus = StatusResting
 
 			return
 		}
@@ -308,13 +308,13 @@ func (mp *MelodixPlayer) Play(startAt int, song *Song) {
 		time.Sleep(250 * time.Millisecond)
 
 		slog.Info("Playing next song in queue")
-		mp.Play(0, nil)
+		p.Play(0, nil)
 
-	case <-mp.SkipInterrupt:
+	case <-p.SkipInterrupt:
 		slog.Info("Song is interrupted for skip, stopping playback")
 
-		if mp.VoiceConnection != nil {
-			mp.VoiceConnection.Speaking(false)
+		if p.VoiceConnection != nil {
+			p.VoiceConnection.Speaking(false)
 		}
 		encodingSession.Cleanup()
 
@@ -323,7 +323,7 @@ func (mp *MelodixPlayer) Play(startAt int, song *Song) {
 }
 
 // metrics calculates playback metrics for a song.
-func (mp *MelodixPlayer) metrics(encoding *dca.EncodeSession, streaming *dca.StreamingSession, song *Song) (songDuration, songPosition time.Duration) {
+func (p *Player) metrics(encoding *dca.EncodeSession, streaming *dca.StreamingSession, song *Song) (songDuration, songPosition time.Duration) {
 	encodingDuration := encoding.Stats().Duration
 	encodingStartTime := time.Duration(encoding.Options().StartTime) * time.Second
 
@@ -344,36 +344,36 @@ func (mp *MelodixPlayer) metrics(encoding *dca.EncodeSession, streaming *dca.Str
 }
 
 // GetStatus returns the current playback status.
-func (mp *MelodixPlayer) GetCurrentStatus() Status {
-	return mp.CurrentStatus
+func (p *Player) GetCurrentStatus() Status {
+	return p.CurrentStatus
 }
 
 // SetStatus sets the playback status.
-func (mp *MelodixPlayer) SetCurrentStatus(status Status) {
-	mp.CurrentStatus = status
+func (p *Player) SetCurrentStatus(status Status) {
+	p.CurrentStatus = status
 }
 
 // GetSongQueue returns the song queue.
-func (mp *MelodixPlayer) GetSongQueue() []*Song {
-	return mp.SongQueue
+func (p *Player) GetSongQueue() []*Song {
+	return p.SongQueue
 }
 
 // GetVoiceConnection returns the voice connection.
-func (mp *MelodixPlayer) GetVoiceConnection() *discordgo.VoiceConnection {
-	return mp.VoiceConnection
+func (p *Player) GetVoiceConnection() *discordgo.VoiceConnection {
+	return p.VoiceConnection
 }
 
 // SetVoiceConnection sets the voice connection.
-func (mp *MelodixPlayer) SetVoiceConnection(voiceConnection *discordgo.VoiceConnection) {
-	mp.VoiceConnection = voiceConnection
+func (p *Player) SetVoiceConnection(voiceConnection *discordgo.VoiceConnection) {
+	p.VoiceConnection = voiceConnection
 }
 
 // GetCurrentSong returns the current song being played.
-func (mp *MelodixPlayer) GetCurrentSong() *Song {
-	return mp.CurrentSong
+func (p *Player) GetCurrentSong() *Song {
+	return p.CurrentSong
 }
 
 // GetStreamingSession returns the current streaming session.
-func (mp *MelodixPlayer) GetStreamingSession() *dca.StreamingSession {
-	return mp.StreamingSession
+func (p *Player) GetStreamingSession() *dca.StreamingSession {
+	return p.StreamingSession
 }

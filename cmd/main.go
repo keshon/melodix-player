@@ -101,7 +101,7 @@ func getGuildsOrSetDefault() ([]string, error) {
 
 func startBotInstances(session *discordgo.Session, guildID string) {
 	botInstances[guildID] = &melodix.BotInstance{
-		Melodix: melodix.NewDiscordMelodix(session, guildID),
+		Melodix: melodix.NewDiscord(session, guildID),
 	}
 	botInstances[guildID].Melodix.Start(guildID)
 }
@@ -113,7 +113,7 @@ func startRestServer(ginMode bool) {
 
 	router := gin.Default()
 
-	restAPI := melodix.NewRestfulMelodix(botInstances)
+	restAPI := melodix.NewRest(botInstances)
 	restAPI.Start(router)
 
 	go func() {

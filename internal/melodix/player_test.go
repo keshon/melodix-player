@@ -7,8 +7,8 @@ import (
 )
 
 // Helper function to initialize a mock MelodixPlayer
-func newMockPlayer() *MelodixPlayer {
-	return &MelodixPlayer{
+func newMockPlayer() *Player {
+	return &Player{
 		SongQueue:     make([]*Song, 0),
 		SkipInterrupt: make(chan bool, 1),
 		CurrentStatus: StatusResting,

@@ -4,8 +4,8 @@ import (
 	"app/internal/db"
 )
 
-// MelodixHistory manages the history of songs played in the application.
-type MelodixHistory struct{}
+// History manages the history of songs played in the application.
+type History struct{}
 
 // HistoryTrackInfo contains information about a history entry and its associated track.
 type HistoryTrackInfo struct {
@@ -13,8 +13,8 @@ type HistoryTrackInfo struct {
 	Track   db.Track
 }
 
-// IMelodixHistory defines the interface for managing the application's play history.
-type IMelodixHistory interface {
+// IHistory defines the interface for managing the application's play history.
+type IHistory interface {
 	AddTrackToHistory(guildID string, song *Song) error
 	AddPlaybackAllStats(guildID, ytid string, duration float64) error
 	AddPlaybackCountStats(guildID, ytid string) error
@@ -23,13 +23,13 @@ type IMelodixHistory interface {
 	GetTrackFromHistory(guildID string, trackID uint) (db.Track, error)
 }
 
-// NewHistory creates a new MelodixHistory instance.
-func NewHistory() IMelodixHistory {
-	return &MelodixHistory{}
+// NewHistory creates a new History instance.
+func NewHistory() IHistory {
+	return &History{}
 }
 
 // AddTrackToHistory adds a song to the application's play history.
-func (mp *MelodixHistory) AddTrackToHistory(guildID string, song *Song) error {
+func (h *History) AddTrackToHistory(guildID string, song *Song) error {
 	var track *db.Track
 
 	existingTrack, err := db.GetTrackByYTID(song.ID)
@@ -75,7 +75,7 @@ func (mp *MelodixHistory) AddTrackToHistory(guildID string, song *Song) error {
 }
 
 // AddPlaybackStats updates all playback statistics (duration and count) for a track.
-func (mp *MelodixHistory) AddPlaybackAllStats(guildID, ytid string, duration float64) error {
+func (h *History) AddPlaybackAllStats(guildID, ytid string, duration float64) error {
 
 	existingTrackRecord, err := db.GetTrackByYTID(ytid)
 	if err != nil {
@@ -94,7 +94,7 @@ func (mp *MelodixHistory) AddPlaybackAllStats(guildID, ytid string, duration flo
 }
 
 // AddPlaybackCountStats updates playback count statistics for a track.
-func (mp *MelodixHistory) AddPlaybackCountStats(guildID, ytid string) error {
+func (h *History) AddPlaybackCountStats(guildID, ytid string) error {
 
 	existingTrackRecord, err := db.GetTrackByYTID(ytid)
 	if err != nil {
@@ -113,7 +113,7 @@ func (mp *MelodixHistory) AddPlaybackCountStats(guildID, ytid string) error {
 }
 
 // AddPlaybackDurationStats updates playback duration statistics for a track.
-func (mp *MelodixHistory) AddPlaybackDurationStats(guildID, ytid string, duration float64) error {
+func (h *History) AddPlaybackDurationStats(guildID, ytid string, duration float64) error {
 
 	existingTrackRecord, err := db.GetTrackByYTID(ytid)
 	if err != nil {
@@ -132,7 +132,7 @@ func (mp *MelodixHistory) AddPlaybackDurationStats(guildID, ytid string, duratio
 }
 
 // GetHistory retrieves the play history for a guild, sorted by the specified criteria.
-func (mp *MelodixHistory) GetHistory(guildID string, sortBy string) ([]HistoryTrackInfo, error) {
+func (h *History) GetHistory(guildID string, sortBy string) ([]HistoryTrackInfo, error) {
 	var historyEntries []db.History
 	var err error
 
@@ -169,7 +169,7 @@ func (mp *MelodixHistory) GetHistory(guildID string, sortBy string) ([]HistoryTr
 }
 
 // GetTrackFromHistory retrieves a track from the play history based on its ID and guild.
-func (mp *MelodixHistory) GetTrackFromHistory(guildID string, trackID uint) (db.Track, error) {
+func (h *History) GetTrackFromHistory(guildID string, trackID uint) (db.Track, error) {
 
 	exists, err := db.DoesHistoryExistForGuild(trackID, guildID)
 	if err != nil {
