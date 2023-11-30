@@ -5,6 +5,7 @@ services:
     restart: always
     image: '${ALIAS}-image'
     volumes:
+      - ./data/avatars:/usr/project/assets/avatars
       - ./data/melodix.sqlite3:/usr/project/melodix.db
       - ./data/all-levels.log:/usr/project/logs/all-levels.log
     environment:

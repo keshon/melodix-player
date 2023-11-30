@@ -136,14 +136,11 @@ func getVideoURLFromTitle(title string) (string, error) {
 		return "", err
 	}
 
-	re := regexp.MustCompile(`"url":"/watch\?v=([a-zA-Z0-9_-]+)(?:[^"]*?"list=([a-zA-Z0-9_-]+))?[^"]*`)
+	re := regexp.MustCompile(`"url":"/watch\?v=([a-zA-Z0-9_-]+)(?:\\u0026list=([a-zA-Z0-9_-]+))?[^"]*`)
 	matches := re.FindAllStringSubmatch(string(body), -1)
 	if len(matches) > 0 && len(matches[0]) > 1 {
 		videoID := matches[0][1]
 		listID := matches[0][2]
-		slog.Info(matches)
-		slog.Info(videoID)
-		slog.Info(listID)
 
 		url := "https://www.youtube.com/watch?v=" + videoID
 		if listID != "" {
