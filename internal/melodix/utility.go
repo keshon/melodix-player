@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -183,6 +184,16 @@ func readFileToBase64(imgPath string) (string, error) {
 
 	base64Img := base64.StdEncoding.EncodeToString(img)
 	return fmt.Sprintf("data:%s;base64,%s", http.DetectContentType(img), base64Img), nil
+}
+
+func sanitizeString(input string) string {
+	// Define a regular expression to match unwanted characters
+	re := regexp.MustCompile("[[:^print:]]")
+
+	// Replace unwanted characters with an empty string
+	sanitized := re.ReplaceAllString(input, "")
+
+	return sanitized
 }
 
 func getRandomWaitPhrase() string {
