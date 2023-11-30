@@ -239,7 +239,7 @@ func (r *Rest) registerPlayerRoutes(router *gin.RouterGroup) {
 			return
 		}
 
-		song, err := FetchSongByURL(songURL)
+		song, err := newSongFromURL(songURL)
 		if err != nil {
 			slog.Warnf("Error fetching song by URL: %v", err)
 			return

@@ -2,29 +2,25 @@
 
 # Melodix Discord Player
 
-Melodix is a versatile Discord music bot tailored to manage and play music seamlessly in your server. With a primary focus on offering a smooth music playback experience, Melodix supports multiple Discord servers.
+Melodix is yet another Discord music bot that allows to manage and play music on one or multiple Discord servers.
 
-## Project Overview
+## Features Overview
 
-Melodix aims to be an easy-to-use and versatile Discord music bot. Its key objectives include:
+Melodix aims to be an easy-to-use yet powerful Discord music bot beastie. Its key objectives include:
 
-- Seamlessly playing lengthy tracks.
-- Handling interruptions from sources like YouTube or Discord's gateway.
-- Maintaining a user-friendly interface.
+- Playback single tracks or playlists from Youtube added by title or URL.
+- Handling playback interruptions with auto-resume feature.
+- Exposed Rest API to do various magic tasks outside of Discord commands.
+- Basic walkman functionality: add to queue, play/pause, next and etc.
+- Access the history of previously played tracks with sorting by play counts or duration.
+- Operate across multiple Discord servers via bundled 'guild manager'.
+- Randomly picked avatars to add more spicy.
 
 ![# Playing Example](https://raw.githubusercontent.com/keshon/assets/main/melodix-discord-player/playing.jpg)
 
-## Features
+## Download binary
 
-Melodix includes the following features:
-
-- Play music from YouTube.
-- Pause and resume playback.
-- Skip to the next track.
-- Manage a queue for music playback.
-- Access the history of previously played tracks.
-- Operate across multiple Discord servers.
-- API access for integration.
+Binaries (Windows only) are available at [Release page](https://github.com/keshon/melodix-discord-player/releases).
 
 ## Getting Started
 
@@ -41,11 +37,11 @@ To add Melodix to your Discord server:
 6. Grant Melodix the necessary permissions for it to function correctly.
 7. Click "Authorize" to add Melodix to your server.
 
-Once added, Melodix will be available in your Discord server, ready for music playback and other functionalities.
+Once 'bot' is added proceed to actual bot building.
 
 ### Building Melodix
 
-Melodix is written in the Go language, allowing it to run on a *server* or as a *local* program.
+Melodix is written in Go language, allowing it to run on a *server* or as a *local* program.
 
 **Local Usage**
 There are several scripts provided for building Melodix:
@@ -109,18 +105,30 @@ Melodix provides various routes for different functionalities:
 - `GET /history`: Access the overall history of played tracks.
 - `GET /history/:guild_id`: Fetch the history of played tracks for a specific guild.
 
-## Join the Official Melodix Discord Server
+#### Avatar Routes
 
-Join [official Discord server](https://discord.gg/2rArYVPYfR) to get support, and share your experiences!
+- `GET /avatar`: List available images in avatar folder.
+- `GET /avatar/random`: Fetch random image from avatar folder.
+
+#### Log Routes
+
+- `GET /log`: Show current log.
+- `GET /log/clear`: Clear log.
+- `GET /log/download`: Download log as a file.
+
+## Where to get gently pats
+
+If you have any questions you can ask me in my [Discord server](https://discord.gg/2rArYVPYfR) to get support. Bear in mind there is no community whatsoever — just me.
 
 ## Acknowledgment
 
-Melodix project drew inspiration from [Muzikas](https://github.com/FabijanZulj/Muzikas), a user-friendly Discord bot created by Fabijan Zulj.
+I drew inspiration from [Muzikas](https://github.com/FabijanZulj/Muzikas), a user-friendly Discord bot created by Fabijan Zulj.
+
 The banner images used in this project were sourced from [Freepik](https://www.freepik.com), attributed to contributors [@GarryKillian](https://www.freepik.com/author/garrykillian) and [@rawpixel.com](https://www.freepik.com/author/rawpixel-com).
 
 ## Contribution
 
-While contributions are welcome, please note that this is primarily a one-person project designed as a Discord music player, especially suited for lengthy DnD sessions.
+Ahahahaha.... riiight.
 
 ## License
 
