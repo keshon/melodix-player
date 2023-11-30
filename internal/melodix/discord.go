@@ -130,7 +130,11 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	playlist := createPlaylist(paramType, songsList, d, m)
+	playlist, err := createPlaylist(paramType, songsList, d, m)
+	if err != nil {
+		s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("Error creating playlist: %v", err))
+		return
+	}
 
 	if len(playlist) > 0 {
 		enqueuePlaylist(d, playlist, s, m, enqueueOnly)
@@ -140,12 +144,13 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 }
 
 // createPlaylist creates a playlist of songs based on the parameter type and list of songs.
-func createPlaylist(paramType string, songsList []string, d *Discord, m *discordgo.MessageCreate) []*Song {
+func createPlaylist(paramType string, songsList []string, d *Discord, m *discordgo.MessageCreate) ([]*Song, error) {
 	var playlist []*Song
 
 	for _, param := range songsList {
-		var song *Song
+		var songs []*Song
 		var err error
+		// var isManySongs bool
 		switch paramType {
 		case "id":
 			id, err := strconv.Atoi(param)
@@ -153,28 +158,30 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 				slog.Error("Cannot convert string id to int id")
 				continue
 			}
-			song, err = FetchSongByID(m.GuildID, id)
+			songs, err = FetchSongsByID(m.GuildID, []int{id})
 			if err != nil {
-				slog.Warnf("Error fetching song by history ID: %v", err)
+				slog.Warnf("Error fetching songs by history ID: %v", err)
 			}
 		case "title":
-			song, err = FetchSongByTitle(param)
+			songs, err = FetchSongsByTitle([]string{param})
 			if err != nil {
-				slog.Warnf("Error fetching song by title: %v", err)
+				slog.Warnf("Error fetching songs by title: %v", err)
 			}
 		case "url":
-			song, err = FetchSongByURL(param)
+			songs, err = FetchSongsByURL([]string{param})
 			if err != nil {
-				slog.Warnf("Error fetching song by URL: %v", err)
+				slog.Warnf("Error fetching songs by URL: %v", err)
 			}
 		}
 
-		if song != nil {
-			playlist = append(playlist, song)
+		if err != nil {
+			return nil, err
 		}
+
+		playlist = append(playlist, songs...)
 	}
 
-	return playlist
+	return playlist, nil
 }
 
 // enqueuePlaylist enqueues a playlist of songs in the player's queue.
