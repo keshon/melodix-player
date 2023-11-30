@@ -239,7 +239,8 @@ func (r *Rest) registerPlayerRoutes(router *gin.RouterGroup) {
 			return
 		}
 
-		song, err := newSongFromURL(songURL)
+		youtube := NewYoutube()
+		song, err := youtube.getSpecificSongFromURL(songURL)
 		if err != nil {
 			slog.Warnf("Error fetching song by URL: %v", err)
 			return

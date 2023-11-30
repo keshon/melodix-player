@@ -11,7 +11,8 @@ func TestNewSong(t *testing.T) {
 	url := "https://www.youtube.com/watch?v=4vQ8If7f374"
 
 	// Call NewSong to create a Song instance
-	song, err := newSongFromURL(url)
+	youtube := NewYoutube()
+	song, err := youtube.getSpecificSongFromURL(url)
 
 	// Check for errors
 	assert.NoError(t, err, "Unexpected error during NewSong")
@@ -27,7 +28,8 @@ func TestNewSong_InvalidURL(t *testing.T) {
 	url := "https://www.youtube.com/watch?v=4vQ8If7f374____"
 
 	// Call NewSong with an invalid URL
-	song, err := newSongFromURL(url)
+	youtube := NewYoutube()
+	song, err := youtube.getSpecificSongFromURL(url)
 
 	// Check for expected error
 	assert.Error(t, err, "Expected an error for an invalid URL")

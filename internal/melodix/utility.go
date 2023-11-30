@@ -184,3 +184,65 @@ func readFileToBase64(imgPath string) (string, error) {
 	base64Img := base64.StdEncoding.EncodeToString(img)
 	return fmt.Sprintf("data:%s;base64,%s", http.DetectContentType(img), base64Img), nil
 }
+
+func getRandomWaitPhrase() string {
+	phrases := []string{
+		"Chillax, I'm on it...",
+		"Easy there, turbo...",
+		"Ever heard of fashionably late?",
+		"Hold your horses, we got this...",
+		"Patience, my young padawan...",
+		"I move at my own pace, deal with it...",
+		"Slow and steady wins the race, right?",
+		"Taking my time, just like a fine wine...",
+		"Can't rush perfection, my friend...",
+		"Grab a snack, this might take a minute...",
+		"Tick-tock, but in my own clock...",
+		"Did someone order a chilled response?",
+		"Sit back, relax, and enjoy the show...",
+		"Don't rush me, I'm on island time...",
+		"Mastering the art of fashionably late...",
+		"Patience, grasshopper...",
+		"Hang in there, superstar...",
+		"Hold my server, I got this...",
+		"Data's doing the cha-cha...",
+		"Server's got moves, wait...",
+		"Code's flexing its muscles...",
+		"Binary bits breakdancing...",
+		"Servers tap dancing for you...",
+		"Coding wizardry in progress...",
+		"Request on a magic carpet...",
+		"Cyber monkeys typing furiously...",
+		"Your wish is my command...almost...",
+		"Quantum computing, almost there...",
+		"Data sprinting to your screen...",
+		"Virtual acrobatics in motion...",
+		"Code juggling like a boss...",
+		"Bytes breakdancing in the server...",
+		"Request breakdancing through firewalls...",
+		"Code tap dancing its way...",
+		"Server's telling knock-knock jokes...",
+		"Request on a virtual rollercoaster...",
+		"Algorithms breakdancing for you...",
+		"Ninja moves on your request...",
+		"Coffee break while we work...",
+		"Request moonwalking to completion...",
+		"Wild times in the server room...",
+		"Sit back, enjoy the show...",
+		"Sloth could be faster, but we're on it...",
+		"Grab popcorn, it's interesting...",
+		"Your request is the VIP...",
+		"Put on a seatbelt, bumpy ride...",
+		"Request on a data rollercoaster...",
+		"Cha-cha with our servers...",
+		"Counting to infinity... almost done...",
+		"Brace yourself, request is dropping...",
+		"Working harder than a cat...",
+		"Fairy dust, request complete...",
+		"Hold on tight, breakdancing to you...",
+	}
+
+	index := rand.Intn(len(phrases))
+
+	return phrases[index]
+}

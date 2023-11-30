@@ -130,6 +130,18 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
+	embedStr := getRandomWaitPhrase()
+	embedMsg := embed.NewEmbed().
+		SetColor(0x9f00d4).
+		SetFooter(version.AppFullName).
+		SetDescription(embedStr).
+		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
+
+	pleaseWaitMessage, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+	if err != nil {
+		slog.Warnf("Error sending 'please wait' message: %v", err)
+	}
+
 	playlist, err := createPlaylist(paramType, songsList, d, m)
 	if err != nil {
 		s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("Error creating playlist: %v", err))
@@ -137,7 +149,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 
 	if len(playlist) > 0 {
-		enqueuePlaylist(d, playlist, s, m, enqueueOnly)
+		enqueuePlaylist(d, playlist, s, m, enqueueOnly, pleaseWaitMessage)
 	} else {
 		s.ChannelMessageSend(m.Message.ChannelID, "No songs to add to the queue.")
 	}
@@ -147,6 +159,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 func createPlaylist(paramType string, songsList []string, d *Discord, m *discordgo.MessageCreate) ([]*Song, error) {
 	var playlist []*Song
 
+	youtube := NewYoutube()
 	for _, param := range songsList {
 		var songs []*Song
 		var err error
@@ -158,17 +171,17 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 				slog.Error("Cannot convert string id to int id")
 				continue
 			}
-			songs, err = FetchSongsByID(m.GuildID, []int{id})
+			songs, err = youtube.FetchSongsByIDs(m.GuildID, []int{id})
 			if err != nil {
 				slog.Warnf("Error fetching songs by history ID: %v", err)
 			}
 		case "title":
-			songs, err = FetchSongsByTitle([]string{param})
+			songs, err = youtube.FetchSongsByTitle(param)
 			if err != nil {
 				slog.Warnf("Error fetching songs by title: %v", err)
 			}
 		case "url":
-			songs, err = FetchSongsByURL([]string{param})
+			songs, err = youtube.FetchSongsByURLs([]string{param})
 			if err != nil {
 				slog.Warnf("Error fetching songs by URL: %v", err)
 			}
@@ -185,7 +198,7 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 }
 
 // enqueuePlaylist enqueues a playlist of songs in the player's queue.
-func enqueuePlaylist(d *Discord, playlist []*Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool) {
+func enqueuePlaylist(d *Discord, playlist []*Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, pleaseWaitMessage *discordgo.Message) {
 	c, _ := s.State.Channel(m.Message.ChannelID)
 	g, _ := s.State.Guild(c.GuildID)
 
@@ -208,7 +221,7 @@ func enqueuePlaylist(d *Discord, playlist []*Song, s *discordgo.Session, m *disc
 					d.Player.Enqueue(song)
 				}
 
-				embedsg := embed.NewEmbed().
+				embedMsg := embed.NewEmbed().
 					SetColor(0x9f00d4).
 					SetFooter(version.AppFullName)
 
@@ -217,8 +230,8 @@ func enqueuePlaylist(d *Discord, playlist []*Song, s *discordgo.Session, m *disc
 					playlistStr = fmt.Sprintf("%v%d. [%v](%v)\n", playlistStr, i+1, song.Name, song.UserURL)
 				}
 
-				embedsg.SetDescription(playlistStr)
-				message, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg.MessageEmbed)
+				embedMsg.SetDescription(playlistStr)
+				_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg.MessageEmbed)
 				if err != nil {
 					slog.Errorf("Error sending message: %v", err.Error())
 					return
@@ -229,7 +242,7 @@ func enqueuePlaylist(d *Discord, playlist []*Song, s *discordgo.Session, m *disc
 						for {
 							if d.Player.GetCurrentStatus() == StatusPlaying {
 
-								embedsg := embed.NewEmbed().
+								embedMsg := embed.NewEmbed().
 									SetColor(0x9f00d4).
 									SetFooter(version.AppFullName)
 
@@ -238,16 +251,16 @@ func enqueuePlaylist(d *Discord, playlist []*Song, s *discordgo.Session, m *disc
 									playlistStr = fmt.Sprintf("%v%d. [%v](%v)\n", playlistStr, i+1, song.Name, song.UserURL)
 									if i == 0 {
 										playlistStr = fmt.Sprintf("%v <%v>\n\n", playlistStr, d.Player.GetCurrentStatus().String())
-										embedsg.SetThumbnail(song.Thumbnail.URL)
+										embedMsg.SetThumbnail(song.Thumbnail.URL)
 										if len(playlist) > 1 {
 											playlistStr += " **Next in queue:**\n"
 										}
 									}
 								}
 
-								embedsg.SetDescription(playlistStr)
+								embedMsg.SetDescription(playlistStr)
 
-								_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, message.ID, embedsg.MessageEmbed)
+								_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg.MessageEmbed)
 								if err != nil {
 									slog.Warnf("Error updating message: %v", err)
 								}
@@ -274,10 +287,10 @@ func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageC
 	}
 
 	embedStr := "⏸ **Pause**"
-	embedsg := embed.NewEmbed().
+	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg)
+	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	d.Player.Pause()
 }
 
@@ -304,20 +317,20 @@ func (d *Discord) handleResumeCommand(s *discordgo.Session, m *discordgo.Message
 	}
 
 	embedStr := "▶️ **Play (or resume)**"
-	embedsg := embed.NewEmbed().
+	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg)
+	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	d.Player.Unpause()
 }
 
 // handleStopCommand handles the stop command for Discord.
 func (d *Discord) handleStopCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	embedStr := "⏹ **Stop all activity**"
-	embedsg := embed.NewEmbed().
+	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg)
+	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	d.Player.ClearQueue()
 	d.Player.Stop()
 }
@@ -327,10 +340,10 @@ func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCr
 	d.changeAvatar(s)
 
 	embedStr := "⏩ **Skip track**"
-	embedsg := embed.NewEmbed().
+	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg)
+	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 
 	d.Player.Skip()
 }
@@ -339,7 +352,7 @@ func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCr
 func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
 
-	embedsg := embed.NewEmbed().
+	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetFooter(version.AppFullName)
 
@@ -349,8 +362,8 @@ func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.Mess
 
 	// Check if there's a current song or the playlist is not empty
 	if currentSong == nil && (len(playlist) == 0) {
-		embedsg.SetDescription("The queue is empty or no current song is playing.")
-		s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg.MessageEmbed)
+		embedMsg.SetDescription("The queue is empty or no current song is playing.")
+		s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg.MessageEmbed)
 		return
 	}
 
@@ -376,15 +389,15 @@ func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.Mess
 		playlistStr = fmt.Sprintf("%v%d. [%v](%v)\n", playlistStr, i+1, song.Name, song.UserURL)
 		if i == 0 {
 			playlistStr = fmt.Sprintf("%v <%v>\n\n", playlistStr, d.Player.GetCurrentStatus().String())
-			embedsg.SetThumbnail(song.Thumbnail.URL)
+			embedMsg.SetThumbnail(song.Thumbnail.URL)
 			if len(newPlaylist) > 1 {
 				playlistStr += " **Next in queue:**\n"
 			}
 		}
 	}
 
-	embedsg.SetDescription(playlistStr)
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg.MessageEmbed)
+	embedMsg.SetDescription(playlistStr)
+	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg.MessageEmbed)
 }
 
 // handleHelpCommand handles the help command for Discord.
@@ -405,7 +418,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	register := fmt.Sprintf("**Enable commands listening**: `%vregister`\n", d.prefix)
 	unregister := fmt.Sprintf("**Disable commands listening**: `%vunregister`", d.prefix)
 
-	embedsg := embed.NewEmbed().
+	embedMsg := embed.NewEmbed().
 		SetTitle("ℹ️ Melodix — Command Usage").
 		SetDescription("Some commands are aliased for shortness.\n`[title]` - track name\n`[url]` - youtube link\n`[id]` - track id from *History*.").
 		AddField("", "*Playback*\n"+play+skip+pause).
@@ -420,7 +433,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 		SetThumbnail("https://melodix-bot.keshon.ru/avatar/random"). // TODO: move out to config .env file
 		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
 
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg)
+	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 }
 
 // handleHistoryCommand handles the history command for Discord.
@@ -445,7 +458,7 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 		slog.Warn("No history table found")
 	}
 
-	embedsg := embed.NewEmbed().
+	embedMsg := embed.NewEmbed().
 		SetDescription(fmt.Sprintf("⏳ **History %v**", title)).
 		SetColor(0x9f00d4).
 		SetFooter(version.AppFullName)
@@ -454,10 +467,10 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 		duration := formatDuration(elem.History.Duration)
 		fieldContent := fmt.Sprintf("```id: %d```    ```count: %d```    ```duration: %v```", elem.History.TrackID, elem.History.PlayCount, duration)
 
-		embedsg.AddField(fieldContent, fmt.Sprintf("[%v](%v)", elem.Track.Name, elem.Track.URL))
+		embedMsg.AddField(fieldContent, fmt.Sprintf("[%v](%v)", elem.Track.Name, elem.Track.URL))
 	}
 
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg.MessageEmbed)
+	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg.MessageEmbed)
 }
 
 // handleAboutCommand handles the about command for Discord.
@@ -468,7 +481,7 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 
 	embedStr := fmt.Sprintf("📻 **About %v**\n\n%v", version.AppName, content)
 
-	embedsg := embed.NewEmbed().
+	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		AddField("```"+version.BuildDate+"```", "Build date").
 		AddField("```"+version.GoVersion+"```", "Go version").
@@ -477,7 +490,7 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 		SetImage("https://melodix-bot.keshon.ru/avatar/random"). // TODO: move out to config .env file
 		SetColor(0x9f00d4).SetFooter(version.AppFullName + " <" + d.Player.GetCurrentStatus().String() + ">").MessageEmbed
 
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedsg)
+	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 }
 
 // changeAvatar changes bot avatar with randomly picked avatar image within allowed rate limit
