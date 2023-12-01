@@ -6,6 +6,7 @@ import (
 	"app/internal/manager"
 	"app/internal/melodix"
 	"app/internal/version"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -72,7 +73,7 @@ func main() {
 	defer dg.Close()
 
 	if config.RestEnabled {
-		startRestServer(config.RestGinRelease)
+		startRestServer(config.RestGinRelease, config.RestHostname)
 	}
 
 	slog.Infof("%v is now running. Press Ctrl+C to exit", version.AppName)
@@ -106,7 +107,7 @@ func startBotInstances(session *discordgo.Session, guildID string) {
 	botInstances[guildID].Melodix.Start(guildID)
 }
 
-func startRestServer(isReleaseMode bool) {
+func startRestServer(isReleaseMode bool, hostname string) {
 	if isReleaseMode {
 		gin.SetMode("release")
 	}
@@ -117,9 +118,21 @@ func startRestServer(isReleaseMode bool) {
 	restAPI.Start(router)
 
 	go func() {
-		port := "8080" // TODO: move out port number to .env file
-		slog.Infof("REST API server started on port %v\n", port)
-		if err := router.Run(":" + port); err != nil {
+		// parse hostname var - if it has port - use it or fallback to 8080
+		host, port, err := net.SplitHostPort(hostname)
+		if err != nil {
+			// If there's an error, assume the entire input is the host (without port)
+			host = hostname
+			port = "8080"
+		}
+
+		// If hostname is empty, set it to the default port (8080)
+		if host == "" {
+			host = "localhost"
+		}
+
+		slog.Infof("REST API server started on %s:%s\n", host, port)
+		if err := router.Run(net.JoinHostPort(host, port)); err != nil {
 			slog.Fatalf("Error starting REST API server: %v", err)
 		}
 	}()

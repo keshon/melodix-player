@@ -493,9 +493,17 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
 
-	content := version.AppName + " is a simple music bot that allows you to play music in voice channels on a Discord server."
+	config, err := config.NewConfig()
+	if err != nil {
+		slog.Fatalf("Error loading config: %v", err)
+	}
 
-	embedStr := fmt.Sprintf("📻 **About %v**\n\n%v", version.AppName, content)
+	avatarUrl := inferProtocolByPort(config.RestHostname, 443) + config.RestHostname + "/avatar/random?" + fmt.Sprint(time.Now().UnixNano())
+
+	title := getRandomAboutTitlePhrase()
+	content := getRandomAboutDescriptionPhrase()
+
+	embedStr := fmt.Sprintf("**%v**\n\n%v", title, content)
 
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
@@ -503,7 +511,7 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 		AddField("```"+version.GoVersion+"```", "Go version").
 		AddField("```Created by Innokentiy Sokolov```", "[Linkedin](https://www.linkedin.com/in/keshon), [GitHub](https://github.com/keshon), [Homepage](https://keshon.ru)").
 		InlineAllFields().
-		SetImage("https://melodix-bot.keshon.ru/avatar/random"). // TODO: move out to config .env file
+		SetImage(avatarUrl).
 		SetColor(0x9f00d4).SetFooter(version.AppFullName + " <" + d.Player.GetCurrentStatus().String() + ">").MessageEmbed
 
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
