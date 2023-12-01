@@ -16,6 +16,7 @@ type Config struct {
 	DiscordBotToken            string
 	RestEnabled                bool
 	RestGinRelease             bool
+	RestHostname               string
 	DcaFrameDuration           int
 	DcaBitrate                 int
 	DcaPacketLoss              int
@@ -48,6 +49,7 @@ func NewConfig() (*Config, error) {
 		DiscordBotToken:            os.Getenv("DISCORD_BOT_TOKEN"),
 		RestEnabled:                getenvAsBool("REST_ENABLED"),
 		RestGinRelease:             getenvAsBool("REST_GIN_RELEASE"),
+		RestHostname:               os.Getenv("REST_HOSTNAME"),
 		DcaFrameDuration:           getenvAsInt("DCA_FRAME_DURATION"),
 		DcaBitrate:                 getenvAsInt("DCA_BITRATE"),
 		DcaPacketLoss:              getenvAsInt("DCA_PACKET_LOSS"),
@@ -76,6 +78,7 @@ func (c *Config) String() string {
 		"DiscordBotToken":            c.DiscordBotToken,
 		"RestEnabled":                c.RestEnabled,
 		"RestGinRelease":             c.RestGinRelease,
+		"RestHostname":               c.RestHostname,
 		"DcaFrameDuration":           c.DcaFrameDuration,
 		"DcaBitrate":                 c.DcaBitrate,
 		"DcaPacketLoss":              c.DcaPacketLoss,
@@ -110,6 +113,7 @@ func validateMandatoryConfig() error {
 	// Extra overlay to ensure we have all necessary values even if they have default values (e.g. ffmpeg has own)
 	// ignore:
 	// - REST_GIN_RELEASE
+	// - REST_HOSTNAME
 	// - DCA_FFMPEG_BINARY_PATH
 
 	mandatoryKeys := []string{
