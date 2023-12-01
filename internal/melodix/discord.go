@@ -133,9 +133,8 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	embedStr := getRandomWaitPhrase()
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
-		SetFooter(version.AppFullName).
 		SetDescription(embedStr).
-		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
+		SetColor(0x9f00d4).MessageEmbed
 
 	pleaseWaitMessage, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	if err != nil {
@@ -289,7 +288,7 @@ func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageC
 	embedStr := "⏸ **Pause**"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
-		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
+		SetColor(0x9f00d4).MessageEmbed
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	d.Player.Pause()
 }
@@ -319,7 +318,7 @@ func (d *Discord) handleResumeCommand(s *discordgo.Session, m *discordgo.Message
 	embedStr := "▶️ **Play (or resume)**"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
-		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
+		SetColor(0x9f00d4).MessageEmbed
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	d.Player.Unpause()
 }
@@ -329,7 +328,7 @@ func (d *Discord) handleStopCommand(s *discordgo.Session, m *discordgo.MessageCr
 	embedStr := "⏹ **Stop all activity**"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
-		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
+		SetColor(0x9f00d4).MessageEmbed
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	d.Player.ClearQueue()
 	d.Player.Stop()
@@ -342,7 +341,7 @@ func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCr
 	embedStr := "⏩ **Skip track**"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
-		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
+		SetColor(0x9f00d4).MessageEmbed
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 
 	d.Player.Skip()
@@ -458,19 +457,36 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 		slog.Warn("No history table found")
 	}
 
+	description := fmt.Sprintf("⏳ **History %v**", title)
+	descriptionLength := len(description)
+
 	embedMsg := embed.NewEmbed().
-		SetDescription(fmt.Sprintf("⏳ **History %v**", title)).
 		SetColor(0x9f00d4).
 		SetFooter(version.AppFullName)
+
+	footerLength := len(version.AppFullName)
 
 	for _, elem := range list {
 		duration := formatDuration(elem.History.Duration)
 		fieldContent := fmt.Sprintf("```id: %d```    ```count: %d```    ```duration: %v```", elem.History.TrackID, elem.History.PlayCount, duration)
+		fieldContentLength := len(fieldContent)
+		nameLength := len(elem.Track.Name)
+		urlLength := len(elem.Track.URL)
 
+		// Check if adding the field exceeds the embed limit
+		if descriptionLength+footerLength+len(embedMsg.Fields)+fieldContentLength+nameLength+urlLength > 4000 {
+			break
+		}
+
+		// Add the field and update the length counter
 		embedMsg.AddField(fieldContent, fmt.Sprintf("[%v](%v)", elem.Track.Name, elem.Track.URL))
+		descriptionLength += fieldContentLength + nameLength
 	}
-
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg.MessageEmbed)
+	fmt.Println(descriptionLength)
+	_, err = s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg.MessageEmbed)
+	if err != nil {
+		slog.Warnf("Error sending history message: %v", err)
+	}
 }
 
 // handleAboutCommand handles the about command for Discord.
