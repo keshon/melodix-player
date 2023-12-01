@@ -39,7 +39,7 @@ func main() {
 
 	slog.Info("Config loaded:\n" + config.String())
 
-	if _, err := db.InitDB("./melodix.sqlite3"); err != nil {
+	if _, err := db.InitDB("./melodix.db"); err != nil {
 		slog.Fatalf("Error initializing the database: %v", err)
 		os.Exit(0)
 	}
