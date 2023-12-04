@@ -45,7 +45,7 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 
 func GetRandomAboutTitlePhrase() string {
 	phrases := []string{
-		"Hello there!",
+		"Well, hello there!",
 		"Who do we have here?",
 		"Brace yourselves for Melodix!",
 		"Get ready to laugh and groove!",
