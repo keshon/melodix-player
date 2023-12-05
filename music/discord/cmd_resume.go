@@ -10,6 +10,10 @@ import (
 func (d *Discord) handleResumeCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
 
+	if d.Player.GetCurrentSong() == nil {
+		return
+	}
+
 	c, _ := s.State.Channel(m.Message.ChannelID)
 	g, _ := s.State.Guild(c.GuildID)
 

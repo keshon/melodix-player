@@ -23,8 +23,22 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	embedStr := GetRandomWaitPhrase()
+	embedStr := GetVoiceChannelPhrase()
 	embedMsg := embed.NewEmbed().
+		SetColor(0x9f00d4).
+		SetDescription(embedStr).
+		SetColor(0x9f00d4).MessageEmbed
+
+	c, _ := s.State.Channel(m.Message.ChannelID)
+	g, _ := s.State.Guild(c.GuildID)
+
+	if len(g.VoiceStates) == 0 {
+		s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+		return
+	}
+
+	embedStr = GetRandomWaitPhrase()
+	embedMsg = embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
@@ -168,6 +182,48 @@ func enqueuePlaylist(d *Discord, playlist []*player.Song, s *discordgo.Session, 
 			}
 		}
 	}
+}
+
+func GetVoiceChannelPhrase() string {
+	phrases := []string{
+		"Hop into a voice channel, I'll be waiting...",
+		"Can't serenade the silence, join a voice channel...",
+		"Music needs an audience, join a voice channel first...",
+		"Voice channels are where the party's at, join in...",
+		"Can't play tunes in thin air, join a voice channel...",
+		"Get ready to jam, but you gotta be in a voice channel...",
+		"Time to turn up the volume, get into a voice channel...",
+		"No silent disco here, join a voice channel for the beats...",
+		"Let's make some noise, hop into a voice channel...",
+		"Voice channels are the concert halls of Discord, join one...",
+		"Music is meant to be heard, join a voice channel and let's roll...",
+		"I'm ready to play, but you gotta be in a voice channel...",
+		"Silent parties are no fun, join a voice channel and let's dance...",
+		"Get your vocal cords ready, join a voice channel for the tunes...",
+		"Step into the arena of sound, join a voice channel now...",
+		"I can't play music in thin air, join a voice channel first...",
+		"Turn on the mic, turn up the music, join a voice channel...",
+		"Grab a seat in the virtual amphitheater, join a voice channel...",
+		"Join the audio adventure, get into a voice channel...",
+		"Where words fail, music speaks – join a voice channel...",
+		"The party is where the voices are, join a channel to start...",
+		"Unlock the music vault by entering a voice channel...",
+		"Can't serenade empty spaces, join a voice channel...",
+		"Voice channels are the DJ booths of Discord, join the party...",
+		"Music's calling, but it needs a voice channel to answer...",
+		"Prepare for an audio journey, hop into a voice channel...",
+		"Music's knocking on your eardrums, open the door with a voice channel...",
+		"Ready to broadcast tunes, but you gotta be in a voice channel...",
+		"Silence isn't golden when it comes to music – join a voice channel...",
+		"Get cozy in a voice channel, the music's about to begin...",
+		"Unlock the melody, step into a voice channel...",
+		"Join the sonic revolution – get into a voice channel...",
+		"The stage is set, but you need to step into a voice channel...",
+	}
+
+	index := rand.Intn(len(phrases))
+
+	return phrases[index]
 }
 
 func GetRandomWaitPhrase() string {

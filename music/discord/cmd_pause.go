@@ -9,7 +9,7 @@ import (
 func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
 
-	if d.Player.GetCurrentSong().ID == "" {
+	if d.Player.GetCurrentSong() == nil {
 		return
 	}
 
