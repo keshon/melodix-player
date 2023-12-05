@@ -270,7 +270,7 @@ func (p *Player) Play(startAt int, song *Song) {
 	p.CurrentStatus = StatusPlaying
 
 	h := history.NewHistory()
-	historySong := &history.Song{Name: p.CurrentSong.Name, UserURL: p.CurrentSong.Name, DownloadURL: p.CurrentSong.DownloadURL, Duration: p.CurrentSong.Duration, ID: p.CurrentSong.ID, Thumbnail: history.Thumbnail(p.CurrentSong.Thumbnail)}
+	historySong := &history.Song{Name: p.CurrentSong.Name, UserURL: p.CurrentSong.UserURL, DownloadURL: p.CurrentSong.DownloadURL, Duration: p.CurrentSong.Duration, ID: p.CurrentSong.ID, Thumbnail: history.Thumbnail(p.CurrentSong.Thumbnail)}
 	h.AddTrackToHistory(p.VoiceConnection.GuildID, historySong)
 
 	interval := 2 * time.Second
@@ -311,11 +311,11 @@ func (p *Player) Play(startAt int, song *Song) {
 					return
 				}
 			}
-		}
 
-		err = h.AddPlaybackCountStats(p.VoiceConnection.GuildID, p.CurrentSong.ID)
-		if err != nil {
-			slog.Warnf("Error adding stats count stats to history: %v", err)
+			err = h.AddPlaybackCountStats(p.VoiceConnection.GuildID, p.CurrentSong.ID)
+			if err != nil {
+				slog.Warnf("Error adding stats count stats to history: %v", err)
+			}
 		}
 
 		if err != nil && err != io.EOF {
