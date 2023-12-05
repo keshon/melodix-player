@@ -77,7 +77,7 @@ func (y *Youtube) getAnySongsFromURL(url string) ([]*player.Song, error) {
 			go func(videoID string) {
 				defer wg.Done()
 
-				videoURL := fmt.Sprintf("https://www.kkdai_youtube.com/watch?v=%s", videoID)
+				videoURL := fmt.Sprintf("https://www.youtube.com/watch?v=%s", videoID)
 				song, err := y.GetSpecificSongFromURL(videoURL)
 				if err != nil {
 					// Handle the error, e.g., log it
@@ -127,7 +127,7 @@ func (y *Youtube) extractPlaylistID(url string) string {
 
 // getVideoURLFromTitle retrieves the YouTube video URL from the given title.
 func (y *Youtube) getVideoURLFromTitle(title string) (string, error) {
-	searchURL := fmt.Sprintf("https://www.kkdai_youtube.com/results?search_query=%v", strings.ReplaceAll(title, " ", "+"))
+	searchURL := fmt.Sprintf("https://www.youtube.com/results?search_query=%v", strings.ReplaceAll(title, " ", "+"))
 
 	resp, err := http.Get(searchURL)
 	if err != nil {
@@ -150,7 +150,7 @@ func (y *Youtube) getVideoURLFromTitle(title string) (string, error) {
 		videoID := matches[0][1]
 		listID := matches[0][2]
 
-		url := "https://www.kkdai_youtube.com/watch?v=" + videoID
+		url := "https://www.youtube.com/watch?v=" + videoID
 		if listID != "" {
 			url += "&list=" + listID
 		}
@@ -185,7 +185,7 @@ func (y *Youtube) FetchSongsByIDs(guildID string, ids []int) ([]*player.Song, er
 	return songs, nil
 }
 
-// FetchSongsByTitle fetches songs by their titles from kkdai_youtube.
+// FetchSongsByTitle fetches songs by their titles from youtube.
 func (y *Youtube) FetchSongsByTitles(titles []string) ([]*player.Song, error) {
 	var songs []*player.Song
 
@@ -204,7 +204,7 @@ func (y *Youtube) FetchSongsByTitles(titles []string) ([]*player.Song, error) {
 	return songs, nil
 }
 
-// FetchSongsByTitle fetches song by its title from kkdai_youtube. Or songs if the initial song was part of playlist
+// FetchSongsByTitle fetches song by its title from youtube. Or songs if the initial song was part of playlist
 func (y *Youtube) FetchSongsByTitle(title string) ([]*player.Song, error) {
 	var songs []*player.Song
 

@@ -141,12 +141,18 @@ func (p *Player) Dequeue() *Song {
 // ClearQueue clears the song queue.
 func (p *Player) ClearQueue() {
 	slog.Info("Clearing song queue")
+
+	p.Lock()
+	defer p.Unlock()
+
 	p.SongQueue = make([]*Song, 0)
 }
 
 // Stop stops audio playback and disconnects from the voice channel.
 func (p *Player) Stop() {
 	slog.Info("Stopping audio playback and disconnecting from voice channel")
+
+	p.ClearQueue()
 
 	p.CurrentStatus = StatusResting
 

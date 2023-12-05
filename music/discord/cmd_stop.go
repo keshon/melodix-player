@@ -12,6 +12,5 @@ func (d *Discord) handleStopCommand(s *discordgo.Session, m *discordgo.MessageCr
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
-	d.Player.ClearQueue()
 	d.Player.Stop()
 }
