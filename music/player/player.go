@@ -53,6 +53,17 @@ func (status Status) String() string {
 	return statuses[status]
 }
 
+func (status Status) StringEmoji() string {
+	statuses := map[Status]string{
+		StatusResting: "⏹️",
+		StatusPlaying: "▶️",
+		StatusPaused:  "⏸",
+		StatusError:   "⚠️",
+	}
+
+	return statuses[status]
+}
+
 // Player manages audio playback and song queue.
 type Player struct {
 	sync.Mutex

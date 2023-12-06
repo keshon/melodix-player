@@ -3,6 +3,7 @@ package discord
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	embed "github.com/Clinet/discordgo-embed"
@@ -23,11 +24,18 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 		slog.Fatalf("Error loading config: %v", err)
 	}
 
-	avatarUrl := utils.InferProtocolByPort(config.RestHostname, 443) + config.RestHostname + "/avatar/random?" + fmt.Sprint(time.Now().UnixNano())
+	var hostname string
+	if os.Getenv("HOST") == "" {
+		hostname = config.RestHostname
+	} else {
+		hostname = os.Getenv("HOST") // from docker environment
+	}
+
+	avatarUrl := utils.InferProtocolByPort(hostname, 443) + hostname + "/avatar/random?" + fmt.Sprint(time.Now().UnixNano())
 	slog.Info(avatarUrl)
 
-	title := GetRandomAboutTitlePhrase()
-	content := GetRandomAboutDescriptionPhrase()
+	title := getRandomAboutTitlePhrase()
+	content := getRandomAboutDescriptionPhrase()
 
 	embedStr := fmt.Sprintf("**%v**\n\n%v", title, content)
 
@@ -43,7 +51,7 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 }
 
-func GetRandomAboutTitlePhrase() string {
+func getRandomAboutTitlePhrase() string {
 	phrases := []string{
 		"Well, hello there!",
 		"Who do we have here?",
@@ -65,7 +73,7 @@ func GetRandomAboutTitlePhrase() string {
 	return phrases[index]
 }
 
-func GetRandomAboutDescriptionPhrase() string {
+func getRandomAboutDescriptionPhrase() string {
 	phrases := []string{
 		"🎶 The Discord DJ That Won't Take Requests From Your In-Laws! 🔊 Crank up the tunes and drown out the chaos. No commercials, no cover charges—just pure, unfiltered beats. Because when life hands you a mic, you drop it with Melodix! 🎤🎉 #MelodixMadness #NoRequestsAllowed",
 		"🎵 Groovy Bot: Where Beats Meet Banter! 🤖 Tune in for the ultimate audio fiesta. Tracks that hit harder than Monday mornings and a vibe that won't quit. Request, rewind, and revel in the groove. Life's a party; let's make it legendary! 🚀🕺 #GroovyBot #UnleashTheBeats",

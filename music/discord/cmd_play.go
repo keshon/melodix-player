@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -23,7 +24,8 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	embedStr := GetVoiceChannelPhrase()
+	// Join voice channel message
+	embedStr := getVoiceChannelPhrase()
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).
@@ -37,7 +39,8 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	embedStr = GetRandomWaitPhrase()
+	// Wait message
+	embedStr = getRandomWaitPhrase()
 	embedMsg = embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).
@@ -48,16 +51,23 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		slog.Warnf("Error sending 'please wait' message: %v", err)
 	}
 
+	// Fill-in playlist
 	playlist, err := createPlaylist(paramType, songsList, d, m)
 	if err != nil {
 		s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("Error creating playlist: %v", err))
 		return
 	}
 
-	if len(playlist) > 0 {
-		enqueuePlaylist(d, playlist, s, m, enqueueOnly, pleaseWaitMessage)
-	} else {
-		s.ChannelMessageSend(m.Message.ChannelID, "No songs to add to the queue.")
+	if len(playlist) == 0 {
+		s.ChannelMessageSend(m.Message.ChannelID, "No songs to enqueue.")
+		return
+	}
+
+	// Enqueue playlist to the player
+	err = enqueuePlaylistV2(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
+	if err != nil {
+		s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("Error enqueuing playlist: %v", err))
+		return
 	}
 }
 
@@ -103,122 +113,122 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 	return playlist, nil
 }
 
-// enqueuePlaylist enqueues a playlist of songs in the player's queue.
-func enqueuePlaylist(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, pleaseWaitMessage *discordgo.Message) {
-	c, _ := s.State.Channel(m.Message.ChannelID)
-	g, _ := s.State.Guild(c.GuildID)
+func enqueuePlaylistV2(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
+	channel, err := s.State.Channel(m.Message.ChannelID)
+	if err != nil {
+		return err
+	}
 
-	for _, vs := range g.VoiceStates {
-		if vs.UserID == m.Message.Author.ID {
-			if d.Player.GetVoiceConnection() == nil {
-				conn, err := d.Session.ChannelVoiceJoin(c.GuildID, vs.ChannelID, false, true)
-				if err != nil {
-					slog.Errorf("Error connecting to voice channel: %v", err.Error())
-					s.ChannelMessageSend(m.Message.ChannelID, "Error connecting to voice channel")
-					return
+	guild, err := s.State.Guild(channel.GuildID)
+	if err != nil {
+		return err
+	}
+
+	vs, found := findUserVoiceState(m.Message.Author.ID, guild.VoiceStates)
+	if !found {
+		return errors.New("user not found in voice channel")
+	}
+
+	if d.Player.GetVoiceConnection() == nil {
+		conn, err := d.Session.ChannelVoiceJoin(channel.GuildID, vs.ChannelID, false, true)
+		if err != nil {
+			slog.Errorf("Error connecting to voice channel: %v", err.Error())
+			s.ChannelMessageSend(m.Message.ChannelID, "Error connecting to voice channel")
+			return err
+		}
+		d.Player.SetVoiceConnection(conn)
+		conn.LogLevel = discordgo.LogWarning
+	}
+
+	// Enqueue songs
+	for _, song := range playlist {
+		d.Player.Enqueue(song)
+	}
+
+	// Update playlist message
+	if err := updatePlaylistMessage(s, m.Message.ChannelID, prevMessageID, playlist); err != nil {
+		return err
+	}
+
+	// Start playing if not in enqueue-only mode
+	if !enqueueOnly && d.Player.GetCurrentStatus() != player.StatusPlaying {
+		go updatePlayingStatus(d, s, m.Message.ChannelID, prevMessageID, playlist)
+		d.Player.Play(0, nil)
+	}
+
+	return nil
+}
+
+func updatePlaylistMessage(s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song) error {
+	embedMsg := embed.NewEmbed().
+		SetColor(0x9f00d4).
+		SetFooter(version.AppFullName)
+
+	playlistStr := "🆕 **Added to queue**\n\n"
+	for _, song := range playlist {
+		playlistStr = fmt.Sprintf("%v- [%v](%v)\n", playlistStr, song.Name, song.UserURL)
+	}
+
+	embedMsg.SetDescription(playlistStr)
+
+	_, err := s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
+	if err != nil {
+		slog.Errorf("Error updating playlist message: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func updatePlayingStatus(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song) {
+	for {
+		// Check if the player is in the playing status
+		if d.Player.GetCurrentStatus() == player.StatusPlaying {
+			embedMsg := embed.NewEmbed().
+				SetColor(0x9f00d4).
+				SetFooter(version.AppFullName)
+
+			statusTitle := fmt.Sprintf("%v %v", d.Player.GetCurrentStatus().StringEmoji(), d.Player.GetCurrentStatus().String())
+			nextTitle := "📑 Next"
+			playlistContent := statusTitle + "\n"
+
+			for i, song := range playlist {
+				playlistContent = fmt.Sprintf("%v- [%v](%v)\n", playlistContent, song.Name, song.UserURL)
+				if i == 0 {
+					playlistContent = fmt.Sprintf("%v \n\n", playlistContent)
+					embedMsg.SetThumbnail(song.Thumbnail.URL)
+					if len(playlist) > 1 {
+						playlistContent += nextTitle + "\n"
+					}
 				}
-				d.Player.SetVoiceConnection(conn)
-				conn.LogLevel = discordgo.LogWarning
 			}
 
-			if len(playlist) > 0 {
+			embedMsg.SetDescription(playlistContent)
 
-				for _, song := range playlist {
-					d.Player.Enqueue(song)
-				}
-
-				embedMsg := embed.NewEmbed().
-					SetColor(0x9f00d4).
-					SetFooter(version.AppFullName)
-
-				playlistStr := "🆕⁬ **Added to queue**\n\n"
-				for i, song := range playlist {
-					playlistStr = fmt.Sprintf("%v%d. [%v](%v)\n", playlistStr, i+1, song.Name, song.UserURL)
-				}
-
-				embedMsg.SetDescription(playlistStr)
-				_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg.MessageEmbed)
-				if err != nil {
-					slog.Errorf("Error sending message: %v", err.Error())
-					return
-				}
-
-				if !enqueueOnly && d.Player.GetCurrentStatus() != player.StatusPlaying {
-					go func() {
-						for {
-							if d.Player.GetCurrentStatus() == player.StatusPlaying {
-
-								embedMsg := embed.NewEmbed().
-									SetColor(0x9f00d4).
-									SetFooter(version.AppFullName)
-
-								playlistStr := "▶️ **Playing**\n\n"
-								for i, song := range playlist {
-									playlistStr = fmt.Sprintf("%v%d. [%v](%v)\n", playlistStr, i+1, song.Name, song.UserURL)
-									if i == 0 {
-										playlistStr = fmt.Sprintf("%v <%v>\n\n", playlistStr, d.Player.GetCurrentStatus().String())
-										embedMsg.SetThumbnail(song.Thumbnail.URL)
-										if len(playlist) > 1 {
-											playlistStr += " **Next in queue:**\n"
-										}
-									}
-								}
-
-								embedMsg.SetDescription(playlistStr)
-
-								_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg.MessageEmbed)
-								if err != nil {
-									slog.Warnf("Error updating message: %v", err)
-								}
-
-								break
-							}
-						}
-					}()
-					d.Player.Play(0, nil)
-				}
-			} else {
-				s.ChannelMessageSend(m.Message.ChannelID, "No songs to add to the queue.")
+			_, err := s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
+			if err != nil {
+				slog.Warnf("Error updating playing status message: %v", err)
 			}
+
+			break
 		}
 	}
 }
 
-func GetVoiceChannelPhrase() string {
+func getVoiceChannelPhrase() string {
 	phrases := []string{
-		"Hop into a voice channel, I'll be waiting...",
-		"Can't serenade the silence, join a voice channel...",
+		"Hop into a voice channel, then try again...",
+		"Can't serenade the silence, join a voice channel first...",
 		"Music needs an audience, join a voice channel first...",
-		"Voice channels are where the party's at, join in...",
 		"Can't play tunes in thin air, join a voice channel...",
-		"Get ready to jam, but you gotta be in a voice channel...",
-		"Time to turn up the volume, get into a voice channel...",
-		"No silent disco here, join a voice channel for the beats...",
-		"Let's make some noise, hop into a voice channel...",
-		"Voice channels are the concert halls of Discord, join one...",
-		"Music is meant to be heard, join a voice channel and let's roll...",
-		"I'm ready to play, but you gotta be in a voice channel...",
-		"Silent parties are no fun, join a voice channel and let's dance...",
-		"Get your vocal cords ready, join a voice channel for the tunes...",
-		"Step into the arena of sound, join a voice channel now...",
+		"You gotta be in a voice channel...",
+		"Get into a voice channel...",
+		"No silent disco here, join a voice channel first...",
+		"Hop into a voice channel first...",
+		"Music is meant to be heard, join a voice channel first...",
+		"You gotta be in a voice channel...",
 		"I can't play music in thin air, join a voice channel first...",
-		"Turn on the mic, turn up the music, join a voice channel...",
-		"Grab a seat in the virtual amphitheater, join a voice channel...",
-		"Join the audio adventure, get into a voice channel...",
-		"Where words fail, music speaks – join a voice channel...",
-		"The party is where the voices are, join a channel to start...",
-		"Unlock the music vault by entering a voice channel...",
-		"Can't serenade empty spaces, join a voice channel...",
-		"Voice channels are the DJ booths of Discord, join the party...",
-		"Music's calling, but it needs a voice channel to answer...",
-		"Prepare for an audio journey, hop into a voice channel...",
-		"Music's knocking on your eardrums, open the door with a voice channel...",
-		"Ready to broadcast tunes, but you gotta be in a voice channel...",
-		"Silence isn't golden when it comes to music – join a voice channel...",
-		"Get cozy in a voice channel, the music's about to begin...",
-		"Unlock the melody, step into a voice channel...",
-		"Join the sonic revolution – get into a voice channel...",
-		"The stage is set, but you need to step into a voice channel...",
+		"Can't serenade empty spaces, join a voice channel first...",
 	}
 
 	index := rand.Intn(len(phrases))
@@ -226,7 +236,7 @@ func GetVoiceChannelPhrase() string {
 	return phrases[index]
 }
 
-func GetRandomWaitPhrase() string {
+func getRandomWaitPhrase() string {
 	phrases := []string{
 		"Chillax, I'm on it...",
 		"Easy there, turbo...",

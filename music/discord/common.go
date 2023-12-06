@@ -134,3 +134,12 @@ func (d *Discord) changeAvatar(s *discordgo.Session) {
 	// Update the last execution time
 	d.lastChangeAvatarTime = time.Now()
 }
+
+func findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (*discordgo.VoiceState, bool) {
+	for _, vs := range voiceStates {
+		if vs.UserID == userID {
+			return vs, true
+		}
+	}
+	return nil, false
+}
