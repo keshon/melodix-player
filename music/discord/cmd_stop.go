@@ -7,7 +7,7 @@ import (
 
 // handleStopCommand handles the stop command for Discord.
 func (d *Discord) handleStopCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	embedStr := "⏹ **Stop all activity**"
+	embedStr := "⏹ Stop all activity and exit"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed

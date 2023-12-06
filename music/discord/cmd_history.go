@@ -33,7 +33,7 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 		slog.Warn("No history table found")
 	}
 
-	description := fmt.Sprintf("⏳ **History %v**", title)
+	description := fmt.Sprintf("⏳ History %v", title)
 	descriptionLength := len(description)
 
 	embedMsg := embed.NewEmbed().

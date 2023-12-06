@@ -19,19 +19,22 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	d.changeAvatar(s)
 
 	// Wait message
-	embedStr := getRandomWaitPhrase()
+	embedStr := getPleaseWaitPhrase()
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
 
 	pleaseWaitMessage, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+	if err != nil {
+		slog.Warnf("Error sending 'please wait' message: %v", err)
+	}
 
 	paramType, songsList := ParseSongsAndTypeInParameter(param)
 
 	// Check if any songs were found
 	if len(songsList) <= 0 {
-		embedStr = "No music was found in request"
+		embedStr = "I could not understand your song request"
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
@@ -46,7 +49,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	g, _ := s.State.Guild(c.GuildID)
 
 	if len(g.VoiceStates) == 0 {
-		embedStr = getVoiceChannelPhrase()
+		embedStr = getJoinVoiceChannelPhrase()
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
@@ -56,19 +59,20 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	if err != nil {
-		slog.Warnf("Error sending 'please wait' message: %v", err)
-	}
-
 	// Fill-in playlist
 	playlist, err := createPlaylist(paramType, songsList, d, m)
 	if err != nil {
-		s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("Error creating playlist: %v", err))
+		embedStr = fmt.Sprintf("%v\n\n**Error details**:\n`%v`", getErrorFormingPlaylistPhrase(), err)
+		embedMsg = embed.NewEmbed().
+			SetColor(0x9f00d4).
+			SetDescription(embedStr).
+			SetColor(0x9f00d4).MessageEmbed
+		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
 		return
 	}
 
 	if len(playlist) == 0 {
-		embedStr = "No songs to queue"
+		embedStr = getNoMusicFoundPhrase()
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
@@ -81,7 +85,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	// Enqueue playlist to the player
 	err = enqueuePlaylistV2(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
 	if err != nil {
-		embedStr = fmt.Sprintf("Error enqueuing playlist: %v", err)
+		embedStr = fmt.Sprintf("%v\n\n**Error details**:\n`%v`", getErrorFormingPlaylistPhrase(), err)
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
@@ -276,7 +280,75 @@ func updatePlayingStatus(d *Discord, s *discordgo.Session, channelID, prevMessag
 	}
 }
 
-func getVoiceChannelPhrase() string {
+func getErrorFormingPlaylistPhrase() string {
+	phrases := []string{
+		"Oopsie woopsie! Can't make a playlist, sowwy!",
+		"Nyaa~ Sorry, playlist-making powers on cooldown!",
+		"Teehee~ Playlist magic malfunction, my bad!",
+		"UwU I tripped on code-kun! No playlist this time, sorry~",
+		"Sowwy, playlist fairy got tangled in the code forest!",
+		"Nyaa~ Playlist potion spilled! Apologies, senpai!",
+		"Kawaii desu~ Playlist spell backfired! Sorry, sempai!",
+		"UwU Playlist sprites are on vacation! Forgive me~",
+		"Oops, playlist charm misfired! Forgive this game girl~",
+		"Nyaa~ Playlist button is on a kawaii break, sorry!",
+		"My bad, playlist's on a coffee break. Blame the intern.",
+		"Oops, playlist chef had a stand-up gig. Sorry 'bout that.",
+		"Playlist mixtape got lost in the comedy club. My bad.",
+		"Sorry, playlist's on strike—demands more green M&Ms.",
+		"Playlist DJ got caught in a Chappelle Show marathon. Oops.",
+		"Playlist's playing hard to get, classic move. Forgive me.",
+		"Playlist on a laughter yoga retreat. My apologies, friend.",
+		"Playlist ghosted me. Even my code's getting swiped left.",
+		"Oops, playlist's on vacation, sipping margaritas. My bad.",
+		"Apologies, playlist's doing a comedy roast. Timing, right?",
+		"Playlist machine took a day off. Classic.",
+		"Playlist generator pulled a no-show. Go figure.",
+		"Playlist system's on a spa day. Tough luck.",
+		"Playlist magician called in sick. Surprise, surprise.",
+		"Playlist computer is 'not feeling it today.' How novel.",
+		"Playlist gizmo chose this moment to play hooky. Fantastic.",
+		"Playlist contraption called in sick. Go figure, Ghandi.",
+		"Playlist machine's MIA. Clearly, it's a genius move.",
+		"Playlist sorcery is on strike. What a revelation, chief.",
+		"Playlist rigamarole is ghosting us. Tough break, Snowflake.",
+	}
+
+	index := rand.Intn(len(phrases))
+
+	return phrases[index]
+}
+
+func getNoMusicFoundPhrase() string {
+	phrases := []string{
+		"No tunes matching your vibes.",
+		"Music search came up empty.",
+		"Can't find your requested beats.",
+		"Sorry, no jams found.",
+		"Your playlist is on a coffee break.",
+		"No beats in this corner of the digital universe.",
+		"Seems like the music elves are on vacation.",
+		"Search yielded silence.",
+		"No melody miracles today.",
+		"Sorry, the sound waves went on strike.",
+		"No music vibes detected.",
+		"Playlist search ended up in a black hole.",
+		"Beats MIA.",
+		"404: Music not found.",
+		"No harmonies in sight.",
+		"Music radar malfunction.",
+		"Looks like the songbird took a day off.",
+		"Your beats are on vacation.",
+		"Search party for your tunes canceled.",
+		"No hits, just misses.",
+	}
+
+	index := rand.Intn(len(phrases))
+
+	return phrases[index]
+}
+
+func getJoinVoiceChannelPhrase() string {
 	phrases := []string{
 		"Hop into a voice channel, then try again...",
 		"Can't serenade the silence, join a voice channel first...",
@@ -290,6 +362,53 @@ func getVoiceChannelPhrase() string {
 		"You gotta be in a voice channel...",
 		"I can't play music in thin air, join a voice channel first...",
 		"Can't serenade empty spaces, join a voice channel first...",
+		"You can't drop the beat in the void, join a voice channel!",
+		"Can't spin the vinyl in empty space, join a voice channel first!",
+		"Can't perform miracles in silence. Voice channel, please!",
+		"Join the voice party, then let the beats drop...",
+		"No voice channel, no music – it's science, man...",
+		"Music needs an audience; voice channel, my friend...",
+		"Can't groove in solitude; voice channel it up...",
+		"Hold up! No voice channel, no sound waves...",
+		"Join the voice channel; music awaits your ears...",
+		"You're the missing link – get in a voice channel...",
+		"No echoes in space; join a voice channel, genius...",
+		"I'm a DJ, not a mind reader; voice channel first...",
+		"No beats in the void; voice channel's the portal...",
+		"Can't serenade the void; voice channel, my dude...",
+		"Voiceless melodies? Join a channel, laugh track...",
+		"Missing the voice memo? Channel up, amigo...",
+		"Voiceless disco? Nah, join a channel, dance hero...",
+		"Music in limbo? Nah, voice channel time, my friend...",
+		"Beats on hold without voice; tune in, join up...",
+		"Silent beats? Not here. Join a voice channel, boss...",
+		"No beats in the void; voice channel's the link...",
+		"Soundcheck's lonely; join a voice channel, maestro...",
+		"Voiceless symphony? Join the channel orchestra...",
+		"Can't spin airwaves; join a voice channel, champ...",
+		"Voiceless DJ? Nah, join a channel, mix master...",
+		"No voice, no beats; join a channel, music maestro...",
+		"Join the chorus; voice channel's the VIP access...",
+		"Can't serenade silence; voice channel, maestro...",
+		"Beats on mute without voice; channel in, laugh out...",
+		"Silent beats? Not on my watch. Voice channel, amigo...",
+		"Voiceless gig? Join the channel comedy, my friend...",
+		"Missing the voice memo? Channel up, dance down...",
+		"No voice, no tunes; join a channel, groove king...",
+		"Can't hum in vacuum; voice channel, genius move...",
+		"Voiceless beats? Nah, join a channel, groove guru...",
+		"No voice, no notes; join a channel, music wizard...",
+		"Beats in exile without voice; channel in, laugh out...",
+		"Silent disco? Not here. Voice channel, dance floor...",
+		"No beats in the void; voice channel's the remedy...",
+		"Voiceless melodies? Join a channel, laugh track...",
+		"Can't groove in solitude; voice channel, dance party...",
+		"Silent beats? Nah, join a channel, laugh out loud...",
+		"No voice, no beats; join a channel, party starter...",
+		"Can't serenade silence; voice channel, dance vibes...",
+		"Beats on mute without voice; channel in, dance out...",
+		"Silent disco? Not here. Voice channel, music magic...",
+		"No voice, no notes; join a channel, laugh louder...",
 	}
 
 	index := rand.Intn(len(phrases))
@@ -297,7 +416,7 @@ func getVoiceChannelPhrase() string {
 	return phrases[index]
 }
 
-func getRandomWaitPhrase() string {
+func getPleaseWaitPhrase() string {
 	phrases := []string{
 		"Chillax, I'm on it...",
 		"Easy there, turbo...",
@@ -353,35 +472,7 @@ func getRandomWaitPhrase() string {
 		"Fairy dust, request complete...",
 		"Hold on tight, breakdancing to you...",
 		"Slow down, Captain Impatience!",
-		"Hold your horses, I'm not Flash, ya know?",
-		"Easy, I'm not racing a Formula 1 server here.",
 		"I'm on it, just simmer down, okay?",
-		"Take a breath, this isn't a comedy special.",
-		"I move at the speed of a sloth on caffeine.",
-		"Calm your coding cravings, I'm coding!",
-		"Wait, you expected quantum speed? Cute.",
-		"Relax, we're not launching rockets here.",
-		"Your playlist is in line, like at the DMV.",
-		"Hold tight, data's doing a stand-up routine.",
-		"Patience, coding is not a fast-food drive-thru.",
-		"I'm not a bot, I'm a chill algorithm.",
-		"Put on your chill hat; we're taking our time.",
-		"Hold up, servers need warm-up exercises.",
-		"I'm not slow; I'm savoring the coding.",
-		"Easy there, it's not a comedy roast server.",
-		"Code's tap dancing—chill and enjoy it.",
-		"Request's on a leisurely coding stroll.",
-		"Hold on, I'm not a speedrun world record.",
-		"Relax, servers are doing yoga poses.",
-		"I code like I drive—cautious but steady.",
-		"Your playlist is in the slow-cooker phase.",
-		"Slow and steady, just like coding marathons.",
-		"I'm not a sprinter; I'm a marathon coder.",
-		"Your request's in line, like a patient cat.",
-		"Coding's a dance, and we're waltzing.",
-		"I'm not in a rush; I'm in a coding groove.",
-		"Easy on the gas, we're not at Nascar.",
-		"Chill vibes only; servers need a spa day.",
 	}
 
 	index := rand.Intn(len(phrases))
