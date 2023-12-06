@@ -18,35 +18,44 @@ import (
 func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string, enqueueOnly bool) {
 	d.changeAvatar(s)
 
-	paramType, songsList := ParseSongsAndTypeInParameter(param)
-
-	if len(songsList) <= 0 {
-		return
-	}
-
-	// Join voice channel message
-	embedStr := getVoiceChannelPhrase()
+	// Wait message
+	embedStr := getRandomWaitPhrase()
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
 
+	pleaseWaitMessage, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+
+	paramType, songsList := ParseSongsAndTypeInParameter(param)
+
+	// Check if any songs were found
+	if len(songsList) <= 0 {
+		embedStr = "No music was found in request"
+		embedMsg = embed.NewEmbed().
+			SetColor(0x9f00d4).
+			SetDescription(embedStr).
+			SetColor(0x9f00d4).MessageEmbed
+
+		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
+		return
+	}
+
+	// Join voice channel message
 	c, _ := s.State.Channel(m.Message.ChannelID)
 	g, _ := s.State.Guild(c.GuildID)
 
 	if len(g.VoiceStates) == 0 {
-		s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+		embedStr = getVoiceChannelPhrase()
+		embedMsg = embed.NewEmbed().
+			SetColor(0x9f00d4).
+			SetDescription(embedStr).
+			SetColor(0x9f00d4).MessageEmbed
+
+		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
 		return
 	}
 
-	// Wait message
-	embedStr = getRandomWaitPhrase()
-	embedMsg = embed.NewEmbed().
-		SetColor(0x9f00d4).
-		SetDescription(embedStr).
-		SetColor(0x9f00d4).MessageEmbed
-
-	pleaseWaitMessage, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	if err != nil {
 		slog.Warnf("Error sending 'please wait' message: %v", err)
 	}
@@ -59,14 +68,26 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 
 	if len(playlist) == 0 {
-		s.ChannelMessageSend(m.Message.ChannelID, "No songs to enqueue.")
+		embedStr = "No songs to queue"
+		embedMsg = embed.NewEmbed().
+			SetColor(0x9f00d4).
+			SetDescription(embedStr).
+			SetColor(0x9f00d4).MessageEmbed
+
+		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
 		return
 	}
 
 	// Enqueue playlist to the player
 	err = enqueuePlaylistV2(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
 	if err != nil {
-		s.ChannelMessageSend(m.Message.ChannelID, fmt.Sprintf("Error enqueuing playlist: %v", err))
+		embedStr = fmt.Sprintf("Error enqueuing playlist: %v", err)
+		embedMsg = embed.NewEmbed().
+			SetColor(0x9f00d4).
+			SetDescription(embedStr).
+			SetColor(0x9f00d4).MessageEmbed
+
+		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
 		return
 	}
 }
@@ -140,36 +161,56 @@ func enqueuePlaylistV2(d *Discord, playlist []*player.Song, s *discordgo.Session
 		conn.LogLevel = discordgo.LogWarning
 	}
 
+	previousPlaylistExist := len(d.Player.GetSongQueue())
+
 	// Enqueue songs
 	for _, song := range playlist {
 		d.Player.Enqueue(song)
 	}
 
 	// Update playlist message
-	if err := updatePlaylistMessage(s, m.Message.ChannelID, prevMessageID, playlist); err != nil {
+	if err := updatePlaylistMessage(s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist); err != nil {
 		return err
 	}
 
 	// Start playing if not in enqueue-only mode
 	if !enqueueOnly && d.Player.GetCurrentStatus() != player.StatusPlaying {
-		go updatePlayingStatus(d, s, m.Message.ChannelID, prevMessageID, playlist)
+		go updatePlayingStatus(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist)
 		d.Player.Play(0, nil)
 	}
 
 	return nil
 }
 
-func updatePlaylistMessage(s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song) error {
+func updatePlaylistMessage(s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int) error {
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetFooter(version.AppFullName)
 
-	playlistStr := "🆕 **Added to queue**\n\n"
-	for _, song := range playlist {
-		playlistStr = fmt.Sprintf("%v- [%v](%v)\n", playlistStr, song.Name, song.UserURL)
+	nextTitle := "📑 In queue"
+	playlistContent := nextTitle + "\n"
+
+	for i, song := range playlist {
+		if len(playlistContent) > 1800 {
+			playlistContent = fmt.Sprintf("%v\n\nList too long to fit..", playlistContent)
+
+			breakline := "\n"
+			if previousPlaylistExist == 0 {
+				breakline = "\n\n"
+			}
+			if previousPlaylistExist > 0 {
+				playlistContent = fmt.Sprintf("%v%v Some tracks have already been added — `!list` to see", playlistContent, breakline)
+			}
+			break
+		} else if i == len(playlist)-1 {
+			if previousPlaylistExist > 0 {
+				playlistContent = fmt.Sprintf("%v\n\n Some tracks have already been added — `!list` to see", playlistContent)
+			}
+		}
+		playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, i, song.Name, song.UserURL)
 	}
 
-	embedMsg.SetDescription(playlistStr)
+	embedMsg.SetDescription(playlistContent)
 
 	_, err := s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
 	if err != nil {
@@ -180,8 +221,9 @@ func updatePlaylistMessage(s *discordgo.Session, channelID, prevMessageID string
 	return nil
 }
 
-func updatePlayingStatus(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song) {
+func updatePlayingStatus(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int) {
 	for {
+
 		// Check if the player is in the playing status
 		if d.Player.GetCurrentStatus() == player.StatusPlaying {
 			embedMsg := embed.NewEmbed().
@@ -189,17 +231,36 @@ func updatePlayingStatus(d *Discord, s *discordgo.Session, channelID, prevMessag
 				SetFooter(version.AppFullName)
 
 			statusTitle := fmt.Sprintf("%v %v", d.Player.GetCurrentStatus().StringEmoji(), d.Player.GetCurrentStatus().String())
-			nextTitle := "📑 Next"
+			nextTitle := "📑 In queue"
 			playlistContent := statusTitle + "\n"
 
 			for i, song := range playlist {
-				playlistContent = fmt.Sprintf("%v- [%v](%v)\n", playlistContent, song.Name, song.UserURL)
+
 				if i == 0 {
+					playlistContent = fmt.Sprintf("%v\n*[%v](%v)*", playlistContent, song.Name, song.UserURL)
 					playlistContent = fmt.Sprintf("%v \n\n", playlistContent)
 					embedMsg.SetThumbnail(song.Thumbnail.URL)
 					if len(playlist) > 1 {
 						playlistContent += nextTitle + "\n"
 					}
+				} else {
+					if len(playlistContent) > 1800 {
+						playlistContent = fmt.Sprintf("%v\n\nList too long to fit..", playlistContent)
+
+						breakline := "\n"
+						if previousPlaylistExist == 0 {
+							breakline = "\n\n"
+						}
+						if previousPlaylistExist > 0 {
+							playlistContent = fmt.Sprintf("%v%v Some tracks have already been added — `%vlist` to see", playlistContent, breakline, d.prefix)
+						}
+						break
+					} else if i == len(playlist)-1 {
+						if previousPlaylistExist > 0 {
+							playlistContent = fmt.Sprintf("%v\n\n Some tracks have already been added — `%vlist` to see", playlistContent, d.prefix)
+						}
+					}
+					playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, i, song.Name, song.UserURL)
 				}
 			}
 
@@ -291,6 +352,36 @@ func getRandomWaitPhrase() string {
 		"Working harder than a cat...",
 		"Fairy dust, request complete...",
 		"Hold on tight, breakdancing to you...",
+		"Slow down, Captain Impatience!",
+		"Hold your horses, I'm not Flash, ya know?",
+		"Easy, I'm not racing a Formula 1 server here.",
+		"I'm on it, just simmer down, okay?",
+		"Take a breath, this isn't a comedy special.",
+		"I move at the speed of a sloth on caffeine.",
+		"Calm your coding cravings, I'm coding!",
+		"Wait, you expected quantum speed? Cute.",
+		"Relax, we're not launching rockets here.",
+		"Your playlist is in line, like at the DMV.",
+		"Hold tight, data's doing a stand-up routine.",
+		"Patience, coding is not a fast-food drive-thru.",
+		"I'm not a bot, I'm a chill algorithm.",
+		"Put on your chill hat; we're taking our time.",
+		"Hold up, servers need warm-up exercises.",
+		"I'm not slow; I'm savoring the coding.",
+		"Easy there, it's not a comedy roast server.",
+		"Code's tap dancing—chill and enjoy it.",
+		"Request's on a leisurely coding stroll.",
+		"Hold on, I'm not a speedrun world record.",
+		"Relax, servers are doing yoga poses.",
+		"I code like I drive—cautious but steady.",
+		"Your playlist is in the slow-cooker phase.",
+		"Slow and steady, just like coding marathons.",
+		"I'm not a sprinter; I'm a marathon coder.",
+		"Your request's in line, like a patient cat.",
+		"Coding's a dance, and we're waltzing.",
+		"I'm not in a rush; I'm in a coding groove.",
+		"Easy on the gas, we're not at Nascar.",
+		"Chill vibes only; servers need a spa day.",
 	}
 
 	index := rand.Intn(len(phrases))
