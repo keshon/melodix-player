@@ -32,7 +32,7 @@ func (d *Discord) handleResumeCommand(s *discordgo.Session, m *discordgo.Message
 		}
 	}
 
-	embedStr := "▶️ **Play (or resume)**"
+	embedStr := "▶️ Resume"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed

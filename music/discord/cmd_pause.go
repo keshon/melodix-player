@@ -13,7 +13,7 @@ func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageC
 		return
 	}
 
-	embedStr := "⏸ **Pause**"
+	embedStr := "⏸ Pause"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed

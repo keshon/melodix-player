@@ -14,7 +14,7 @@ func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.Mess
 	playlist := d.Player.GetSongQueue()
 
 	// Wait message
-	embedStr := getRandomWaitPhrase()
+	embedStr := getPleaseWaitPhrase()
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).
