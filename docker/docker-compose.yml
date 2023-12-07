@@ -9,6 +9,7 @@ services:
       - ./data/melodix.sqlite3:/usr/project/melodix.db
       - ./data/all-levels.log:/usr/project/logs/all-levels.log
     environment:
+      - HOST    
       - DISCORD_COMMAND_PREFIX
       - DISCORD_BOT_TOKEN
       - REST_ENABLED
