@@ -1,11 +1,6 @@
 package main
 
 import (
-	"app/internal/config"
-	"app/internal/db"
-	"app/internal/manager"
-	"app/internal/melodix"
-	"app/internal/version"
 	"net"
 	"os"
 	"os/signal"
@@ -15,9 +10,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
 	"github.com/gookit/slog/handler"
+
+	"github.com/keshon/melodix-discord-player/internal/config"
+	"github.com/keshon/melodix-discord-player/internal/db"
+	"github.com/keshon/melodix-discord-player/internal/manager"
+	"github.com/keshon/melodix-discord-player/internal/rest"
+	"github.com/keshon/melodix-discord-player/internal/version"
+	"github.com/keshon/melodix-discord-player/music/discord"
 )
 
-var botInstances map[string]*melodix.BotInstance
+var botInstances map[string]*discord.BotInstance
 
 func main() {
 	slog.Configure(func(logger *slog.SugaredLogger) {
@@ -51,7 +53,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	botInstances = make(map[string]*melodix.BotInstance)
+	botInstances = make(map[string]*discord.BotInstance)
 
 	guildManager := manager.NewGuildManager(dg, botInstances)
 	guildManager.Start()
@@ -101,8 +103,8 @@ func getGuildsOrSetDefault() ([]string, error) {
 }
 
 func startBotInstances(session *discordgo.Session, guildID string) {
-	botInstances[guildID] = &melodix.BotInstance{
-		Melodix: melodix.NewDiscord(session, guildID),
+	botInstances[guildID] = &discord.BotInstance{
+		Melodix: discord.NewDiscord(session, guildID),
 	}
 	botInstances[guildID].Melodix.Start(guildID)
 }
@@ -114,7 +116,7 @@ func startRestServer(isReleaseMode bool, hostname string) {
 
 	router := gin.Default()
 
-	restAPI := melodix.NewRest(botInstances)
+	restAPI := rest.NewRest(botInstances)
 	restAPI.Start(router)
 
 	go func() {

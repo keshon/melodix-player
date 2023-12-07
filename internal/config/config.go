@@ -1,7 +1,6 @@
 package config
 
 import (
-	"app/pkg/dca"
 	"encoding/json"
 	"errors"
 	"os"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/gookit/slog"
 	"github.com/joho/godotenv"
+	"github.com/keshon/melodix-discord-player/music/pkg/dca"
 )
 
 type Config struct {

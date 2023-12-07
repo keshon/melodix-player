@@ -13,6 +13,7 @@ services:
       - DISCORD_BOT_TOKEN
       - REST_ENABLED
       - REST_GIN_RELEASE
+      - REST_HOSTNAME
       - DCA_FRAME_DURATION
       - DCA_BITRATE
       - DCA_PACKET_LOSS
