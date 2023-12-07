@@ -10,7 +10,7 @@ RUN GO_VERSION=$(go version | awk '{print $3}') && \
     BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
     CGO_ENABLED=1 && \
     rm -f .env && \
-    go build -o app -ldflags "-X 'app/internal/version.BuildDate=${BUILD_DATE}' -X 'app/internal/version.GoVersion=${GO_VERSION}'" cmd/main.go && \
+    go build -o app -ldflags "-X 'github.com/keshon/melodix-discord-player/internal/version.BuildDate=${BUILD_DATE}' -X 'github.com/keshon/melodix-discord-player/internal/version.GoVersion=${GO_VERSION}'" cmd/main.go && \
     mv melodix.db.empty melodix.db
 
 # Second stage: create the final image
