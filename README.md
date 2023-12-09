@@ -1,4 +1,4 @@
-![# Header](https://raw.githubusercontent.com/keshon/assets/main/melodix-discord-player/header.png)
+![# Header](https://github.com/keshon/melodix-discord-player/blob/master/assets/banner.jpg)
 
 # Melodix Discord Player
 
@@ -16,7 +16,7 @@ Melodix aims to be an easy-to-use yet powerful Discord music bot beastie. Its ke
 - Operate across multiple Discord servers via bundled 'guild manager'.
 - Randomly picked avatars to add more spicy.
 
-![# Playing Example](https://raw.githubusercontent.com/keshon/assets/main/melodix-discord-player/playing.jpg)
+![# Playing Example](https://github.com/keshon/melodix-discord-player/blob/master/assets/playing.jpg)
 
 ## Download binary
 
