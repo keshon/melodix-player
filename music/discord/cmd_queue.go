@@ -27,12 +27,12 @@ func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.Mess
 
 	if d.Player.GetCurrentStatus() != player.StatusPlaying {
 		// Update playlist message
-		if err := updatePlaylistMessage(s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0); err != nil {
+		if err := updateAddToQueueMessage(s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0); err != nil {
 			slog.Warnf("Error publishing playlist: %v", err)
 		}
 	} else {
 		// Start playing if not in enqueue-only mode
-		go updatePlayingStatus(d, s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0)
+		go updatePlayingNowMessage(d, s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0)
 
 	}
 }
