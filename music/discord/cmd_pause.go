@@ -1,6 +1,8 @@
 package discord
 
 import (
+	"log/slog"
+
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 )
@@ -13,10 +15,13 @@ func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageC
 		return
 	}
 
-	embedStr := "⏸ Pause"
+	d.Player.Pause()
+
+	embedStr := d.Player.GetCurrentStatus().StringEmoji() + " " + d.Player.GetCurrentStatus().String()
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
-	d.Player.Pause()
+
+	slog.Info(d.Player.GetCurrentStatus().String())
 }

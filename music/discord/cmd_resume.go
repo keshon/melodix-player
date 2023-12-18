@@ -17,11 +17,11 @@ func (d *Discord) handleResumeCommand(s *discordgo.Session, m *discordgo.Message
 		phrase = getContinuePhrase()
 	}
 
-	embedStr := "▶️ " + phrase
+	d.Player.Unpause()
+
+	embedStr := d.Player.GetCurrentStatus().StringEmoji() + " " + phrase
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
-
-	d.Player.Unpause()
 }
