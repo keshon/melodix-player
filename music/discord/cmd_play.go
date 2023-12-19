@@ -185,6 +185,63 @@ func enqueuePlaylistV2(d *Discord, playlist []*player.Song, s *discordgo.Session
 	return nil
 }
 
+func enqueuePlaylistV3(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
+	channel, err := s.State.Channel(m.Message.ChannelID)
+	if err != nil {
+		return err
+	}
+
+	guild, err := s.State.Guild(channel.GuildID)
+	if err != nil {
+		return err
+	}
+
+	// Find the voice state of the user who triggered the command
+	vs, found := findUserVoiceState(m.Message.Author.ID, guild.VoiceStates)
+	if !found {
+		return errors.New("user not found in voice channel")
+	}
+
+	// Check if a Player instance exists for the voice channel
+	playerInstance, exists := d.Players[vs.ChannelID]
+	if !exists {
+		// Create a new Player instance for the voice channel
+		playerInstance = player.NewPlayer(vs.ChannelID)
+		d.Players[vs.ChannelID] = playerInstance
+
+		// Connect to the voice channel
+		conn, err := s.ChannelVoiceJoin(channel.GuildID, vs.ChannelID, false, true)
+		if err != nil {
+			slog.Errorf("Error connecting to voice channel: %v", err.Error())
+			s.ChannelMessageSend(m.Message.ChannelID, "Error connecting to voice channel")
+			return err
+		}
+		playerInstance.SetVoiceConnection(conn)
+		conn.LogLevel = discordgo.LogWarning
+	}
+
+	// Save the previous playlist length
+	previousPlaylistExist := len(playerInstance.GetSongQueue())
+
+	// Enqueue songs to the specific Player instance
+	for _, song := range playlist {
+		playerInstance.Enqueue(song)
+	}
+
+	// Update the playlist message
+	if err := updateAddToQueueMessage(s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist); err != nil {
+		return err
+	}
+
+	// Start playing if not in enqueue-only mode
+	if !enqueueOnly && playerInstance.GetCurrentStatus() != player.StatusPlaying {
+		go updatePlayingNowMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist)
+		playerInstance.Play(0, nil)
+	}
+
+	return nil
+}
+
 func updateAddToQueueMessage(s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int) error {
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).

@@ -17,6 +17,7 @@ type BotInstance struct {
 // Discord represents the Melodix instance for Discord.
 type Discord struct {
 	Player               player.IPlayer
+	Players              map[string]player.IPlayer
 	Session              *discordgo.Session
 	GuildID              string
 	InstanceActive       bool
@@ -34,6 +35,7 @@ func NewDiscord(session *discordgo.Session, guildID string) *Discord {
 
 	return &Discord{
 		Player:            player.NewPlayer(guildID),
+		Players:           make(map[string]player.IPlayer),
 		Session:           session,
 		InstanceActive:    true,
 		prefix:            config.DiscordCommandPrefix,
