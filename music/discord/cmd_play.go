@@ -82,7 +82,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 
 	// Enqueue playlist to the player
-	err = enqueuePlaylistV2(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
+	err = playOrEnqueue(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
 	if err != nil {
 		embedStr = fmt.Sprintf("%v\n\n**Error details**:\n`%v`", getErrorFormingPlaylistPhrase(), err)
 		embedMsg = embed.NewEmbed().
@@ -100,12 +100,14 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 	var playlist []*player.Song
 
 	youtube := sources.NewYoutube()
+	stream := sources.NewStream()
+
 	for _, param := range songsList {
 		var songs []*player.Song
 		var err error
 		// var isManySongs bool
 		switch paramType {
-		case "id":
+		case "history_id":
 			id, err := strconv.Atoi(param)
 			if err != nil {
 				slog.Error("Cannot convert string id to int id")
@@ -115,16 +117,19 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 			if err != nil {
 				slog.Warnf("Error fetching songs by history ID: %v", err)
 			}
-		case "title":
+		case "youtube_title":
 			songs, err = youtube.FetchSongsByTitle(param)
 			if err != nil {
 				slog.Warnf("Error fetching songs by title: %v", err)
 			}
-		case "url":
+		case "youtube_url":
 			songs, err = youtube.FetchSongsByURLs([]string{param})
 			if err != nil {
 				slog.Warnf("Error fetching songs by URL: %v", err)
 			}
+		case "stream_url":
+			// TODO: implement adding radio stations URLs
+			songs, err = stream.FetchStreamsByURLs([]string{param})
 		}
 
 		if err != nil {
@@ -137,7 +142,7 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 	return playlist, nil
 }
 
-func enqueuePlaylistV2(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
+func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
 	channel, err := s.State.Channel(m.Message.ChannelID)
 	if err != nil {
 		return err
@@ -180,63 +185,6 @@ func enqueuePlaylistV2(d *Discord, playlist []*player.Song, s *discordgo.Session
 	if !enqueueOnly && d.Player.GetCurrentStatus() != player.StatusPlaying {
 		go updatePlayingNowMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist)
 		d.Player.Play(0, nil)
-	}
-
-	return nil
-}
-
-func enqueuePlaylistV3(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
-	channel, err := s.State.Channel(m.Message.ChannelID)
-	if err != nil {
-		return err
-	}
-
-	guild, err := s.State.Guild(channel.GuildID)
-	if err != nil {
-		return err
-	}
-
-	// Find the voice state of the user who triggered the command
-	vs, found := findUserVoiceState(m.Message.Author.ID, guild.VoiceStates)
-	if !found {
-		return errors.New("user not found in voice channel")
-	}
-
-	// Check if a Player instance exists for the voice channel
-	playerInstance, exists := d.Players[vs.ChannelID]
-	if !exists {
-		// Create a new Player instance for the voice channel
-		playerInstance = player.NewPlayer(vs.ChannelID)
-		d.Players[vs.ChannelID] = playerInstance
-
-		// Connect to the voice channel
-		conn, err := s.ChannelVoiceJoin(channel.GuildID, vs.ChannelID, false, true)
-		if err != nil {
-			slog.Errorf("Error connecting to voice channel: %v", err.Error())
-			s.ChannelMessageSend(m.Message.ChannelID, "Error connecting to voice channel")
-			return err
-		}
-		playerInstance.SetVoiceConnection(conn)
-		conn.LogLevel = discordgo.LogWarning
-	}
-
-	// Save the previous playlist length
-	previousPlaylistExist := len(playerInstance.GetSongQueue())
-
-	// Enqueue songs to the specific Player instance
-	for _, song := range playlist {
-		playerInstance.Enqueue(song)
-	}
-
-	// Update the playlist message
-	if err := updateAddToQueueMessage(s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist); err != nil {
-		return err
-	}
-
-	// Start playing if not in enqueue-only mode
-	if !enqueueOnly && playerInstance.GetCurrentStatus() != player.StatusPlaying {
-		go updatePlayingNowMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist)
-		playerInstance.Play(0, nil)
 	}
 
 	return nil

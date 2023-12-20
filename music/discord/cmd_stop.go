@@ -3,6 +3,7 @@ package discord
 import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
+	"github.com/gookit/slog"
 )
 
 // handleStopCommand handles the stop command for Discord.
@@ -14,4 +15,11 @@ func (d *Discord) handleStopCommand(s *discordgo.Session, m *discordgo.MessageCr
 	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 
 	d.Player.Stop()
+
+	err := d.Player.GetVoiceConnection().Disconnect()
+	if err != nil {
+		slog.Fatal(err)
+	}
+
+	d.Player.SetVoiceConnection(nil)
 }

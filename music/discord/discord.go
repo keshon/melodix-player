@@ -70,14 +70,13 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"pause", "!", ">"},
 		{"resume", "play", ">"},
 		{"play", "p", ">"},
-		{"skip", "ff", ">>"},
+		{"skip", "next", "ff", ">>"},
 		{"list", "queue", "l", "q"},
 		{"add", "a", "+"},
 		{"exit", "stop", "e", "x"},
 		{"help", "h", "?"},
 		{"history", "time", "t"},
-		{"about", "v"},
-		{"radio"},
+		{"about", "version", "v"},
 	}
 
 	canonicalCommand := GetCanonicalCommand(command, commandAliases)
@@ -114,8 +113,6 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		d.handleHistoryCommand(s, m, parameter)
 	case "about":
 		d.handleAboutCommand(s, m)
-	case "radio":
-		d.handleRadioCommand(s, m)
 	default:
 		// Unknown command
 	}

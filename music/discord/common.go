@@ -57,12 +57,17 @@ func ParseSongsAndTypeInParameter(param string) (string, []string) {
 
 	// Check if the parameter is a URL
 	u, err := url.Parse(param)
-	if err == nil && (u.Scheme == "http" || u.Scheme == "https") && IsYouTubeURL(u.Host) {
+	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
 		// If it's a URL, split by ",", " ", new line, or carriage return
 		paramSlice := strings.FieldsFunc(param, func(r rune) bool {
 			return r == ',' || r == '\n' || r == '\r' || r == ' ' || r == '\t'
 		})
-		return "url", paramSlice
+
+		if IsYouTubeURL(u.Host) {
+			return "youtube_url", paramSlice
+		} else {
+			return "stream_url", paramSlice
+		}
 	}
 
 	// Check if the parameter is an ID
@@ -76,11 +81,11 @@ func ParseSongsAndTypeInParameter(param string) (string, []string) {
 		}
 	}
 	if allValidIDs {
-		return "id", params
+		return "history_id", params
 	}
 
 	// Treat it as a single title if it's not a URL or ID
-	return "title", []string{param}
+	return "youtube_title", []string{param}
 }
 
 // isYouTubeURL checks if the host is a YouTube URL.
