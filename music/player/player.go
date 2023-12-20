@@ -420,6 +420,8 @@ func (p *Player) GetCurrentStatus() Status {
 
 // SetStatus sets the playback status.
 func (p *Player) SetCurrentStatus(status Status) {
+	p.Lock()
+	defer p.Unlock()
 	p.CurrentStatus = status
 }
 
@@ -435,6 +437,8 @@ func (p *Player) GetVoiceConnection() *discordgo.VoiceConnection {
 
 // SetVoiceConnection sets the voice connection.
 func (p *Player) SetVoiceConnection(voiceConnection *discordgo.VoiceConnection) {
+	p.Lock()
+	defer p.Unlock()
 	p.VoiceConnection = voiceConnection
 }
 
