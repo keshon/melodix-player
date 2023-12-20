@@ -8,13 +8,14 @@ Melodix is yet another Discord music bot that allows to manage and play music on
 
 Melodix aims to be an easy-to-use yet powerful Discord music bot beastie. Its key objectives include:
 
-- Playback single tracks or playlists from Youtube added by title or URL.
-- Handling playback interruptions with auto-resume feature.
+- Playback single/multiple tracks or playlists from Youtube added by title or URL.
+- Playback of radio streams added via URL.
+- Handling playback interruptions with auto-resume feature (in case of network failure).
 - Exposed Rest API to do various magic tasks outside of Discord commands.
 - Basic walkman functionality: add to queue, play/pause, next and etc.
 - Access the history of previously played tracks with sorting by play counts or duration.
-- Operate across multiple Discord servers via bundled 'guild manager'.
-- Randomly picked avatars to add more spicy.
+- Operate across multiple Discord servers.
+- Randomly picked avatars and phrases to add more spicy.
 
 ![# Playing Example](https://github.com/keshon/melodix-discord-player/blob/master/assets/playing.jpg)
 
