@@ -77,6 +77,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"help", "h", "?"},
 		{"history", "time", "t"},
 		{"about", "v"},
+		{"radio"},
 	}
 
 	canonicalCommand := GetCanonicalCommand(command, commandAliases)
@@ -113,6 +114,8 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		d.handleHistoryCommand(s, m, parameter)
 	case "about":
 		d.handleAboutCommand(s, m)
+	case "radio":
+		d.handleRadioCommand(s, m)
 	default:
 		// Unknown command
 	}
