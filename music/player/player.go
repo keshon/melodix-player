@@ -69,6 +69,7 @@ type Player struct {
 	sync.Mutex
 	VoiceConnection  *discordgo.VoiceConnection
 	StreamingSession *dca.StreamingSession
+	EncodingSession  *dca.EncodeSession
 	SongQueue        []*Song
 	CurrentSong      *Song
 	CurrentStatus    Status
@@ -186,20 +187,17 @@ func (p *Player) Stop() {
 
 	p.ClearQueue()
 
+	if p.VoiceConnection != nil {
+		err := p.VoiceConnection.Speaking(false)
+		if err != nil {
+			slog.Errorf("Error disconnecting voice connection: %v", err)
+		}
+	}
+
+	p.EncodingSession.Stop()
+	p.EncodingSession.Cleanup()
 	p.CurrentStatus = StatusResting
 
-	if p.VoiceConnection == nil {
-		return
-	}
-
-	err := p.VoiceConnection.Disconnect()
-	if err != nil {
-		slog.Errorf("Error disconnecting voice connection: %v", err)
-	}
-
-	p.VoiceConnection = nil
-	p.StreamingSession = nil
-	p.CurrentSong = nil
 }
 
 // Pause pauses audio playback.
@@ -276,12 +274,12 @@ func (p *Player) Play(startAt int, song *Song) {
 		UserAgent:               config.DcaUserAgent,
 	}
 
-	encodingSession, err := dca.EncodeFile(p.CurrentSong.DownloadURL, options)
+	p.EncodingSession, err = dca.EncodeFile(p.CurrentSong.DownloadURL, options)
 	if err != nil {
 		slog.Errorf("Error encoding song: %v", err)
 		return
 	}
-	defer encodingSession.Cleanup()
+	defer p.EncodingSession.Cleanup()
 
 	for p.VoiceConnection == nil || !p.VoiceConnection.Ready {
 		time.Sleep(100 * time.Millisecond)
@@ -295,7 +293,7 @@ func (p *Player) Play(startAt int, song *Song) {
 	}
 
 	done := make(chan error)
-	p.StreamingSession = dca.NewStream(encodingSession, p.VoiceConnection, done)
+	p.StreamingSession = dca.NewStream(p.EncodingSession, p.VoiceConnection, done)
 
 	slog.Info("Stream is created, waiting for finish or error")
 
@@ -331,14 +329,15 @@ func (p *Player) Play(startAt int, song *Song) {
 	select {
 	case <-done:
 		if p.VoiceConnection != nil && p.StreamingSession != nil && p.CurrentSong != nil {
-			songDuration, songPosition := p.metrics(encodingSession, p.StreamingSession, p.CurrentSong)
-			if p.CurrentStatus == StatusPlaying && encodingSession.Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 {
+			songDuration, songPosition := p.metrics(p.EncodingSession, p.StreamingSession, p.CurrentSong)
+			if p.CurrentStatus == StatusPlaying && p.EncodingSession.Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 {
 				if songPosition < songDuration {
 					slog.Warn("Song is done but still unfinished. Restarting from interrupted position...")
 
-					encodingSession.Cleanup()
+					p.EncodingSession.Cleanup()
 					p.VoiceConnection.Speaking(false)
-					go p.Play(int(songPosition.Seconds()), p.CurrentSong)
+
+					p.Play(int(songPosition.Seconds()), p.CurrentSong)
 
 					return
 				}
@@ -358,7 +357,7 @@ func (p *Player) Play(startAt int, song *Song) {
 				p.VoiceConnection.Speaking(false)
 			}
 			p.CurrentStatus = StatusError
-			encodingSession.Cleanup()
+			p.EncodingSession.Cleanup()
 
 			return
 		}
@@ -386,7 +385,7 @@ func (p *Player) Play(startAt int, song *Song) {
 		if p.VoiceConnection != nil {
 			p.VoiceConnection.Speaking(false)
 		}
-		encodingSession.Cleanup()
+		p.EncodingSession.Cleanup()
 
 		return
 	}
@@ -420,6 +419,8 @@ func (p *Player) GetCurrentStatus() Status {
 
 // SetStatus sets the playback status.
 func (p *Player) SetCurrentStatus(status Status) {
+	p.Lock()
+	defer p.Unlock()
 	p.CurrentStatus = status
 }
 
@@ -435,6 +436,8 @@ func (p *Player) GetVoiceConnection() *discordgo.VoiceConnection {
 
 // SetVoiceConnection sets the voice connection.
 func (p *Player) SetVoiceConnection(voiceConnection *discordgo.VoiceConnection) {
+	p.Lock()
+	defer p.Unlock()
 	p.VoiceConnection = voiceConnection
 }
 

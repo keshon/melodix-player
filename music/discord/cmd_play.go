@@ -82,7 +82,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 
 	// Enqueue playlist to the player
-	err = enqueuePlaylistV2(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
+	err = playOrEnqueue(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
 	if err != nil {
 		embedStr = fmt.Sprintf("%v\n\n**Error details**:\n`%v`", getErrorFormingPlaylistPhrase(), err)
 		embedMsg = embed.NewEmbed().
@@ -100,12 +100,14 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 	var playlist []*player.Song
 
 	youtube := sources.NewYoutube()
+	stream := sources.NewStream()
+
 	for _, param := range songsList {
 		var songs []*player.Song
 		var err error
 		// var isManySongs bool
 		switch paramType {
-		case "id":
+		case "history_id":
 			id, err := strconv.Atoi(param)
 			if err != nil {
 				slog.Error("Cannot convert string id to int id")
@@ -115,16 +117,19 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 			if err != nil {
 				slog.Warnf("Error fetching songs by history ID: %v", err)
 			}
-		case "title":
+		case "youtube_title":
 			songs, err = youtube.FetchSongsByTitle(param)
 			if err != nil {
 				slog.Warnf("Error fetching songs by title: %v", err)
 			}
-		case "url":
+		case "youtube_url":
 			songs, err = youtube.FetchSongsByURLs([]string{param})
 			if err != nil {
 				slog.Warnf("Error fetching songs by URL: %v", err)
 			}
+		case "stream_url":
+			// TODO: implement adding radio stations URLs
+			songs, err = stream.FetchStreamsByURLs([]string{param})
 		}
 
 		if err != nil {
@@ -137,7 +142,7 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 	return playlist, nil
 }
 
-func enqueuePlaylistV2(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
+func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
 	channel, err := s.State.Channel(m.Message.ChannelID)
 	if err != nil {
 		return err
