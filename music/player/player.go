@@ -348,8 +348,8 @@ func (p *Player) Play(startAt int, song *Song) {
 	select {
 	case <-done:
 		// Auto-restarting logic in case of interruption
-		// Youtube songs checked by their current/total duration
-		// Streams (radio) never stops
+		// Youtube songs checked by their current vs total duration
+		// Streams (radio) never stop
 		if p.VoiceConnection != nil && p.StreamingSession != nil && p.CurrentSong != nil {
 			if p.CurrentSong.Source != SourceStream {
 				songDuration, songPosition := p.metrics(p.EncodingSession, p.StreamingSession, p.CurrentSong)

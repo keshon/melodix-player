@@ -178,21 +178,19 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 		d.Player.Enqueue(song)
 	}
 
-	// Update playlist message
-	if err := updateAddToQueueMessage(s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist); err != nil {
-		return err
-	}
-
-	// Start playing if not in enqueue-only mode
-	if !enqueueOnly && d.Player.GetCurrentStatus() != player.StatusPlaying {
-		go updatePlayingNowMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist)
+	if enqueueOnly {
+		// Update playlist message
+		updateAddToQueueMessage(s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist)
+	} else {
+		// Start playing if not in enqueue-only mode
+		go updatePlayingNowMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, true)
 		d.Player.Play(0, nil)
 	}
 
 	return nil
 }
 
-func updateAddToQueueMessage(s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int) error {
+func updateAddToQueueMessage(s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int) {
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetFooter(version.AppFullName)
@@ -224,38 +222,41 @@ func updateAddToQueueMessage(s *discordgo.Session, channelID, prevMessageID stri
 	}
 
 	embedMsg.SetDescription(playlistContent)
-
-	_, err := s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
-	if err != nil {
-		slog.Errorf("Error updating playlist message: %v", err)
-		return err
-	}
-
-	return nil
+	s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
 }
 
-func updatePlayingNowMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int) {
+func updatePlayingNowMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int, skipFirst bool) {
 	for {
 
 		// Check if the player is in the playing status
-		if d.Player.GetCurrentStatus() == player.StatusPlaying {
+		if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
+
 			embedMsg := embed.NewEmbed().
 				SetColor(0x9f00d4).
 				SetFooter(version.AppFullName)
 
 			statusTitle := fmt.Sprintf("%v %v", d.Player.GetCurrentStatus().StringEmoji(), d.Player.GetCurrentStatus().String())
-			slog.Info(statusTitle)
-			nextTitle := "📑 In queue"
-			var playlistContent string
-
-			// if d.Player.GetCurrentSong() != nil {
-			playlistContent = statusTitle + "\n"
+			playlistContent := statusTitle + "\n"
 			playlistContent = fmt.Sprintf("%v\n*[%v](%v)*\n\n", playlistContent, d.Player.GetCurrentSong().Title, d.Player.GetCurrentSong().UserURL)
-			embedMsg.SetThumbnail(d.Player.GetCurrentSong().Thumbnail.URL)
-			// }
 
-			if len(playlist) > 1 {
-				playlistContent += nextTitle + "\n"
+			embedMsg.SetThumbnail(d.Player.GetCurrentSong().Thumbnail.URL)
+
+			slog.Warnf("Playlist length is %v", len(playlist))
+			for _, elem := range playlist {
+				slog.Warn(elem.Title)
+			}
+
+			if len(playlist) > 0 {
+				// pure ugliness
+				if !skipFirst {
+					nextTitle := "📑 In queue"
+					playlistContent += nextTitle + "\n"
+				} else {
+					if len(playlist) > 1 {
+						nextTitle := "📑 In queue"
+						playlistContent += nextTitle + "\n"
+					}
+				}
 
 				// Separate counter variable starting from 1
 				counter := 1
@@ -285,10 +286,8 @@ func updatePlayingNowMessage(d *Discord, s *discordgo.Session, channelID, prevMe
 						}
 					}
 
-					// Use the separate counter variable for display
 					playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, counter, song.Title, song.UserURL)
 
-					// Increment the counter for each iteration
 					counter++
 				}
 			}
@@ -302,6 +301,7 @@ func updatePlayingNowMessage(d *Discord, s *discordgo.Session, channelID, prevMe
 
 			break
 		}
+
 	}
 }
 

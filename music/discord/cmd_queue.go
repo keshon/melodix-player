@@ -4,7 +4,6 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-discord-player/music/player"
 )
 
 // handleShowQueueCommand handles the show queue command for Discord.
@@ -25,14 +24,11 @@ func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.Mess
 		slog.Warnf("Error sending 'please wait' message: %v", err)
 	}
 
-	if d.Player.GetCurrentStatus() != player.StatusPlaying {
-		// Update playlist message
-		if err := updateAddToQueueMessage(s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0); err != nil {
-			slog.Warnf("Error publishing playlist: %v", err)
-		}
+	if d.Player.GetCurrentSong() != nil {
+		// show list of songs with curent one loaded
+		updatePlayingNowMessage(d, s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0, false)
 	} else {
-		// Start playing if not in enqueue-only mode
-		go updatePlayingNowMessage(d, s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0)
-
+		// show just a list of song
+		updateAddToQueueMessage(s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0)
 	}
 }
