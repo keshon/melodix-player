@@ -6,7 +6,6 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-discord-player/internal/version"
 	"github.com/keshon/melodix-discord-player/music/history"
 	"github.com/keshon/melodix-discord-player/music/utils"
 )
@@ -34,31 +33,37 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 	}
 
 	description := fmt.Sprintf("⏳ History %v", title)
+	if len(description) > 4096 {
+		description = utils.TrimString(description, 4096)
+	}
 	descriptionLength := len(description)
 
 	embedMsg := embed.NewEmbed().
-		SetColor(0x9f00d4).
-		SetFooter(version.AppFullName)
+		SetDescription(description).
+		SetColor(0x9f00d4)
 
-	footerLength := len(version.AppFullName)
+	maxLimit := 6000 - descriptionLength
 
-	for _, elem := range list {
-		duration := utils.FormatDuration(elem.History.Duration)
-		fieldContent := fmt.Sprintf("```id: %d```    ```count: %d```    ```duration: %v```", elem.History.TrackID, elem.History.PlayCount, duration)
-		fieldContentLength := len(fieldContent)
-		nameLength := len(elem.Track.Name)
-		urlLength := len(elem.Track.URL)
-
-		// Check if adding the field exceeds the embed limit
-		if descriptionLength+footerLength+len(embedMsg.Fields)+fieldContentLength+nameLength+urlLength > 4000 {
+	for i, elem := range list {
+		if i > 24 {
 			break
 		}
 
-		// Add the field and update the length counter
+		duration := utils.FormatDuration(elem.History.Duration)
+		fieldContent := fmt.Sprintf("```id: %d```    ```count: %d```    ```duration: %v```", elem.History.TrackID, elem.History.PlayCount, duration)
+		fieldContentLength := len(fieldContent)
+
+		nameLength := len(elem.Track.Name)
+		urlLength := len(elem.Track.URL)
+
+		if maxLimit-len(embedMsg.Fields)-fieldContentLength-nameLength-urlLength < 0 {
+			break
+		}
+
 		embedMsg.AddField(fieldContent, fmt.Sprintf("[%v](%v)", elem.Track.Name, elem.Track.URL))
-		descriptionLength += fieldContentLength + nameLength
+
 	}
-	fmt.Println(descriptionLength)
+
 	_, err = s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg.MessageEmbed)
 	if err != nil {
 		slog.Warnf("Error sending history message: %v", err)

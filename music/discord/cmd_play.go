@@ -3,7 +3,9 @@ package discord
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
+	"strings"
 
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
@@ -29,7 +31,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		slog.Warnf("Error sending 'please wait' message: %v", err)
 	}
 
-	paramType, songsList := ParseSongsAndTypeInParameter(param)
+	paramType, songsList := parseParameter(param)
 
 	// Check if any songs were found
 	if len(songsList) <= 0 {
@@ -211,12 +213,12 @@ func updateAddToQueueMessage(s *discordgo.Session, channelID, prevMessageID stri
 			}
 			break
 		} else if i == len(playlist)-1 {
-			playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, i, song.Name, song.UserURL)
+			playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, i, song.Title, song.UserURL)
 			if previousPlaylistExist > 0 {
 				playlistContent = fmt.Sprintf("%v\n\n Some tracks have already been added — `!list` to see", playlistContent)
 			}
 		} else {
-			playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, i, song.Name, song.UserURL)
+			playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, i, song.Title, song.UserURL)
 		}
 
 	}
@@ -248,7 +250,7 @@ func updatePlayingNowMessage(d *Discord, s *discordgo.Session, channelID, prevMe
 
 			// if d.Player.GetCurrentSong() != nil {
 			playlistContent = statusTitle + "\n"
-			playlistContent = fmt.Sprintf("%v\n*[%v](%v)*\n\n", playlistContent, d.Player.GetCurrentSong().Name, d.Player.GetCurrentSong().UserURL)
+			playlistContent = fmt.Sprintf("%v\n*[%v](%v)*\n\n", playlistContent, d.Player.GetCurrentSong().Title, d.Player.GetCurrentSong().UserURL)
 			embedMsg.SetThumbnail(d.Player.GetCurrentSong().Thumbnail.URL)
 			// }
 
@@ -284,7 +286,7 @@ func updatePlayingNowMessage(d *Discord, s *discordgo.Session, channelID, prevMe
 					}
 
 					// Use the separate counter variable for display
-					playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, counter, song.Name, song.UserURL)
+					playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, counter, song.Title, song.UserURL)
 
 					// Increment the counter for each iteration
 					counter++
@@ -301,4 +303,51 @@ func updatePlayingNowMessage(d *Discord, s *discordgo.Session, channelID, prevMe
 			break
 		}
 	}
+}
+
+// ParseParameter parses the type and parameters from the input parameter string.
+func parseParameter(param string) (string, []string) {
+	// Trim spaces at the beginning and end
+	param = strings.TrimSpace(param)
+
+	if len(param) == 0 {
+		return "", []string{}
+	}
+
+	// Check if the parameter is a URL
+	u, err := url.Parse(param)
+	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+		// If it's a URL, split by ",", " ", new line, or carriage return
+		paramSlice := strings.FieldsFunc(param, func(r rune) bool {
+			return r == '\n' || r == '\r' || r == ' ' || r == '\t'
+		})
+
+		if isYouTubeURL(u.Host) {
+			return "youtube_url", paramSlice
+		} else {
+			return "stream_url", paramSlice
+		}
+	}
+
+	// Check if the parameter is an ID
+	params := strings.Fields(param)
+	allValidIDs := true
+	for _, param := range params {
+		_, err := strconv.Atoi(param)
+		if err != nil {
+			allValidIDs = false
+			break
+		}
+	}
+	if allValidIDs {
+		return "history_id", params
+	}
+
+	// Treat it as a single title if it's not a URL or ID
+	return "youtube_title", []string{param}
+}
+
+// isYouTubeURL checks if the host is a YouTube URL.
+func isYouTubeURL(host string) bool {
+	return host == "www.youtube.com" || host == "youtube.com" || host == "youtu.be"
 }

@@ -1,6 +1,8 @@
 package sources
 
 import (
+	"fmt"
+	"hash/crc32"
 	"net/url"
 
 	"github.com/gookit/slog"
@@ -27,9 +29,21 @@ func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
 		u, err := url.Parse(elem)
 		if err != nil {
 			slog.Errorf("Error parsing URL: %v", err)
+			continue // Skip to the next iteration if URL parsing fails
 		}
 
-		song = &player.Song{Name: u.Host, UserURL: u.String(), DownloadURL: u.String(), Thumbnail: player.Thumbnail{}, Duration: -1, ID: ""}
+		// Use CRC32 as an example hash function
+		hash := crc32.ChecksumIEEE([]byte(u.Host))
+
+		song = &player.Song{
+			Title:       u.Host,
+			UserURL:     u.String(),
+			DownloadURL: u.String(),
+			Thumbnail:   player.Thumbnail{},
+			Duration:    -1,
+			ID:          fmt.Sprintf("%d", hash), // Convert hash to string
+			Source:      player.SourceStream,
+		}
 		songs = append(songs, song)
 	}
 

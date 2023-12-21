@@ -21,29 +21,48 @@ type Thumbnail struct {
 	Height uint
 }
 
-// Song represents a song with relevant information.
+// SongSource represents the source type of the media.
+type SongSource int32
+
+const (
+	SourceYouTube SongSource = iota
+	SourceStream
+)
+
+// String returns the string representation of the SongSource.
+func (source SongSource) String() string {
+	sources := map[SongSource]string{
+		SourceYouTube: "YouTube",
+		SourceStream:  "Stream",
+	}
+
+	return sources[source]
+}
+
+// Song represents a media item with relevant information.
 type Song struct {
-	Name        string        // Name of the song
+	Title       string        // Title of the song
 	UserURL     string        // URL provided by the user
 	DownloadURL string        // URL for downloading the song
 	Thumbnail   Thumbnail     // Thumbnail image for the song
 	Duration    time.Duration // Duration of the song
 	ID          string        // Unique ID for the song
+	Source      SongSource    // Source type of the song
 }
 
-// Status represents the playback status of the Player.
-type Status int32
+// PlaybackStatus represents the playback status of the Player.
+type PlaybackStatus int32
 
 const (
-	StatusResting Status = iota
+	StatusResting PlaybackStatus = iota
 	StatusPlaying
 	StatusPaused
 	StatusError
 )
 
-// String returns the string representation of the CurrentStatus.
-func (status Status) String() string {
-	statuses := map[Status]string{
+// String returns the string representation of the PlaybackStatus.
+func (status PlaybackStatus) String() string {
+	statuses := map[PlaybackStatus]string{
 		StatusResting: "Resting",
 		StatusPlaying: "Playing",
 		StatusPaused:  "Paused",
@@ -53,8 +72,8 @@ func (status Status) String() string {
 	return statuses[status]
 }
 
-func (status Status) StringEmoji() string {
-	statuses := map[Status]string{
+func (status PlaybackStatus) StringEmoji() string {
+	statuses := map[PlaybackStatus]string{
 		StatusResting: "⏹️",
 		StatusPlaying: "▶️",
 		StatusPaused:  "⏸",
@@ -72,7 +91,7 @@ type Player struct {
 	EncodingSession  *dca.EncodeSession
 	SongQueue        []*Song
 	CurrentSong      *Song
-	CurrentStatus    Status
+	CurrentStatus    PlaybackStatus
 	SkipInterrupt    chan bool
 }
 
@@ -86,8 +105,8 @@ type IPlayer interface {
 	Stop()
 	Pause()
 	Unpause()
-	GetCurrentStatus() Status
-	SetCurrentStatus(status Status)
+	GetCurrentStatus() PlaybackStatus
+	SetCurrentStatus(status PlaybackStatus)
 	GetSongQueue() []*Song
 	GetVoiceConnection() *discordgo.VoiceConnection
 	SetVoiceConnection(voiceConnection *discordgo.VoiceConnection)
@@ -146,7 +165,7 @@ func (p *Player) Skip() {
 
 // Enqueue adds a song to the queue.
 func (p *Player) Enqueue(song *Song) {
-	slog.Infof("Enqueuing song to queue: %v", song.Name)
+	slog.Infof("Enqueuing song to queue: %v", song.Title)
 
 	p.Lock()
 	defer p.Unlock()
@@ -245,7 +264,7 @@ func (p *Player) Play(startAt int, song *Song) {
 		}
 	}
 
-	slog.Infof("Playing song: %v", p.CurrentSong.Name)
+	slog.Infof("Playing song: %v", p.CurrentSong.Title)
 	slog.Infof("Playing song at: %v", time.Duration(startAt)*time.Second)
 
 	config, err := config.NewConfig()
@@ -300,7 +319,7 @@ func (p *Player) Play(startAt int, song *Song) {
 	p.CurrentStatus = StatusPlaying
 
 	h := history.NewHistory()
-	historySong := &history.Song{Name: p.CurrentSong.Name, UserURL: p.CurrentSong.UserURL, DownloadURL: p.CurrentSong.DownloadURL, Duration: p.CurrentSong.Duration, ID: p.CurrentSong.ID, Thumbnail: history.Thumbnail(p.CurrentSong.Thumbnail)}
+	historySong := &history.Song{Name: p.CurrentSong.Title, UserURL: p.CurrentSong.UserURL, DownloadURL: p.CurrentSong.DownloadURL, Duration: p.CurrentSong.Duration, ID: p.CurrentSong.ID, Thumbnail: history.Thumbnail(p.CurrentSong.Thumbnail)}
 	h.AddTrackToHistory(p.VoiceConnection.GuildID, historySong)
 
 	interval := 2 * time.Second
@@ -328,18 +347,36 @@ func (p *Player) Play(startAt int, song *Song) {
 
 	select {
 	case <-done:
+		// Auto-restarting logic in case of interruption
+		// Youtube songs checked by their current/total duration
+		// Streams (radio) never stops
 		if p.VoiceConnection != nil && p.StreamingSession != nil && p.CurrentSong != nil {
-			songDuration, songPosition := p.metrics(p.EncodingSession, p.StreamingSession, p.CurrentSong)
-			if p.CurrentStatus == StatusPlaying && p.EncodingSession.Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 {
-				if songPosition < songDuration {
-					slog.Warn("Song is done but still unfinished. Restarting from interrupted position...")
+			if p.CurrentSong.Source != SourceStream {
+				songDuration, songPosition := p.metrics(p.EncodingSession, p.StreamingSession, p.CurrentSong)
+				if p.CurrentStatus == StatusPlaying && p.EncodingSession.Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 {
+					if songPosition < songDuration {
+						slog.Warn("Song is done but still unfinished. Restarting from interrupted position...")
+
+						p.EncodingSession.Cleanup()
+						p.VoiceConnection.Speaking(false)
+
+						p.Play(int(songPosition.Seconds()), p.CurrentSong)
+
+						return
+					}
+				}
+			} else {
+				if p.CurrentStatus == StatusPlaying {
+
+					slog.Warn("Song is done but its a stream so it's never finished. Restarting from interrupted position...")
 
 					p.EncodingSession.Cleanup()
 					p.VoiceConnection.Speaking(false)
 
-					p.Play(int(songPosition.Seconds()), p.CurrentSong)
+					p.Play(0, p.CurrentSong)
 
 					return
+
 				}
 			}
 
@@ -399,10 +436,17 @@ func (p *Player) metrics(encoding *dca.EncodeSession, streaming *dca.StreamingSe
 	streamingPosition := streaming.PlaybackPosition()
 	delay := encodingDuration - streamingPosition
 
-	duration, _, _, err := utils.ParseVideoParamsFromYouTubeURL(song.DownloadURL)
+	params, err := utils.ParseQueryParamsFromURL(song.DownloadURL)
 	if err != nil {
 		slog.Warnf("Failed to parse download URL parameters: %v", err)
 	}
+
+	// Convert duration string to time.Duration
+	duration, err := time.ParseDuration(params["duration"])
+	if err != nil {
+		slog.Errorf("Error parsing duration:", err)
+	}
+
 	songDuration = time.Duration(duration) * time.Second
 	songPosition = encodingStartTime + streamingPosition + delay
 
@@ -413,12 +457,12 @@ func (p *Player) metrics(encoding *dca.EncodeSession, streaming *dca.StreamingSe
 }
 
 // GetStatus returns the current playback status.
-func (p *Player) GetCurrentStatus() Status {
+func (p *Player) GetCurrentStatus() PlaybackStatus {
 	return p.CurrentStatus
 }
 
 // SetStatus sets the playback status.
-func (p *Player) SetCurrentStatus(status Status) {
+func (p *Player) SetCurrentStatus(status PlaybackStatus) {
 	p.Lock()
 	defer p.Unlock()
 	p.CurrentStatus = status

@@ -42,12 +42,13 @@ func (y *Youtube) GetSpecificSongFromURL(url string) (*player.Song, error) {
 	}
 
 	return &player.Song{
-		Name:        song.Title,
+		Title:       song.Title,
 		UserURL:     url,
 		DownloadURL: song.Formats.WithAudioChannels()[0].URL,
 		Duration:    song.Duration,
 		Thumbnail:   thumbnail,
 		ID:          song.ID,
+		Source:      player.SourceYouTube,
 	}, nil
 }
 

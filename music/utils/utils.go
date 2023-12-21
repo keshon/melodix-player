@@ -11,10 +11,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 )
 
-// formatDuration formats the given seconds into HH:MM:SS format.
+// FormatDuration formats the given seconds into HH:MM:SS format.
+// Example: formattedTime := FormatDuration(3661.5) // Returns "01:01:02"
 func FormatDuration(seconds float64) string {
 	totalSeconds := int(seconds)
 	hours := totalSeconds / 3600
@@ -24,31 +24,31 @@ func FormatDuration(seconds float64) string {
 	return fmt.Sprintf("%02d:%02d:%02.0f", hours, minutes, seconds)
 }
 
-func ReadFileToBase64(imgPath string) (string, error) {
-	img, err := os.ReadFile(imgPath)
+// ReadFileToBase64 reads a file and returns its base64 representation with data URI.
+// Example: base64Data, err := ReadFileToBase64("/path/to/image.jpg")
+func ReadFileToBase64(filePath string) (string, error) {
+	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
-		return "", fmt.Errorf("error reading the response: %v", err)
+		return "", fmt.Errorf("error reading the file: %v", err)
 	}
 
-	base64Img := base64.StdEncoding.EncodeToString(img)
-	return fmt.Sprintf("data:%s;base64,%s", http.DetectContentType(img), base64Img), nil
+	base64Content := base64.StdEncoding.EncodeToString(fileContent)
+	return fmt.Sprintf("data:%s;base64,%s", http.DetectContentType(fileContent), base64Content), nil
 }
 
+// SanitizeString removes unwanted characters from the input string.
+// Example: sanitizedStr := SanitizeString("Hello#World!")
 func SanitizeString(input string) string {
-	// Define a regular expression to match unwanted characters
-	re := regexp.MustCompile("[[:^print:]]")
-
-	// Replace unwanted characters with an empty string
-	sanitized := re.ReplaceAllString(input, "")
-
-	return sanitized
+	unwantedCharRegex := regexp.MustCompile("[[:^print:]]")
+	return unwantedCharRegex.ReplaceAllString(input, "")
 }
 
-// inferProtocolByPort attempts to infer the protocol based on the availability of a specific port.
+// InferProtocolByPort attempts to infer the protocol based on the availability of a specific port.
+// Example: protocol := InferProtocolByPort("example.com", 443)
 func InferProtocolByPort(hostname string, port int) string {
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", hostname, port))
 	if err != nil {
-		// Assuming it's not available, use HTTP
+		// Assuming it's not available, default to HTTP
 		return "http://"
 	}
 	defer conn.Close()
@@ -57,45 +57,28 @@ func InferProtocolByPort(hostname string, port int) string {
 	return "https://"
 }
 
-// parseVideoParamsFromYoutubeURL parses video parameters from a YouTube URL.
-func ParseVideoParamsFromYouTubeURL(urlString string) (duration float64, contentLength int, expiryTimestamp int64, err error) {
-	duration = -1
-	contentLength = -1
-	expiryTimestamp = -1
-
+// ParseQueryParamsFromURL parses query parameters from a URL.
+// Example: params, err := ParseQueryParamsFromURL("https://www.example.com/path?param1=value1&param2=value2")
+func ParseQueryParamsFromURL(urlString string) (map[string]string, error) {
 	parsedURL, err := url.Parse(urlString)
 	if err != nil {
-		return duration, contentLength, expiryTimestamp, fmt.Errorf("failed to parse URL: %v", err)
+		return nil, fmt.Errorf("failed to parse URL: %v", err)
 	}
 
 	queryParams := parsedURL.Query()
 
-	durParam, err := strconv.ParseFloat(queryParams.Get("dur"), 64)
-	if err != nil {
-		duration = -1
-	}
-	duration = durParam
-
-	if clenParam := queryParams.Get("clen"); clenParam != "" {
-		contentLength, err = strconv.Atoi(clenParam)
-		if err != nil {
-			return duration, contentLength, expiryTimestamp, fmt.Errorf("failed to parse content length: %v", err)
-		}
+	params := make(map[string]string)
+	for key, values := range queryParams {
+		// For simplicity, consider only the first value if there are multiple values for a key
+		params[key] = values[0]
 	}
 
-	if expireParam := queryParams.Get("expire"); expireParam != "" {
-		expiryTimestamp, err = strconv.ParseInt(expireParam, 10, 64)
-		if err != nil {
-			return duration, contentLength, expiryTimestamp, fmt.Errorf("failed to parse expiry timestamp: %v", err)
-		}
-	}
-
-	return duration, contentLength, expiryTimestamp, nil
+	return params, nil
 }
 
-// getRandomAvatarPath returns path to randomly selected file in specified folder
+// GetRandomImagePathFromPath returns the path to a randomly selected file in the specified folder.
+// Example: imagePath, err := GetRandomImagePathFromPath("/path/to/images")
 func GetRandomImagePathFromPath(folderPath string) (string, error) {
-
 	var validFiles []string
 	files, err := os.ReadDir(folderPath)
 	if err != nil {
@@ -104,7 +87,7 @@ func GetRandomImagePathFromPath(folderPath string) (string, error) {
 
 	// Filter only files with certain extensions (you can modify this if needed)
 	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".jpg" || filepath.Ext(file.Name()) == ".png" {
+		if ext := filepath.Ext(file.Name()); ext == ".jpg" || ext == ".png" {
 			validFiles = append(validFiles, file.Name())
 		}
 	}
@@ -119,4 +102,14 @@ func GetRandomImagePathFromPath(folderPath string) (string, error) {
 	imagePath := filepath.Join(folderPath, randomImage)
 
 	return imagePath, nil
+}
+
+// TrimString trims the string's ending beyond the specified character limit.
+// Example: trimmedText := TrimString("This is a long text.", 10) // Returns "This is a"
+func TrimString(input string, limit int) string {
+	if len(input) <= limit {
+		return input
+	}
+
+	return input[:limit]
 }
