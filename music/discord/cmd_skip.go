@@ -13,7 +13,17 @@ func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCr
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+
+	skipPhrase, _ := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 
 	d.Player.Skip()
+
+	if len(d.Player.GetSongQueue()) == 0 {
+		embedStr := "⏹ " + getStopPhrase()
+		embedMsg := embed.NewEmbed().
+			SetDescription(embedStr).
+			SetColor(0x9f00d4).MessageEmbed
+
+		s.ChannelMessageEditEmbed(m.Message.ChannelID, skipPhrase.ID, embedMsg)
+	}
 }

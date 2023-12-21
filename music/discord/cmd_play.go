@@ -344,7 +344,8 @@ func parseParameter(param string) (string, []string) {
 	}
 
 	// Treat it as a single title if it's not a URL or ID
-	return "youtube_title", []string{param}
+	encodedTitle := url.QueryEscape(param)
+	return "youtube_title", []string{encodedTitle}
 }
 
 // isYouTubeURL checks if the host is a YouTube URL.
