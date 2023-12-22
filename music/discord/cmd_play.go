@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
@@ -105,9 +106,10 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 	stream := sources.NewStream()
 
 	for _, param := range songsList {
+
 		var songs []*player.Song
 		var err error
-		// var isManySongs bool
+
 		switch paramType {
 		case "history_id":
 			id, err := strconv.Atoi(param)
@@ -118,25 +120,31 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 			songs, err = youtube.FetchSongsByIDs(m.GuildID, []int{id})
 			if err != nil {
 				slog.Warnf("Error fetching songs by history ID: %v", err)
+				continue
 			}
 		case "youtube_title":
 			songs, err = youtube.FetchSongsByTitle(param)
 			if err != nil {
 				slog.Warnf("Error fetching songs by title: %v", err)
+				continue
 			}
 		case "youtube_url":
 			songs, err = youtube.FetchSongsByURLs([]string{param})
 			if err != nil {
 				slog.Warnf("Error fetching songs by URL: %v", err)
+				continue
 			}
 		case "stream_url":
-			// TODO: implement adding radio stations URLs
 			songs, err = stream.FetchStreamsByURLs([]string{param})
+			if err != nil {
+				slog.Warnf("Error fetching stream by URL: %v", err)
+				continue
+			}
 		}
 
-		if err != nil {
-			return nil, err
-		}
+		// if err != nil {
+		// 	return nil, err
+		// }
 
 		playlist = append(playlist, songs...)
 	}
@@ -179,130 +187,86 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 	}
 
 	if enqueueOnly {
-		// Update playlist message
-		updateAddToQueueMessage(s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist)
+		showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, false)
 	} else {
-		// Start playing if not in enqueue-only mode
-		go updatePlayingNowMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, true)
+		go func() {
+			for {
+				if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
+					showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, true)
+					break
+				}
+				time.Sleep(250 * time.Millisecond)
+			}
+		}()
+
 		d.Player.Play(0, nil)
 	}
 
 	return nil
 }
 
-func updateAddToQueueMessage(s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int) {
+func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int, skipFirst bool) {
+	slog.Warnf("Playlist length is %v", len(playlist))
+
+	// Log playlist elements
+	for _, elem := range playlist {
+		slog.Warn(elem.Title)
+	}
+
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetFooter(version.AppFullName)
 
-	nextTitle := "📑 In queue"
-	playlistContent := nextTitle + "\n"
+	playerStatus := fmt.Sprintf("%v %v", d.Player.GetCurrentStatus().StringEmoji(), d.Player.GetCurrentStatus().String())
+	content := playerStatus + "\n"
 
-	for i, song := range playlist {
-		if len(playlistContent) > 1800 {
-			playlistContent = fmt.Sprintf("%v\n\nList too long to fit..", playlistContent)
-
-			breakline := "\n"
-			if previousPlaylistExist == 0 {
-				breakline = "\n\n"
-			}
-			if previousPlaylistExist > 0 {
-				playlistContent = fmt.Sprintf("%v%v Some tracks have already been added — `!list` to see", playlistContent, breakline)
-			}
-			break
-		} else if i == len(playlist)-1 {
-			playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, i, song.Title, song.UserURL)
-			if previousPlaylistExist > 0 {
-				playlistContent = fmt.Sprintf("%v\n\n Some tracks have already been added — `!list` to see", playlistContent)
-			}
-		} else {
-			playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, i, song.Title, song.UserURL)
-		}
-
+	// Display current song information
+	if currentSong := d.Player.GetCurrentSong(); currentSong != nil {
+		content += fmt.Sprintf("\n*[%v](%v)*\n\n", currentSong.Title, currentSong.UserURL)
+		embedMsg.SetThumbnail(currentSong.Thumbnail.URL)
+	} else {
+		content += "\nNo song has played yet. Use `!play <song name>` command or use `!help` to find out more\n\n"
 	}
 
-	embedMsg.SetDescription(playlistContent)
+	// Display playlist information
+	if len(playlist) > 0 {
+		// Display queue status
+		if !skipFirst || len(playlist) > 1 {
+			content += "\n📑 In queue\n"
+		}
+
+		// Separate counter variable starting from 1
+		counter := 1
+
+		for i, song := range playlist {
+			// Skip the first song if it's already playing
+			if i == 0 && d.Player.GetCurrentSong() != nil && song == d.Player.GetCurrentSong() {
+				continue
+			}
+
+			// Check if content length exceeds the limit
+			if len(content) > 1800 {
+				content = fmt.Sprintf("%v\n\nList too long to fit..", content)
+
+				breakline := "\n"
+				if previousPlaylistExist == 0 {
+					breakline = "\n\n"
+				}
+
+				if previousPlaylistExist > 0 {
+					content = fmt.Sprintf("%v%v Some tracks have already been added — `%vlist` to see", content, breakline, d.prefix)
+				}
+				break
+			}
+
+			// Display playlist entry
+			content = fmt.Sprintf("%v\n` %v ` [%v](%v)", content, counter, song.Title, song.UserURL)
+			counter++
+		}
+	}
+
+	embedMsg.SetDescription(content)
 	s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
-}
-
-func updatePlayingNowMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int, skipFirst bool) {
-	for {
-
-		// Check if the player is in the playing status
-		if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
-
-			embedMsg := embed.NewEmbed().
-				SetColor(0x9f00d4).
-				SetFooter(version.AppFullName)
-
-			statusTitle := fmt.Sprintf("%v %v", d.Player.GetCurrentStatus().StringEmoji(), d.Player.GetCurrentStatus().String())
-			playlistContent := statusTitle + "\n"
-			playlistContent = fmt.Sprintf("%v\n*[%v](%v)*\n\n", playlistContent, d.Player.GetCurrentSong().Title, d.Player.GetCurrentSong().UserURL)
-
-			embedMsg.SetThumbnail(d.Player.GetCurrentSong().Thumbnail.URL)
-
-			slog.Warnf("Playlist length is %v", len(playlist))
-			for _, elem := range playlist {
-				slog.Warn(elem.Title)
-			}
-
-			if len(playlist) > 0 {
-				// pure ugliness
-				if !skipFirst {
-					nextTitle := "📑 In queue"
-					playlistContent += nextTitle + "\n"
-				} else {
-					if len(playlist) > 1 {
-						nextTitle := "📑 In queue"
-						playlistContent += nextTitle + "\n"
-					}
-				}
-
-				// Separate counter variable starting from 1
-				counter := 1
-
-				for i, song := range playlist {
-					if i == 0 {
-						if song == d.Player.GetCurrentSong() {
-							// Skip the first song if it's already playing
-							continue
-						}
-					}
-
-					if len(playlistContent) > 1800 {
-						playlistContent = fmt.Sprintf("%v\n\nList too long to fit..", playlistContent)
-
-						breakline := "\n"
-						if previousPlaylistExist == 0 {
-							breakline = "\n\n"
-						}
-						if previousPlaylistExist > 0 {
-							playlistContent = fmt.Sprintf("%v%v Some tracks have already been added — `%vlist` to see", playlistContent, breakline, d.prefix)
-						}
-						break
-					} else if i == len(playlist)-1 {
-						if previousPlaylistExist > 0 {
-							playlistContent = fmt.Sprintf("%v\n\n Some tracks have already been added — `%vlist` to see", playlistContent, d.prefix)
-						}
-					}
-
-					playlistContent = fmt.Sprintf("%v\n` %v ` [%v](%v)", playlistContent, counter, song.Title, song.UserURL)
-
-					counter++
-				}
-			}
-
-			embedMsg.SetDescription(playlistContent)
-
-			_, err := s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
-			if err != nil {
-				slog.Warnf("Error updating playing status message: %v", err)
-			}
-
-			break
-		}
-
-	}
 }
 
 // ParseParameter parses the type and parameters from the input parameter string.

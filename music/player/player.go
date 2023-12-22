@@ -117,9 +117,13 @@ type IPlayer interface {
 // NewPlayer creates a new Player instance.
 func NewPlayer(guildID string) IPlayer {
 	return &Player{
-		SongQueue:     make([]*Song, 0),
-		SkipInterrupt: make(chan bool, 1),
-		CurrentStatus: StatusResting,
+		VoiceConnection:  nil,
+		SkipInterrupt:    make(chan bool, 1),
+		StreamingSession: nil,
+		EncodingSession:  nil,
+		SongQueue:        make([]*Song, 0),
+		CurrentSong:      nil,
+		CurrentStatus:    StatusResting,
 	}
 }
 
@@ -197,6 +201,10 @@ func (p *Player) ClearQueue() {
 	p.Lock()
 	defer p.Unlock()
 
+	if len(p.SongQueue) == 0 {
+		return
+	}
+
 	p.SongQueue = make([]*Song, 0)
 }
 
@@ -211,10 +219,28 @@ func (p *Player) Stop() {
 		if err != nil {
 			slog.Errorf("Error disconnecting voice connection: %v", err)
 		}
+
+		err = p.GetVoiceConnection().Disconnect()
+		if err != nil {
+			slog.Fatal(err)
+		}
+
+		p.SetVoiceConnection(nil)
 	}
 
-	p.EncodingSession.Stop()
-	p.EncodingSession.Cleanup()
+	if p.StreamingSession != nil {
+		p.StreamingSession = nil
+	}
+
+	if p.EncodingSession != nil {
+		p.EncodingSession.Stop()
+		p.EncodingSession.Cleanup()
+	}
+
+	if p.CurrentSong != nil {
+		p.CurrentSong = nil
+	}
+
 	p.CurrentStatus = StatusResting
 
 }
@@ -241,14 +267,22 @@ func (p *Player) Pause() {
 func (p *Player) Unpause() {
 	slog.Info("Resuming playback")
 
+	if p.VoiceConnection == nil {
+		return
+	}
+
 	if p.StreamingSession != nil {
-		if p.CurrentStatus != StatusPlaying {
+		if p.CurrentStatus == StatusPaused {
 			p.StreamingSession.SetPaused(false)
 			p.CurrentStatus = StatusPlaying
 		}
-	} else {
-		p.Play(0, nil)
-		p.CurrentStatus = StatusPlaying
+	}
+
+	if len(p.GetSongQueue()) > 0 {
+		if p.CurrentStatus == StatusResting {
+			p.Play(0, nil)
+			p.CurrentStatus = StatusPlaying
+		}
 	}
 }
 
@@ -353,16 +387,18 @@ func (p *Player) Play(startAt int, song *Song) {
 		if p.VoiceConnection != nil && p.StreamingSession != nil && p.CurrentSong != nil {
 			if p.CurrentSong.Source != SourceStream {
 				songDuration, songPosition := p.metrics(p.EncodingSession, p.StreamingSession, p.CurrentSong)
-				if p.CurrentStatus == StatusPlaying && p.EncodingSession.Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 {
-					if songPosition < songDuration {
-						slog.Warn("Song is done but still unfinished. Restarting from interrupted position...")
+				if p.CurrentStatus == StatusPlaying {
+					if p.EncodingSession.Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 {
+						if songPosition < songDuration {
+							slog.Warn("Song is done but still unfinished. Restarting from interrupted position...")
 
-						p.EncodingSession.Cleanup()
-						p.VoiceConnection.Speaking(false)
+							p.EncodingSession.Cleanup()
+							p.VoiceConnection.Speaking(false)
 
-						p.Play(int(songPosition.Seconds()), p.CurrentSong)
+							p.Play(int(songPosition.Seconds()), p.CurrentSong)
 
-						return
+							return
+						}
 					}
 				}
 			} else {
@@ -393,7 +429,7 @@ func (p *Player) Play(startAt int, song *Song) {
 			if p.VoiceConnection != nil {
 				p.VoiceConnection.Speaking(false)
 			}
-			p.CurrentStatus = StatusError
+			p.CurrentStatus = StatusResting
 			p.EncodingSession.Cleanup()
 
 			return
@@ -401,12 +437,11 @@ func (p *Player) Play(startAt int, song *Song) {
 
 		slog.Info("Song is done")
 
-		if len(p.SongQueue) == 0 {
+		if len(p.GetSongQueue()) == 0 {
 			slog.Info("Queue is done")
 
 			time.Sleep(250 * time.Millisecond)
 			p.Stop()
-			p.CurrentStatus = StatusResting
 
 			return
 		}

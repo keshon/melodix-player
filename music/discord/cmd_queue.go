@@ -24,11 +24,6 @@ func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.Mess
 		slog.Warnf("Error sending 'please wait' message: %v", err)
 	}
 
-	if d.Player.GetCurrentSong() != nil {
-		// show list of songs with curent one loaded
-		updatePlayingNowMessage(d, s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0, false)
-	} else {
-		// show just a list of song
-		updateAddToQueueMessage(s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0)
-	}
+	showStatusMessage(d, s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0, false)
+
 }
