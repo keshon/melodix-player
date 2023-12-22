@@ -189,29 +189,32 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 	if enqueueOnly {
 		showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, false)
 	} else {
-		go func() {
-			for {
-				if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
-					showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, true)
-					break
-				}
-				time.Sleep(250 * time.Millisecond)
-			}
-		}()
+		// go func() {
+		// 	for {
+		// 		if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
+		// 			showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, true)
+		// 			break
+		// 		}
+		// 		time.Sleep(250 * time.Millisecond)
+		// 	}
+		// }()
 
-		d.Player.Play(0, nil)
+		go d.Player.Play(0, nil)
+		for {
+			if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
+				showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, true)
+				break
+			}
+			time.Sleep(250 * time.Millisecond)
+		}
 	}
 
 	return nil
 }
 
 func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int, skipFirst bool) {
-	slog.Warnf("Playlist length is %v", len(playlist))
 
-	// Log playlist elements
-	for _, elem := range playlist {
-		slog.Warn(elem.Title)
-	}
+	d.Player.PrintPlayerState()
 
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
