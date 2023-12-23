@@ -214,8 +214,6 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 
 func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int, skipFirst bool) {
 
-	d.Player.PrintPlayerState()
-
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetFooter(version.AppFullName)
@@ -228,7 +226,11 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 		content += fmt.Sprintf("\n*[%v](%v)*\n\n", currentSong.Title, currentSong.UserURL)
 		embedMsg.SetThumbnail(currentSong.Thumbnail.URL)
 	} else {
-		content += "\nNo song has played yet. Use `!play <song name>` command or use `!help` to find out more\n\n"
+		if len(d.Player.GetSongQueue()) > 0 {
+			content += fmt.Sprintf("\nNo song is currently playing, but the queue is filled with songs. Use `%vplay` command to toggle the playback\n\n", d.prefix)
+		} else {
+			content += fmt.Sprintf("\nNo song is currently playing. Use the `%vplay [title/url/id/stream]` command to start. \nType `%vhelp` for more information.\n\n", d.prefix, d.prefix)
+		}
 	}
 
 	// Display playlist information

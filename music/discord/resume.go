@@ -11,7 +11,7 @@ func (d *Discord) handleResumeCommand(s *discordgo.Session, m *discordgo.Message
 
 	var phrase string
 
-	if d.Player.GetCurrentSong() != nil {
+	if d.Player.GetCurrentSong() == nil {
 		phrase = getStartPhrase()
 	} else {
 		phrase = getContinuePhrase()

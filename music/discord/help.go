@@ -32,14 +32,14 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	avatarUrl := utils.InferProtocolByPort(hostname, 443) + hostname + "/avatar/random?" + fmt.Sprint(time.Now().UnixNano())
 	slog.Info(avatarUrl)
 
-	play := fmt.Sprintf("**Play**: `%vplay [title/url/id]` \nAliases: `%vp [title/url/id]`, `%v> [title/url/id]`\n", d.prefix, d.prefix, d.prefix)
+	play := fmt.Sprintf("**Play**: `%vplay [title/url/id/stream]` \nAliases: `%vp ...`, `%v> ...`\n", d.prefix, d.prefix, d.prefix)
 	pause := fmt.Sprintf("**Pause** / **resume**: `%vpause`, `%vplay` \nAliases: `%v!`, `%v>`\n", d.prefix, d.prefix, d.prefix, d.prefix)
-	queue := fmt.Sprintf("**Add track**: `%vadd [title/url/id]` \nAliases: `%va [title/url/id]`, `%v+ [title/url/id]`\n", d.prefix, d.prefix, d.prefix)
+	queue := fmt.Sprintf("**Add track**: `%vadd [title/url/id]` \nAliases: `%va ...`, `%v+ ...`\n", d.prefix, d.prefix, d.prefix)
 	skip := fmt.Sprintf("**Skip track**: `%vskip` \nAliases: `%vff`, `%v>>`\n", d.prefix, d.prefix, d.prefix)
 	list := fmt.Sprintf("**Show queue**: `%vlist` \nAliases: `%vqueue`, `%vl`, `%vq`\n", d.prefix, d.prefix, d.prefix, d.prefix)
 	history := fmt.Sprintf("**Show history**: `%vhistory`\n", d.prefix)
 	historyByDuration := fmt.Sprintf("**.. by duration**: `%vhistory duration`\n", d.prefix)
-	historyByPlaycount := fmt.Sprintf("**.. by play count**: `%vhistory count`\nAliases: `%vtime [count/duration]`, `%vt [count/duration]`", d.prefix, d.prefix, d.prefix)
+	historyByPlaycount := fmt.Sprintf("**.. by play count**: `%vhistory count`\nAliases: `%vtime ...`, `%vt ...`", d.prefix, d.prefix, d.prefix)
 	stop := fmt.Sprintf("**Stop and exit**: `%vexit` \nAliases: `%ve`, `%vx`\n", d.prefix, d.prefix, d.prefix)
 	help := fmt.Sprintf("**Show help**: `%vhelp` \nAliases: `%vh`, `%v?`\n", d.prefix, d.prefix, d.prefix)
 	about := fmt.Sprintf("**Show version**: `%vabout`", d.prefix)
@@ -48,7 +48,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 
 	embedMsg := embed.NewEmbed().
 		SetTitle("ℹ️ Melodix — Command Usage").
-		SetDescription("Some commands are aliased for shortness.\n`[title]` - track name\n`[url]` - youtube link\n`[id]` - track id from *History*.").
+		SetDescription("Some commands are aliased for shortness.\n`[title]` - track name\n`[url]` - YouTube URL\n`[id]` - track id from *History*\n`[stream]` - valid stream URL (radio).").
 		AddField("", "*Playback*\n"+play+skip+pause).
 		AddField("", "").
 		AddField("", "*Queue*\n"+queue+list).
