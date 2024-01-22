@@ -119,7 +119,7 @@ Melodix provides various routes for different functionalities:
 
 ## Where to get gently pats
 
-If you have any questions you can ask me in my [Discord server](https://discord.gg/2rArYVPYfR) to get support. Bear in mind there is no community whatsoever — just me.
+If you have any questions you can ask me in my [Discord server](https://discord.gg/NVtdTka8ZT) to get support. Bear in mind there is no community whatsoever — just me.
 
 ## Acknowledgment
 
