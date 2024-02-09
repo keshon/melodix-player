@@ -95,7 +95,7 @@ type IPlayer interface {
 	Play(startAt int, song *Song)
 	Skip()
 	Enqueue(song *Song)
-	Dequeue() *Song
+	Dequeue() (*Song, error)
 	ClearQueue()
 	Stop()
 	Pause()

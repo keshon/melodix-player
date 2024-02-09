@@ -1,10 +1,16 @@
 package player
 
-import "github.com/gookit/slog"
+import (
+	"errors"
+
+	"github.com/gookit/slog"
+)
+
+var ErrQueueEmpty = errors.New("queue is empty")
 
 // Enqueue adds a song to the queue.
 func (p *Player) Enqueue(song *Song) {
-	slog.Infof("Enqueuing song to queue: %v", song.Title)
+	slog.Debugf("Enqueuing song to queue: %v", song.Title)
 
 	p.Lock()
 	defer p.Unlock()
@@ -13,20 +19,20 @@ func (p *Player) Enqueue(song *Song) {
 }
 
 // Dequeue removes and returns the first song from the queue.
-func (p *Player) Dequeue() *Song {
+func (p *Player) Dequeue() (*Song, error) {
 	slog.Info("Dequeuing song and returning it from queue")
 
 	p.Lock()
 	defer p.Unlock()
 
 	if len(p.SongQueue) == 0 {
-		return nil
+		return nil, ErrQueueEmpty
 	}
 
 	firstSong := p.SongQueue[0]
 	p.SongQueue = p.SongQueue[1:]
 
-	return firstSong
+	return firstSong, nil
 }
 
 // ClearQueue clears the song queue.
@@ -35,10 +41,6 @@ func (p *Player) ClearQueue() {
 
 	p.Lock()
 	defer p.Unlock()
-
-	if len(p.SongQueue) == 0 {
-		return
-	}
 
 	p.SongQueue = make([]*Song, 0)
 }
