@@ -72,7 +72,6 @@ func (status PlaybackStatus) StringEmoji() string {
 		StatusResting: "💤",
 		StatusPlaying: "▶️",
 		StatusPaused:  "⏸",
-		StatusError:   "⚠️",
 	}
 
 	return statuses[status]
@@ -81,12 +80,12 @@ func (status PlaybackStatus) StringEmoji() string {
 // Player manages audio playback and song queue.
 type Player struct {
 	sync.Mutex
-	VoiceConnection  *discordgo.VoiceConnection
-	StreamingSession *dca.StreamingSession
-	EncodingSession  *dca.EncodeSession
-	SongQueue        []*Song
-	CurrentSong      *Song
-	CurrentStatus    PlaybackStatus
+	voiceConnection  *discordgo.VoiceConnection
+	streamingSession *dca.StreamingSession
+	encodingSession  *dca.EncodeSession
+	songQueue        []*Song
+	currentSong      *Song
+	currentStatus    PlaybackStatus
 	SkipInterrupt    chan bool
 }
 
@@ -100,63 +99,109 @@ type IPlayer interface {
 	Stop()
 	Pause()
 	Unpause()
+	Lock()
+	Unlock()
 	GetCurrentStatus() PlaybackStatus
 	SetCurrentStatus(status PlaybackStatus)
 	GetSongQueue() []*Song
+	SetSongQueue(queue []*Song)
 	GetVoiceConnection() *discordgo.VoiceConnection
 	SetVoiceConnection(voiceConnection *discordgo.VoiceConnection)
+	GetEncodingSession() *dca.EncodeSession
 	GetStreamingSession() *dca.StreamingSession
 	GetCurrentSong() *Song
+	SetCurrentSong(song *Song)
 }
 
 // NewPlayer creates a new Player instance.
 func NewPlayer(guildID string) IPlayer {
 	return &Player{
-		VoiceConnection:  nil,
+		voiceConnection:  nil,
+		streamingSession: nil,
+		encodingSession:  nil,
+		songQueue:        make([]*Song, 0),
+		currentSong:      nil,
+		currentStatus:    StatusResting,
 		SkipInterrupt:    make(chan bool, 1),
-		StreamingSession: nil,
-		EncodingSession:  nil,
-		SongQueue:        make([]*Song, 0),
-		CurrentSong:      nil,
-		CurrentStatus:    StatusResting,
 	}
+}
+
+// Lock locks the player for exclusive access.
+func (p *Player) Lock() {
+	p.Mutex.Lock()
+}
+
+// Unlock unlocks the player.
+func (p *Player) Unlock() {
+	p.Mutex.Unlock()
 }
 
 // GetStatus returns the current playback status.
 func (p *Player) GetCurrentStatus() PlaybackStatus {
-	return p.CurrentStatus
+	return p.currentStatus
 }
 
 // SetStatus sets the playback status.
 func (p *Player) SetCurrentStatus(status PlaybackStatus) {
 	p.Lock()
 	defer p.Unlock()
-	p.CurrentStatus = status
+	p.currentStatus = status
 }
 
 // GetSongQueue returns the song queue.
 func (p *Player) GetSongQueue() []*Song {
-	return p.SongQueue
+	return p.songQueue
+}
+
+// SetSongQueue sets the SongQueue field.
+func (p *Player) SetSongQueue(queue []*Song) {
+	// p.Lock()
+	// defer p.Unlock()
+	p.songQueue = queue
 }
 
 // GetVoiceConnection returns the voice connection.
 func (p *Player) GetVoiceConnection() *discordgo.VoiceConnection {
-	return p.VoiceConnection
+	return p.voiceConnection
 }
 
 // SetVoiceConnection sets the voice connection.
 func (p *Player) SetVoiceConnection(voiceConnection *discordgo.VoiceConnection) {
 	p.Lock()
 	defer p.Unlock()
-	p.VoiceConnection = voiceConnection
+	p.voiceConnection = voiceConnection
 }
 
 // GetCurrentSong returns the current song being played.
 func (p *Player) GetCurrentSong() *Song {
-	return p.CurrentSong
+	return p.currentSong
+}
+
+// SetCurrentSong sets the current song.
+func (p *Player) SetCurrentSong(song *Song) {
+	p.currentSong = song
+}
+
+// GetEncodingSession returns the current encoding session.
+func (p *Player) GetEncodingSession() *dca.EncodeSession {
+	return p.encodingSession
+}
+
+// SetEncodingSession sets the current encoding session.
+func (p *Player) SetEncodingSession(session *dca.EncodeSession) {
+	p.Lock()
+	defer p.Unlock()
+	p.encodingSession = session
 }
 
 // GetStreamingSession returns the current streaming session.
 func (p *Player) GetStreamingSession() *dca.StreamingSession {
-	return p.StreamingSession
+	return p.streamingSession
+}
+
+// SetStreamingSession sets the current streaming session.
+func (p *Player) SetStreamingSession(session *dca.StreamingSession) {
+	p.Lock()
+	defer p.Unlock()
+	p.streamingSession = session
 }

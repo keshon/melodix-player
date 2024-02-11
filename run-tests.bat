@@ -4,4 +4,4 @@ rem
 rem TESTS
 rem
 
-go test ./internal/melodix
+go test ./music/player

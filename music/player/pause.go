@@ -6,16 +6,19 @@ import "github.com/gookit/slog"
 func (p *Player) Pause() {
 	slog.Info("Pausing audio playback")
 
-	if p.VoiceConnection == nil {
+	// Check if the current status is playing
+	if p.GetCurrentStatus() != StatusPlaying {
 		return
 	}
 
-	if p.StreamingSession == nil {
+	// Update the status to paused
+	p.SetCurrentStatus(StatusPaused)
+
+	// Check if the streaming session is initialized
+	if p.GetStreamingSession() == nil {
 		return
 	}
 
-	if p.CurrentStatus == StatusPlaying {
-		p.StreamingSession.SetPaused(true)
-		p.CurrentStatus = StatusPaused
-	}
+	// Pause the streaming session
+	p.GetStreamingSession().SetPaused(true)
 }

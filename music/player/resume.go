@@ -6,21 +6,26 @@ import "github.com/gookit/slog"
 func (p *Player) Unpause() {
 	slog.Info("Resuming playback")
 
-	if p.VoiceConnection == nil {
+	// Check if voice connection exists
+	if p.GetVoiceConnection() == nil {
 		return
 	}
 
-	if p.StreamingSession != nil {
-		if p.CurrentStatus == StatusPaused {
-			p.StreamingSession.SetPaused(false)
-			p.CurrentStatus = StatusPlaying
+	// Check if a streaming session is present
+	if p.GetStreamingSession() != nil {
+		// Unpause if currently paused
+		if p.GetCurrentStatus() == StatusPaused {
+			p.GetStreamingSession().SetPaused(false)
+			p.SetCurrentStatus(StatusPlaying)
 		}
 	}
 
+	// Check if there are songs in the queue
 	if len(p.GetSongQueue()) > 0 {
-		if p.CurrentStatus == StatusResting {
+		// If player is resting, start playing
+		if p.GetCurrentStatus() == StatusResting {
 			p.Play(0, nil)
-			p.CurrentStatus = StatusPlaying
+			p.SetCurrentStatus(StatusPlaying)
 		}
 	}
 }
