@@ -19,6 +19,9 @@ RUN GO_VERSION=$(go version | awk '{print $3}') && \
 # Second stage: create the final image
 FROM alpine:3.17
 
+RUN apk update && \
+    apk add --no-cache ffmpeg
+
 COPY --from=build /usr/project /usr/project
 
 WORKDIR /usr/project

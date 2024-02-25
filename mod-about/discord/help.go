@@ -42,7 +42,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	unregister := fmt.Sprintf("`%vunregister` — disable commands listening", prefix)
 
 	play := fmt.Sprintf("`%vplay [title/url/id/stream]` — play selected track/radio\n", prefix)
-	pause := fmt.Sprintf("`%vpause`, `%vplay` — pause/resume playback\n", prefix, prefix)
+	pause := fmt.Sprintf("`%vpause`, `%vresume` — pause/resume playback\n", prefix, prefix)
 	stop := fmt.Sprintf("`%vexit` — stop playback and leave voice channel\n", prefix)
 
 	queue := fmt.Sprintf("`%vadd [title/url/id]` — add track\n", prefix)
