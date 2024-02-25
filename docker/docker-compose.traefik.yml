@@ -4,7 +4,7 @@ services:
     networks:
       - proxy
     ports:
-      - 3034:8080      
+      - 3035:8080      
     labels:
       # HTTP to HTTPS redirection and middleware assignment
       - traefik.enable=true
