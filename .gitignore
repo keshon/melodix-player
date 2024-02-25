@@ -1,7 +1,20 @@
-/.VSCodeCounter
-main.exe
-melodix.exe
+# Ignore .VSCodeCounter directory
+.VSCodeCounter/
+
+# Ignore .vscode directory
+.vscode/
+
+# Ignore database files
 *.db
-/.env
+
+# Ignore environment files
+.env
+
+# Ignore UPX compressed files
 *.upx
-logs/*
+
+# Ignore logs directory and its contents
+logs/
+
+# Ignore executable files in root directory
+/*.exe

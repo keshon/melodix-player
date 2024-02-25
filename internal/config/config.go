@@ -3,12 +3,12 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"os"
 	"strconv"
 
-	"github.com/gookit/slog"
 	"github.com/joho/godotenv"
-	"github.com/keshon/melodix-discord-player/music/pkg/dca"
+	"github.com/keshon/melodix-discord-player/mod-music/pkg/dca"
 )
 
 type Config struct {
@@ -35,6 +35,10 @@ type Config struct {
 	DcaUserAgent               string
 }
 
+// NewConfig creates a new Config object and returns it along with any error encountered.
+//
+// No parameters.
+// Returns *Config and error.
 func NewConfig() (*Config, error) {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
 		return nil, err
@@ -71,8 +75,11 @@ func NewConfig() (*Config, error) {
 	return config, nil
 }
 
+// String returns the JSON representation of the Config struct.
+//
+// No parameters.
+// Returns a string.
 func (c *Config) String() string {
-	// Create a map for key-value pairs
 	configMap := map[string]interface{}{
 		"DiscordCommandPrefix":       c.DiscordCommandPrefix,
 		"DiscordBotToken":            c.DiscordBotToken,
@@ -97,25 +104,19 @@ func (c *Config) String() string {
 		"DcaUserAgent":               c.DcaUserAgent,
 	}
 
-	// Convert the map to a JSON string
 	jsonString, err := json.MarshalIndent(configMap, "", "    ")
 	if err != nil {
-		slog.Error("Error formatting configuration as JSON")
 		return ""
 	}
 
 	return string(jsonString)
 }
 
+// validateMandatoryConfig checks for the presence of mandatory configuration keys in the environment variables and returns an error if any are missing.
+//
+// No parameters.
+// Returns an error.
 func validateMandatoryConfig() error {
-
-	// Define a list of mandatory environment variable keys
-	// Extra overlay to ensure we have all necessary values even if they have default values (e.g. ffmpeg has own)
-	// ignore:
-	// - REST_GIN_RELEASE
-	// - REST_HOSTNAME
-	// - DCA_FFMPEG_BINARY_PATH
-
 	mandatoryKeys := []string{
 		"DISCORD_COMMAND_PREFIX", "DISCORD_BOT_TOKEN", "REST_ENABLED", "DCA_FRAME_DURATION", "DCA_BITRATE", "DCA_PACKET_LOSS",
 		"DCA_RAW_OUTPUT", "DCA_APPLICATION", "DCA_COMPRESSION_LEVEL", "DCA_BUFFERED_FRAMES",
@@ -124,7 +125,6 @@ func validateMandatoryConfig() error {
 		"DCA_ENCODING_LINE_LOG", "DCA_USER_AGENT",
 	}
 
-	// Check if any mandatory key is missing
 	for _, key := range mandatoryKeys {
 		if os.Getenv(key) == "" {
 			return errors.New("Missing mandatory configuration: " + key)
@@ -134,6 +134,23 @@ func validateMandatoryConfig() error {
 	return nil
 }
 
+// getenvAsBool returns the boolean value of the environment variable specified by the key.
+//
+// It takes a string key as a parameter and returns a boolean value.
+func getenvAsBool(key string) bool {
+	val := os.Getenv(key)
+
+	boolValue, err := strconv.ParseBool(val)
+	if err != nil {
+		return false
+	}
+
+	return boolValue
+}
+
+// getenvAsInt returns the integer value of the environment variable with the given key.
+//
+// It takes a string key as parameter and returns an integer value.
 func getenvAsInt(key string) int {
 	val := os.Getenv(key)
 
@@ -146,18 +163,9 @@ func getenvAsInt(key string) int {
 	return intValue
 }
 
-func getenvAsBool(key string) bool {
-	val := os.Getenv(key)
-
-	boolValue, err := strconv.ParseBool(val)
-	if err != nil {
-		slog.Error("Error parsing bool value from env variable")
-		return false
-	}
-
-	return boolValue
-}
-
+// getenvBoolAsInt returns the integer representation of the boolean value retrieved from the environment variable specified by the key.
+//
+// It takes a string key as a parameter and returns an integer value.
 func getenvBoolAsInt(key string) int {
 	val := os.Getenv(key)
 

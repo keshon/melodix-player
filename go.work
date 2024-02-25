@@ -2,5 +2,7 @@ go 1.21.1
 
 use (
 	.
-	./music
+	./mod-about
+	./mod-helloworld
+	./mod-music
 )

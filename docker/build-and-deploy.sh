@@ -30,15 +30,16 @@ else
 fi
 
 # Docker
-# - Stop container
-docker stop "$ALIAS"
-docker rm "$ALIAS"
+# - Remove old container (if it exists)
+docker-compose down
 
-# - Remove old image (if there is any)
-docker rmi "$(docker images --filter=reference="*:${ALIAS}-image" -q)"
+# - Remove old image (if it exists)
+if [ "$(docker images -q "${ALIAS}-image" 2>/dev/null)" ]; then
+    docker rmi "${ALIAS}-image"
+fi
 
-# - Build new docker image from Dockerfile
-docker build -t "${ALIAS}-image" .
+# - Build new docker image from Dockerfile using BuildKit for parallel builds
+DOCKER_BUILDKIT=1 docker build -t "${ALIAS}-image" .
 
 # Start new container using docker-compose based on the selected command
 eval "$DOCKER_COMPOSE_COMMAND"

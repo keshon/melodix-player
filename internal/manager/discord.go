@@ -1,54 +1,73 @@
 package manager
 
 import (
-	"os"
+	"fmt"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 
+	"github.com/keshon/melodix-discord-player/internal/botsdef"
 	"github.com/keshon/melodix-discord-player/internal/config"
 	"github.com/keshon/melodix-discord-player/internal/db"
-	"github.com/keshon/melodix-discord-player/music/discord"
-	"github.com/keshon/melodix-discord-player/music/player"
 )
 
-var (
-	prefix = os.Getenv("COMMAND_PREFIX")
-)
-
-// GuildManager manages guild-related functionality.
 type GuildManager struct {
-	Session      *discordgo.Session
-	BotInstances map[string]*discord.BotInstance
-	prefix       string
+	Session       *discordgo.Session
+	Bots          map[string]map[string]botsdef.Discord
+	commandPrefix string
 }
 
-// NewGuildManager creates a new instance of GuildManager.
-func NewGuildManager(session *discordgo.Session, botInstances map[string]*discord.BotInstance) *GuildManager {
+// NewGuildManager creates a new GuildManager with the given discord session and bot instances.
+//
+// Parameters:
+// - session: *discordgo.Session
+// - botInstances: map[string]*discord.BotInstance
+// Return type: *GuildManager
+func NewGuildManager(session *discordgo.Session, bots map[string]map[string]botsdef.Discord) *GuildManager {
 	config, err := config.NewConfig()
 	if err != nil {
 		slog.Fatalf("Error loading config:", err)
 	}
 
 	return &GuildManager{
-		Session:      session,
-		BotInstances: botInstances,
-		prefix:       config.DiscordCommandPrefix,
+		Session:       session,
+		Bots:          bots,
+		commandPrefix: config.DiscordCommandPrefix,
 	}
 }
 
-// Start starts the GuildManager instance.
+// Start starts the GuildManager.
 func (gm *GuildManager) Start() {
-	slog.Info("Guild manager started")
+	slog.Info("Discord instance of guild manager started")
 	gm.Session.AddHandler(gm.Commands)
 }
 
-// Commands handles incoming Discord commands.
+// Commands handles the commands received in a Discord session message.
+//
+// Parameters:
+//   - s: a pointer to the Discord session
+//   - m: a pointer to the Discord message received
 func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
-	command, _, err := parseCommand(m.Message.Content, gm.prefix)
+	command, _, err := parseCommand(m.Message.Content, gm.commandPrefix)
 	if err != nil {
-		// slog.Info(err)
+		slog.Error(err)
 		return
+	}
+
+	switch command {
+	case "hello", "about", "v", "help", "h", "play", "p", ">", "pause", "!", "resume", "exit", "stop", "e", "x", "list", "queue", "l", "q", "add", "a", "+", "skip", "next", "ff", ">>", "history", "time", "t":
+		guildID := m.GuildID
+		exists, err := db.DoesGuildExist(guildID)
+		if err != nil {
+			slog.Errorf("Error checking if guild is registered: %v", err)
+			return
+		}
+
+		if !exists {
+			gm.Session.ChannelMessageSend(m.Message.ChannelID, "Guild must be registered first.\nUse `"+gm.commandPrefix+"register` command.")
+			return
+		}
 	}
 
 	switch command {
@@ -56,12 +75,14 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		gm.handleRegisterCommand(s, m)
 	case "unregister":
 		gm.handleUnregisterCommand(s, m)
-	default:
-		// log.Println("Unknown command")
 	}
 }
 
-// handleRegisterCommand handles the registration of a guild.
+// handleRegisterCommand handles the registration command for the GuildManager.
+//
+// Parameters:
+// - s: The discord session.
+// - m: The message create event.
 func (gm *GuildManager) handleRegisterCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	channelID := m.Message.ChannelID
 	guildID := m.GuildID
@@ -85,11 +106,16 @@ func (gm *GuildManager) handleRegisterCommand(s *discordgo.Session, m *discordgo
 		return
 	}
 
-	gm.setupBotInstance(gm.BotInstances, s, guildID)
+	gm.setupBotInstance(s, guildID)
 	gm.Session.ChannelMessageSend(channelID, "Guild registered successfully")
 }
 
-// handleUnregisterCommand handles the unregistration of a guild.
+// handleUnregisterCommand handles the unregister command for the GuildManager.
+//
+// Parameters:
+// - s: the discordgo Session
+// - m: the discordgo MessageCreate
+// Return type: none
 func (gm *GuildManager) handleUnregisterCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	channelID := m.Message.ChannelID
 	guildID := m.GuildID
@@ -116,28 +142,76 @@ func (gm *GuildManager) handleUnregisterCommand(s *discordgo.Session, m *discord
 	gm.Session.ChannelMessageSend(channelID, "Guild unregistered successfully")
 }
 
-// setupBotInstance sets up a new BotInstance for a guild.
-func (gm *GuildManager) setupBotInstance(botInstances map[string]*discord.BotInstance, session *discordgo.Session, guildID string) {
-	botInstances[guildID] = &discord.BotInstance{
-		Melodix: discord.NewDiscord(session, guildID),
+// setupBotInstance sets up a bot instance for the given guild.
+//
+// Parameters:
+// - session: pointer to discordgo.Session
+// - guildID: string
+func (gm *GuildManager) setupBotInstance(session *discordgo.Session, guildID string) {
+	id := guildID
+
+	if _, ok := gm.Bots[id]; !ok {
+		gm.Bots[id] = make(map[string]botsdef.Discord)
 	}
-	botInstances[guildID].Melodix.Start(guildID)
+
+	for _, module := range botsdef.Modules {
+		botInstance := botsdef.CreateBotInstance(session, module)
+		if botInstance != nil {
+			gm.Bots[id][module] = botInstance
+			botInstance.Start(id)
+		}
+	}
 }
 
-// removeBotInstance removes a BotInstance for a guild.
+// removeBotInstance removes a bot instance from the GuildManager's Bots map for the given guildID.
+//
+// Parameters:
+// - guildID string: the ID of the guild from which the bot instance will be removed.
+// No return type.
 func (gm *GuildManager) removeBotInstance(guildID string) {
-	instance, ok := gm.BotInstances[guildID]
+	bots, ok := gm.Bots[guildID]
 	if !ok {
-		return // Guild instance not found, nothing to do
+		return
 	}
 
-	instance.Melodix.InstanceActive = false
-
-	if instance.Melodix.Player != nil && instance.Melodix.Player.GetVoiceConnection() != nil {
-		instance.Melodix.Player.GetVoiceConnection().Disconnect()
-		instance.Melodix.Player.SetVoiceConnection(nil)
+	// Iterate through modules and remove each bot
+	for _, module := range botsdef.Modules {
+		if bot, ok := bots[module]; ok {
+			bot.Stop()
+			delete(bots, module)
+		}
 	}
 
-	instance.Melodix.Player.SetCurrentStatus(player.StatusResting)
-	delete(gm.BotInstances, guildID)
+	delete(gm.Bots, guildID)
+}
+
+// parseCommand parses the input based on the provided pattern
+//
+// input: the input string to be parsed
+// pattern: the pattern to match at the beginning of the input
+// string: the parsed command
+// string: the parsed parameter
+// error: an error if the pattern is not found or no command is found
+func parseCommand(input, pattern string) (string, string, error) {
+	input = strings.ToLower(input)
+	pattern = strings.ToLower(pattern)
+
+	if !strings.HasPrefix(input, pattern) {
+		return "", "", nil // fmt.Errorf("pattern not found")
+	}
+
+	input = input[len(pattern):]
+
+	words := strings.Fields(input)
+	if len(words) == 0 {
+		return "", "", fmt.Errorf("no command found")
+	}
+
+	command := words[0]
+	parameter := ""
+	if len(words) > 1 {
+		parameter = strings.Join(words[1:], " ")
+		parameter = strings.TrimSpace(parameter)
+	}
+	return command, parameter, nil
 }

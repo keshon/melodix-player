@@ -95,12 +95,6 @@ Melodix provides various routes for different functionalities:
 - `GET /guild/ids`: Retrieve active guild IDs.
 - `GET /guild/playing`: Obtain information about the currently playing track in each active guild.
 
-#### Player Routes
-
-- `GET /player/play/:guild_id?url=<youtube_video_url>`: Play a track in a specific guild.
-- `GET /player/pause/:guild_id`: Pause playback in a specific guild.
-- `GET /player/resume/:guild_id`: Resume playback in a specific guild.
-
 #### History Routes
 
 - `GET /history`: Access the overall history of played tracks.
@@ -126,10 +120,6 @@ If you have any questions you can ask me in my [Discord server](https://discord.
 I drew inspiration from [Muzikas](https://github.com/FabijanZulj/Muzikas), a user-friendly Discord bot created by Fabijan Zulj.
 
 The banner images used in this project were sourced from [Freepik](https://www.freepik.com), attributed to contributors [@GarryKillian](https://www.freepik.com/author/garrykillian) and [@rawpixel.com](https://www.freepik.com/author/rawpixel-com).
-
-## Contribution
-
-Ahahahaha.... riiight.
 
 ## License
 
