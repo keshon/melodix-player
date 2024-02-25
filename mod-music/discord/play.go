@@ -20,8 +20,13 @@ import (
 func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string, enqueueOnly bool) {
 	d.changeAvatar(s)
 
+	// If param actually has a value
+	if param == "" {
+		return
+	}
+
 	// Wait message
-	embedStr := getPleaseWaitPhrase()
+	embedStr := "Please wait..."
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).
@@ -36,7 +41,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 
 	// Check if any songs were found
 	if len(songsList) <= 0 {
-		embedStr = getErrorRequestPhrase()
+		embedStr = "No songs or streams were found by your query."
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
@@ -51,7 +56,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	g, _ := s.State.Guild(c.GuildID)
 
 	if len(g.VoiceStates) == 0 {
-		embedStr = getJoinVoiceChannelPhrase()
+		embedStr = "You are not in a voice channel, please join one first."
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
@@ -64,7 +69,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	// Fill-in playlist
 	playlist, err := createPlaylist(paramType, songsList, d, m)
 	if err != nil {
-		embedStr = fmt.Sprintf("%v\n\n**Error details**:\n`%v`", getErrorFormingPlaylistPhrase(), err)
+		embedStr = fmt.Sprintf("%v\n\n*details:*\n`%v`", "Error forming playlist", err)
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
@@ -74,7 +79,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 
 	if len(playlist) == 0 {
-		embedStr = getNoMusicFoundPhrase()
+		embedStr = "There are no songs in the playlist."
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
@@ -87,7 +92,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	// Enqueue playlist to the player
 	err = playOrEnqueue(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
 	if err != nil {
-		embedStr = fmt.Sprintf("%v\n\n**Error details**:\n`%v`", getErrorFormingPlaylistPhrase(), err)
+		embedStr = fmt.Sprintf("%v\n\n*details:*\n`%v`", "Error enqueuing/playing playlist", err)
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).

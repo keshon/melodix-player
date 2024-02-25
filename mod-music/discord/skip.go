@@ -9,7 +9,7 @@ import (
 func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
 
-	embedStr := "⏩ " + getSkipPhrase()
+	embedStr := "⏩ " + "Skipping"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
@@ -19,7 +19,7 @@ func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCr
 	d.Player.Skip()
 
 	if len(d.Player.GetSongQueue()) == 0 {
-		embedStr := "⏹ " + getStopPhrase()
+		embedStr := "⏹ " + "Stopped playback"
 		embedMsg := embed.NewEmbed().
 			SetDescription(embedStr).
 			SetColor(0x9f00d4).MessageEmbed

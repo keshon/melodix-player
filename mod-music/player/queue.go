@@ -8,52 +8,42 @@ import (
 
 // Enqueue adds a song to the queue.
 func (p *Player) Enqueue(song *Song) {
-	slog.Infof("Enqueue: Enqueuing song to queue: %v", song.Title)
+	slog.Infof("Enqueue: enqueuing song to queue: %v", song.Title)
 
-	// Lock to ensure thread safety
-	p.Lock()
-	defer p.Unlock()
+	// p.Lock()
+	// defer p.Unlock()
 
-	// Append the song to the queue
-	appendedQueue := append(p.GetSongQueue(), song)
-	p.SetSongQueue(appendedQueue)
+	p.SetSongQueue(append(p.GetSongQueue(), song))
+
+	if p.currentSong == nil {
+		p.SetCurrentSong(song)
+	}
 }
 
 // Dequeue removes and returns the first song from the queue.
 func (p *Player) Dequeue() (*Song, error) {
-	slog.Info("Dequeuing song and returning it from queue")
+	slog.Infof("Dequeue: denqueuing song from queue: %v", p.GetSongQueue())
 
-	// Lock to ensure thread safety
-	p.Lock()
-	defer p.Unlock()
+	// p.Lock()
+	// defer p.Unlock()
 
-	var err = errors.New("queue is empty")
-
-	// Check if the queue is nil or empty
-	if len(p.GetSongQueue()) == 0 {
-		slog.Info("Dequeue: Queue is empty")
-		return nil, err
+	queue := p.GetSongQueue()
+	if len(queue) == 0 {
+		return nil, errors.New("queue is empty")
 	}
 
-	// Dequeue the first song
-	firstSong := p.GetSongQueue()[0]
-	p.SetSongQueue(p.GetSongQueue()[1:])
+	firstSong := queue[0]
+	p.SetSongQueue(queue[1:])
 
 	return firstSong, nil
 }
 
 // ClearQueue clears the song queue.
 func (p *Player) ClearQueue() {
-	slog.Info("ClearQueue: Clearing song queue")
+	slog.Info("ClearQueue: clearing song queue")
 
-	// Lock to ensure thread safety
 	p.Lock()
 	defer p.Unlock()
 
-	if len(p.GetSongQueue()) == 0 {
-		return
-	}
-
-	// Reset the song queue to an empty slice
-	p.SetSongQueue(make([]*Song, 0))
+	p.SetSongQueue(nil)
 }

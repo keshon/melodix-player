@@ -25,8 +25,8 @@ func (p *Player) Skip() {
 		// Check if SkipInterrupt channel is available
 		if len(p.SkipInterrupt) == 0 {
 			// Record playback count statistics
-			history := history.NewHistory()
-			history.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
+			h := history.NewHistory()
+			h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
 
 			// Send interrupt to skip
 			p.SkipInterrupt <- true
@@ -41,8 +41,8 @@ func (p *Player) Skip() {
 			// Check if SkipInterrupt channel is available
 			if len(p.SkipInterrupt) == 0 {
 				// Record playback count statistics
-				history := history.NewHistory()
-				history.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
+				h := history.NewHistory()
+				h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
 
 				// Send interrupt to skip
 				p.SkipInterrupt <- true

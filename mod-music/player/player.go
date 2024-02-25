@@ -97,8 +97,8 @@ type IPlayer interface {
 	Dequeue() (*Song, error)
 	ClearQueue()
 	Stop()
-	Pause()
-	Unpause()
+	Pause() error
+	Unpause() error
 	Lock()
 	Unlock()
 	GetCurrentStatus() PlaybackStatus

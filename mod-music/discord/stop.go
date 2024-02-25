@@ -9,7 +9,7 @@ import (
 func (d *Discord) handleStopCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.Player.Stop()
 
-	embedStr := "⏹ " + getStopPhrase()
+	embedStr := "⏹ " + "Stopped playback"
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed

@@ -13,7 +13,7 @@ func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.Mess
 	playlist := d.Player.GetSongQueue()
 
 	// Wait message
-	embedStr := getPleaseWaitPhrase()
+	embedStr := "Please wait..."
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).

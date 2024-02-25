@@ -1,7 +1,7 @@
 package discord
 
 import (
-	"log/slog"
+	"github.com/gookit/slog"
 
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
@@ -11,11 +11,11 @@ import (
 func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
 
-	if d.Player.GetCurrentSong() == nil {
+	err := d.Player.Pause()
+	if err != nil {
+		slog.Error("Error pausing player:", err)
 		return
 	}
-
-	d.Player.Pause()
 
 	embedStr := d.Player.GetCurrentStatus().StringEmoji() + " " + d.Player.GetCurrentStatus().String()
 	embedMsg := embed.NewEmbed().

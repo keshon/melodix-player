@@ -3,7 +3,6 @@ package player
 import (
 	"fmt"
 	"io"
-	"sync"
 	"time"
 
 	"github.com/gookit/slog"
@@ -15,30 +14,35 @@ import (
 
 // Play starts playing the current or specified song.
 func (p *Player) Play(startAt int, song *Song) {
-	var cleanupDone sync.WaitGroup
-
-	// Listen for skip signal
-	if p.handleSkipSignal() {
-		return
-	}
-
 	// Get current song (from queue or as arg)
-	p.setupCurrentSong(startAt, song)
+	var currentSong *Song
+	if song == nil {
+		var err error
+		currentSong, err = p.Dequeue()
+		if err != nil {
+			slog.Error(err)
+			return
+		}
+	} else {
+		currentSong = song
+	}
+	p.SetCurrentSong(currentSong)
 
 	// Setup encoding
 	options, err := p.createEncodeOptions(startAt)
 	if err != nil {
 		slog.Fatalf("Failed to create encode options: %v", err)
+		return
 	}
 
 	// Start encoding
-	var encErr error
-	encSession, encErr := dca.EncodeFile(p.GetCurrentSong().DownloadURL, options)
-	p.SetEncodingSession(encSession)
-	defer func() {
-		p.GetEncodingSession().Cleanup()
-		cleanupDone.Wait()
-	}()
+	encodingSession, encodingError := dca.EncodeFile(p.GetCurrentSong().DownloadURL, options)
+	if encodingError != nil {
+		slog.Error(encodingError)
+		return
+	}
+	p.SetEncodingSession(encodingSession)
+	defer p.GetEncodingSession().Cleanup()
 
 	// Connect to Discord channel and be ready
 	p.setupVoiceConnection()
@@ -51,21 +55,34 @@ func (p *Player) Play(startAt int, song *Song) {
 	// Set player status
 	p.SetCurrentStatus(StatusPlaying)
 
-	// Setup history
-	h := history.NewHistory()
-
 	// Add current track to history
-	p.addSongToHistory(h)
+	p.addSongToHistory()
 
 	// Add current song playback duration stat to history
-	p.addSongPlaybackStats(h)
+	p.addSongPlaybackStats()
 
-	// Handle done signal (finished or with error)
-	p.handleDoneSignal(done, h, encErr, &cleanupDone)
-}
-
-func (p *Player) handleSkipSignal() bool {
+	// Handle signals
 	select {
+	case <-done:
+		if encodingError != nil && encodingError != io.EOF {
+			p.handleSongError(encodingError)
+			return
+		}
+
+		if p.GetVoiceConnection() == nil || p.GetStreamingSession() == nil || p.GetCurrentSong() == nil {
+			return
+		}
+
+		if p.GetCurrentSong().Source != SourceStream {
+			p.handleSongCompletion()
+		} else {
+			p.handleSongUnfinished(0)
+		}
+
+		h := history.NewHistory()
+		if err := h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID); err != nil {
+			slog.Warnf("Error adding stats count stats to history: %v", err)
+		}
 	case <-p.SkipInterrupt:
 		slog.Info("Song is interrupted for skip, stopping playback")
 
@@ -73,13 +90,21 @@ func (p *Player) handleSkipSignal() bool {
 			p.GetVoiceConnection().Speaking(false)
 		}
 		p.GetEncodingSession().Cleanup()
-		// p.SetCurrentStatus(StatusResting)
-
-		return true
-	default:
-		// No skip signal, continue with playback
-		return false
+		return
 	}
+
+	if len(p.GetSongQueue()) == 0 {
+		time.Sleep(250 * time.Millisecond)
+		slog.Info("Audio done")
+		p.Stop()
+		p.SetCurrentStatus(StatusResting)
+		return
+	}
+
+	p.GetVoiceConnection().Speaking(false)
+	time.Sleep(250 * time.Millisecond)
+	slog.Info("Play next in queue")
+	go p.Play(0, nil)
 }
 
 func (p *Player) setupCurrentSong(startAt int, song *Song) {
@@ -95,11 +120,6 @@ func (p *Player) setupCurrentSong(startAt int, song *Song) {
 				p.SetCurrentSong(currentSong)
 			}
 		}
-	}
-
-	if p.GetCurrentSong() == nil {
-		slog.Info("No songs in queue")
-		return
 	}
 }
 
@@ -131,13 +151,6 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 	}, nil
 }
 
-func (p *Player) setupEncodingSession(options *dca.EncodeOptions) error {
-	var errEnc error
-	session, errEnc := dca.EncodeFile(p.GetCurrentSong().DownloadURL, options)
-	p.SetEncodingSession(session)
-	return errEnc
-}
-
 func (p *Player) setupVoiceConnection() {
 	// p.Lock()
 	// defer p.Unlock()
@@ -158,7 +171,7 @@ func (p *Player) setupVoiceConnection() {
 	}
 }
 
-func (p *Player) addSongToHistory(h history.IHistory) {
+func (p *Player) addSongToHistory() {
 	historySong := &history.Song{
 		Name:        p.GetCurrentSong().Title,
 		UserURL:     p.GetCurrentSong().UserURL,
@@ -167,14 +180,18 @@ func (p *Player) addSongToHistory(h history.IHistory) {
 		ID:          p.GetCurrentSong().ID,
 		Thumbnail:   history.Thumbnail(p.GetCurrentSong().Thumbnail),
 	}
+	h := history.NewHistory()
 	h.AddTrackToHistory(p.GetVoiceConnection().GuildID, historySong)
 }
 
-func (p *Player) addSongPlaybackStats(h history.IHistory) {
+func (p *Player) addSongPlaybackStats() {
 	interval := 2 * time.Second
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
 	tickerDone := make(chan bool)
+
+	h := history.NewHistory()
 
 	go func() {
 		for {
@@ -196,30 +213,6 @@ func (p *Player) addSongPlaybackStats(h history.IHistory) {
 	tickerDone <- true
 }
 
-func (p *Player) handleDoneSignal(done chan error, h history.IHistory, errEnc error, cleanupDone *sync.WaitGroup) {
-	defer cleanupDone.Done()
-
-	select {
-	case <-done:
-		if errEnc != nil && errEnc != io.EOF {
-			p.handleError(errEnc)
-			return
-		}
-
-		if p.GetVoiceConnection() == nil || p.GetStreamingSession() == nil || p.GetCurrentSong() == nil {
-			return
-		}
-
-		if p.GetCurrentSong().Source != SourceStream {
-			p.handleSongCompletion()
-		} else {
-			p.handleUnfinishedSong(0)
-		}
-
-		p.handlePlaybackCountStats(h)
-	}
-}
-
 func (p *Player) handleSongCompletion() {
 	if p.GetCurrentStatus() != StatusPlaying {
 		return
@@ -230,11 +223,11 @@ func (p *Player) handleSongCompletion() {
 	if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
 		startAt := songPosition.Seconds()
 		slog.Warn("Track should be continue starting from ", startAt)
-		p.handleUnfinishedSong(int(startAt))
+		p.handleSongUnfinished(int(startAt))
 	}
 }
 
-func (p *Player) handleUnfinishedSong(startAt int) {
+func (p *Player) handleSongUnfinished(startAt int) {
 	slog.Warn("Song is done but still unfinished. Restarting from interrupted position...")
 
 	p.GetEncodingSession().Cleanup()
@@ -249,13 +242,7 @@ func (p *Player) handleUnfinishedSong(startAt int) {
 	}
 }
 
-func (p *Player) handlePlaybackCountStats(h history.IHistory) {
-	if err := h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID); err != nil {
-		slog.Warnf("Error adding stats count stats to history: %v", err)
-	}
-}
-
-func (p *Player) handleError(err error) {
+func (p *Player) handleSongError(err error) {
 	slog.Warnf("Song is done but an unexpected error occurred: %v", err)
 
 	time.Sleep(250 * time.Millisecond)

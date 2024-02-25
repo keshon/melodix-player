@@ -70,9 +70,9 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	commandAliases := [][]string{
-		{"play", "p", ">"},
 		{"pause", "!", ">"},
 		{"resume", "!", ">"},
+		{"play", "p", ">"},
 		{"exit", "stop", "e", "x"},
 		{"list", "queue", "l", "q"},
 		{"add", "a", "+"},
@@ -93,7 +93,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 		fallthrough
 	case "resume":
-		if parameter == "" && d.Player.GetCurrentStatus() != player.StatusPlaying {
+		if parameter == "" && d.Player.GetCurrentStatus() == player.StatusPaused || d.Player.GetCurrentStatus() == player.StatusResting {
 			d.handleResumeCommand(s, m)
 			return
 		}
