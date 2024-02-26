@@ -15,9 +15,9 @@ func (p *Player) Enqueue(song *Song) {
 
 	p.SetSongQueue(append(p.GetSongQueue(), song))
 
-	if p.currentSong == nil {
-		p.SetCurrentSong(song)
-	}
+	// if p.currentSong == nil {
+	p.SetCurrentSong(song)
+	// }
 }
 
 // Dequeue removes and returns the first song from the queue.
@@ -45,5 +45,5 @@ func (p *Player) ClearQueue() {
 	p.Lock()
 	defer p.Unlock()
 
-	p.SetSongQueue(nil)
+	p.SetSongQueue(make([]*Song, 0))
 }

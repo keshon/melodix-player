@@ -36,12 +36,12 @@ func (p *Player) Play(startAt int, song *Song) {
 	}
 
 	// Start encoding
-	encodingSession, encodingError := dca.EncodeFile(p.GetCurrentSong().DownloadURL, options)
-	if encodingError != nil {
-		slog.Error(encodingError)
+	encoding, err := dca.EncodeFile(p.GetCurrentSong().DownloadURL, options)
+	if err != nil {
+		slog.Error(err)
 		return
 	}
-	p.SetEncodingSession(encodingSession)
+	p.SetEncodingSession(encoding)
 	defer p.GetEncodingSession().Cleanup()
 
 	// Connect to Discord channel and be ready
@@ -49,8 +49,8 @@ func (p *Player) Play(startAt int, song *Song) {
 
 	// Send encoding to Discord stream
 	done := make(chan error, 1)
-	streamSession := dca.NewStream(p.GetEncodingSession(), p.GetVoiceConnection(), done)
-	p.SetStreamingSession(streamSession)
+	stream := dca.NewStream(p.GetEncodingSession(), p.GetVoiceConnection(), done)
+	p.SetStreamingSession(stream)
 
 	// Set player status
 	p.SetCurrentStatus(StatusPlaying)
@@ -64,19 +64,63 @@ func (p *Player) Play(startAt int, song *Song) {
 	// Handle signals
 	select {
 	case <-done:
-		if encodingError != nil && encodingError != io.EOF {
-			p.handleSongError(encodingError)
+		if err != nil && err != io.EOF {
+			slog.Errorf("Song is done but an unexpected error occurred: %v", err)
+
+			time.Sleep(250 * time.Millisecond)
+			if p.GetVoiceConnection() != nil {
+				p.GetVoiceConnection().Speaking(false)
+			}
+			p.SetCurrentStatus(StatusResting)
+			p.GetEncodingSession().Cleanup()
 			return
 		}
 
-		if p.GetVoiceConnection() == nil || p.GetStreamingSession() == nil || p.GetCurrentSong() == nil {
+		if p.GetVoiceConnection() == nil {
+			return
+		}
+
+		if p.GetStreamingSession() == nil {
+			return
+		}
+
+		if p.GetCurrentSong() == nil {
 			return
 		}
 
 		if p.GetCurrentSong().Source != SourceStream {
-			p.handleSongCompletion()
+			if p.GetCurrentStatus() != StatusPlaying {
+				return
+			}
+
+			songDuration, songPosition := p.getSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
+
+			if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
+				startAt := songPosition.Seconds()
+				slog.Warn("Track should be continue starting from ", startAt)
+				slog.Warn("Restarting from interrupted position...")
+
+				p.GetEncodingSession().Cleanup()
+				p.GetVoiceConnection().Speaking(false)
+
+				slog.Errorf("Current song should not be empty", p.GetCurrentSong())
+				p.Play(int(startAt), p.GetCurrentSong())
+
+			}
 		} else {
-			p.handleSongUnfinished(0)
+			// handle stream
+			slog.Warn("Stream got done signal")
+
+			// p.GetEncodingSession().Cleanup()
+			// p.GetVoiceConnection().Speaking(false)
+
+			// if p.GetCurrentSong() != nil {
+			// 	slog.Errorf("Current song should not be empty", p.GetCurrentSong())
+			// 	p.Play(startAt, p.GetCurrentSong())
+			// } else {
+			// 	slog.Warn("No songs in the queue to restart from.")
+			// 	p.SetCurrentStatus(StatusResting)
+			// }
 		}
 
 		h := history.NewHistory()
@@ -105,22 +149,6 @@ func (p *Player) Play(startAt int, song *Song) {
 	time.Sleep(250 * time.Millisecond)
 	slog.Info("Play next in queue")
 	go p.Play(0, nil)
-}
-
-func (p *Player) setupCurrentSong(startAt int, song *Song) {
-	if song != nil {
-		p.SetCurrentSong(song)
-	} else {
-		if len(p.GetSongQueue()) > 0 {
-			var err error
-			currentSong, err := p.Dequeue()
-			if err != nil {
-				slog.Info("Error dequening: ", err)
-			} else {
-				p.SetCurrentSong(currentSong)
-			}
-		}
-	}
 }
 
 func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
@@ -152,9 +180,6 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 }
 
 func (p *Player) setupVoiceConnection() {
-	// p.Lock()
-	// defer p.Unlock()
-
 	for p.GetVoiceConnection() == nil || !p.GetVoiceConnection().Ready {
 		time.Sleep(100 * time.Millisecond)
 
@@ -211,46 +236,6 @@ func (p *Player) addSongPlaybackStats() {
 		}
 	}()
 	tickerDone <- true
-}
-
-func (p *Player) handleSongCompletion() {
-	if p.GetCurrentStatus() != StatusPlaying {
-		return
-	}
-
-	songDuration, songPosition := p.getSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
-
-	if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
-		startAt := songPosition.Seconds()
-		slog.Warn("Track should be continue starting from ", startAt)
-		p.handleSongUnfinished(int(startAt))
-	}
-}
-
-func (p *Player) handleSongUnfinished(startAt int) {
-	slog.Warn("Song is done but still unfinished. Restarting from interrupted position...")
-
-	p.GetEncodingSession().Cleanup()
-	p.GetVoiceConnection().Speaking(false)
-
-	if p.GetCurrentSong() != nil {
-		slog.Errorf("Current song should not be empty", p.GetCurrentSong())
-		p.Play(startAt, p.GetCurrentSong())
-	} else {
-		slog.Warn("No songs in the queue to restart from.")
-		p.SetCurrentStatus(StatusResting)
-	}
-}
-
-func (p *Player) handleSongError(err error) {
-	slog.Warnf("Song is done but an unexpected error occurred: %v", err)
-
-	time.Sleep(250 * time.Millisecond)
-	if p.GetVoiceConnection() != nil {
-		p.GetVoiceConnection().Speaking(false)
-	}
-	p.SetCurrentStatus(StatusResting)
-	p.GetEncodingSession().Cleanup()
 }
 
 // getSongMetrics calculates playback metrics for a song.
