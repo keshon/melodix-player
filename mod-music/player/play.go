@@ -77,14 +77,17 @@ func (p *Player) Play(startAt int, song *Song) {
 		}
 
 		if p.GetVoiceConnection() == nil {
+			slog.Warn("VoiceConnection is nil")
 			return
 		}
 
 		if p.GetStreamingSession() == nil {
+			slog.Warn("StreamingSession is nil")
 			return
 		}
 
 		if p.GetCurrentSong() == nil {
+			slog.Warn("CurrentSong is nil")
 			return
 		}
 
