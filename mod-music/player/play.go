@@ -257,7 +257,7 @@ func (p *Player) getSongMetrics(encoding *dca.EncodeSession, streaming *dca.Stre
 	if err != nil {
 		slog.Errorf("Error parsing duration:", err)
 	}
-	songPosition = encodingStartTime + streamingPosition + delay
+	songPosition = encodingStartTime + streamingPosition + delay.Abs() // delay is negative so we make it positive to jump ahead
 
 	slog.Infof("Total duration: %s, Stopped at: %s", songDuration, songPosition)
 	slog.Infof("Encoding ahead of streaming: %s, Encoding started time: %s", delay, encodingStartTime)

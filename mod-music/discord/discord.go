@@ -69,9 +69,12 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	slog.Warn("Discord")
+	slog.Info("Received command, parameter:", command, parameter)
+
 	commandAliases := [][]string{
-		{"pause", "!", ">"},
-		{"resume", "!", ">"},
+		{"pause", "!"},
+		{"resume", "r", "!>"},
 		{"play", "p", ">"},
 		{"exit", "stop", "e", "x"},
 		{"list", "queue", "l", "q"},

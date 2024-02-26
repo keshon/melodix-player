@@ -110,6 +110,12 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 	youtube := sources.NewYoutube()
 	stream := sources.NewStream()
 
+	slog.Warn("Discord")
+	slog.Info("Getting songs list and their type:")
+	for _, param := range songsList {
+		slog.Info(" - ", param, paramType)
+	}
+
 	for _, param := range songsList {
 
 		var songs []*player.Song
@@ -147,11 +153,12 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 			}
 		}
 
-		// if err != nil {
-		// 	return nil, err
-		// }
-
 		playlist = append(playlist, songs...)
+	}
+
+	slog.Info("Up-to-date playlist now:")
+	for _, song := range playlist {
+		slog.Info(" - ", song.Title, song.Source)
 	}
 
 	return playlist, nil
@@ -187,14 +194,20 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 	previousPlaylistExist := len(d.Player.GetSongQueue())
 
 	// Enqueue songs
+	slog.Info("Enqueuing the playlist...")
 	for _, song := range playlist {
 		d.Player.Enqueue(song)
+	}
+
+	slog.Warn("Discord")
+	slog.Info("Player's song queue:")
+	for _, song := range d.Player.GetSongQueue() {
+		slog.Info(" - ", song.Title, song.Source)
 	}
 
 	if enqueueOnly {
 		showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, false)
 	} else {
-		// Start goroutine to periodically check status
 		go func() {
 			for {
 				if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
@@ -205,19 +218,7 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 			}
 		}()
 
-		d.Player.Play(0, nil)
-
-		// // Start goroutine to initiate playback
-		// go func() {
-		// 	d.Player.Play(0, nil)
-		// }()
-		// for {
-		// 	if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
-		// 		showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, true)
-		// 		break
-		// 	}
-		// 	time.Sleep(250 * time.Millisecond)
-		// }
+		d.Player.Unpause()
 	}
 
 	return nil

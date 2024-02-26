@@ -10,11 +10,6 @@ import (
 func (p *Player) Unpause() error {
 	slog.Info("Resuming playback")
 
-	// Check if current song exists
-	if p.GetCurrentSong() == nil {
-		return fmt.Errorf("no song is currently playing")
-	}
-
 	// Check if the current status is playing
 	if p.GetCurrentStatus() == StatusPlaying || p.GetCurrentStatus() == StatusError {
 		return fmt.Errorf("the track is already playing (or error)")
@@ -22,8 +17,11 @@ func (p *Player) Unpause() error {
 
 	// Check if the streaming session is initialized (start all over if not)
 	if p.GetStreamingSession() == nil {
-		p.Play(0, p.GetCurrentSong())
-		//return fmt.Errorf("the streaming session is not initialized")
+		if p.GetCurrentSong() != nil {
+			p.Play(0, p.GetCurrentSong())
+		} else {
+			p.Play(0, nil)
+		}
 	}
 
 	// Unpause streaming session
