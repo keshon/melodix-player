@@ -124,6 +124,9 @@ func (p *Player) Play(startAt int, song *Song) {
 		}
 
 		h := history.NewHistory()
+
+		time.Sleep(250 * time.Millisecond)
+
 		if err := h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID); err != nil {
 			slog.Warnf("Error adding stats count stats to history: %v", err)
 		}
