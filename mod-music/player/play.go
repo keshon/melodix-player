@@ -92,38 +92,30 @@ func (p *Player) Play(startAt int, song *Song) {
 		}
 
 		if p.GetCurrentSong().Source != SourceStream {
-			if p.GetCurrentStatus() != StatusPlaying {
-				return
-			}
+			// handle song
+			slog.Warn("Song got done signal, checking if should restart")
 
 			songDuration, songPosition := p.getSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
 
 			if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
 				startAt := songPosition.Seconds()
-				slog.Warn("Track should be continue starting from ", startAt)
-				slog.Warn("Restarting from interrupted position...")
 
 				p.GetEncodingSession().Cleanup()
 				p.GetVoiceConnection().Speaking(false)
 
-				slog.Errorf("Current song should not be empty", p.GetCurrentSong())
+				slog.Warnf("Restarting song %v from interrupted position %v", p.GetCurrentSong().Title, int(startAt))
 				p.Play(int(startAt), p.GetCurrentSong())
 
 			}
 		} else {
 			// handle stream
-			slog.Warn("Stream got done signal")
+			slog.Warn("Stream got done signal, should always restart")
 
-			// p.GetEncodingSession().Cleanup()
-			// p.GetVoiceConnection().Speaking(false)
+			p.GetEncodingSession().Cleanup()
+			p.GetVoiceConnection().Speaking(false)
 
-			// if p.GetCurrentSong() != nil {
-			// 	slog.Errorf("Current song should not be empty", p.GetCurrentSong())
-			// 	p.Play(startAt, p.GetCurrentSong())
-			// } else {
-			// 	slog.Warn("No songs in the queue to restart from.")
-			// 	p.SetCurrentStatus(StatusResting)
-			// }
+			slog.Warnf("Restarting stream %v", p.GetCurrentSong().Title)
+			p.Play(0, p.GetCurrentSong())
 		}
 
 		h := history.NewHistory()

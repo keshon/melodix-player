@@ -39,8 +39,8 @@ func (p *Player) ClearQueue() {
 	slog.Warn("Player")
 	slog.Info("Clearing song queue...")
 
-	// p.Lock()
-	// defer p.Unlock()
+	p.Lock()
+	defer p.Unlock()
 	if p.GetSongQueue() == nil {
 		return
 	}
