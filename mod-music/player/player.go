@@ -87,6 +87,7 @@ type Player struct {
 	currentSong      *Song
 	currentStatus    PlaybackStatus
 	SkipInterrupt    chan bool
+	StopInterrupt    chan bool
 }
 
 // IPlayer defines the interface for managing audio playback and song queue.
@@ -123,6 +124,7 @@ func NewPlayer(guildID string) IPlayer {
 		currentSong:      nil,
 		currentStatus:    StatusResting,
 		SkipInterrupt:    make(chan bool, 1),
+		StopInterrupt:    make(chan bool, 1),
 	}
 }
 

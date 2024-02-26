@@ -56,10 +56,40 @@ func (p *Player) Play(startAt int, song *Song) {
 	p.SetCurrentStatus(StatusPlaying)
 
 	// Add current track to history
-	p.addSongToHistory()
-
 	// Add current song playback duration stat to history
-	p.addSongPlaybackStats()
+	historySong := &history.Song{
+		Name:        p.GetCurrentSong().Title,
+		UserURL:     p.GetCurrentSong().UserURL,
+		DownloadURL: p.GetCurrentSong().DownloadURL,
+		Duration:    p.GetCurrentSong().Duration,
+		ID:          p.GetCurrentSong().ID,
+		Thumbnail:   history.Thumbnail(p.GetCurrentSong().Thumbnail),
+	}
+	h := history.NewHistory()
+	h.AddTrackToHistory(p.GetVoiceConnection().GuildID, historySong)
+
+	interval := 2 * time.Second
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	tickerDone := make(chan bool)
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				if p.GetVoiceConnection() != nil && p.GetStreamingSession() != nil && p.GetCurrentSong() != nil {
+					if !p.GetStreamingSession().Paused() {
+						err := h.AddPlaybackDurationStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID, float64(interval.Seconds()))
+						if err != nil {
+							slog.Warnf("Error adding playback duration stats to history: %v", err)
+						}
+					}
+				}
+			case <-tickerDone:
+				return
+			}
+		}
+	}()
 
 	// Handle signals
 	select {
@@ -73,6 +103,7 @@ func (p *Player) Play(startAt int, song *Song) {
 			}
 			p.SetCurrentStatus(StatusResting)
 			p.GetEncodingSession().Cleanup()
+
 			return
 		}
 
@@ -95,7 +126,12 @@ func (p *Player) Play(startAt int, song *Song) {
 			// handle song
 			slog.Warn("Song got done signal, checking if should restart")
 
-			songDuration, songPosition := p.getSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
+			songDuration, songPosition, err := p.getSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
+
+			if err != nil {
+				slog.Warnf("Error getting song metrics: %v", err)
+				return
+			}
 
 			if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
 				startAt := songPosition.Seconds()
@@ -118,7 +154,7 @@ func (p *Player) Play(startAt int, song *Song) {
 			p.Play(0, p.GetCurrentSong())
 		}
 
-		h := history.NewHistory()
+		// h := history.NewHistory()
 
 		time.Sleep(250 * time.Millisecond)
 
@@ -132,6 +168,18 @@ func (p *Player) Play(startAt int, song *Song) {
 			p.GetVoiceConnection().Speaking(false)
 		}
 		p.GetEncodingSession().Cleanup()
+		return
+
+	case <-p.StopInterrupt:
+		slog.Info("Song is interrupted for stop, stopping playback")
+
+		// if p.GetVoiceConnection() != nil {
+		// 	p.GetVoiceConnection().Speaking(false)
+		// }
+		p.GetEncodingSession().Cleanup()
+		p.SetSongQueue(make([]*Song, 0))
+		p.SetCurrentStatus(StatusResting)
+
 		return
 	}
 
@@ -194,50 +242,8 @@ func (p *Player) setupVoiceConnection() {
 	}
 }
 
-func (p *Player) addSongToHistory() {
-	historySong := &history.Song{
-		Name:        p.GetCurrentSong().Title,
-		UserURL:     p.GetCurrentSong().UserURL,
-		DownloadURL: p.GetCurrentSong().DownloadURL,
-		Duration:    p.GetCurrentSong().Duration,
-		ID:          p.GetCurrentSong().ID,
-		Thumbnail:   history.Thumbnail(p.GetCurrentSong().Thumbnail),
-	}
-	h := history.NewHistory()
-	h.AddTrackToHistory(p.GetVoiceConnection().GuildID, historySong)
-}
-
-func (p *Player) addSongPlaybackStats() {
-	interval := 2 * time.Second
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	tickerDone := make(chan bool)
-
-	h := history.NewHistory()
-
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				if p.GetVoiceConnection() != nil && p.GetStreamingSession() != nil && p.GetCurrentSong() != nil {
-					if !p.GetStreamingSession().Paused() {
-						err := h.AddPlaybackDurationStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID, float64(interval.Seconds()))
-						if err != nil {
-							slog.Warnf("Error adding playback duration stats to history: %v", err)
-						}
-					}
-				}
-			case <-tickerDone:
-				return
-			}
-		}
-	}()
-	tickerDone <- true
-}
-
 // getSongMetrics calculates playback metrics for a song.
-func (p *Player) getSongMetrics(encoding *dca.EncodeSession, streaming *dca.StreamingSession, song *Song) (songDuration, songPosition time.Duration) {
+func (p *Player) getSongMetrics(encoding *dca.EncodeSession, streaming *dca.StreamingSession, song *Song) (songDuration, songPosition time.Duration, err error) {
 	encodingDuration := encoding.Stats().Duration
 	encodingStartTime := time.Duration(encoding.Options().StartTime) * time.Second
 
@@ -247,6 +253,7 @@ func (p *Player) getSongMetrics(encoding *dca.EncodeSession, streaming *dca.Stre
 	params, err := utils.ParseQueryParamsFromURL(song.DownloadURL)
 	if err != nil {
 		slog.Warnf("Failed to parse download URL parameters: %v", err)
+		return 0, 0, err
 	}
 	slog.Debug(params)
 
@@ -254,27 +261,12 @@ func (p *Player) getSongMetrics(encoding *dca.EncodeSession, streaming *dca.Stre
 	songDuration, err = time.ParseDuration(fmt.Sprintf("%vs", params.Duration)) // was 'duration'
 	if err != nil {
 		slog.Errorf("Error parsing duration:", err)
+		return 0, 0, err
 	}
 	songPosition = encodingStartTime + streamingPosition + delay.Abs() // delay is negative so we make it positive to jump ahead
 
 	slog.Infof("Total duration: %s, Stopped at: %s", songDuration, songPosition)
 	slog.Infof("Encoding ahead of streaming: %s, Encoding started time: %s", delay, encodingStartTime)
 
-	return songDuration, songPosition
-}
-
-func (p *Player) logPlayingInfo() {
-	slog.Warnf("Current status: %s", p.GetCurrentStatus())
-
-	if p.GetCurrentSong() != nil {
-		slog.Warn("Current song: %s", p.GetCurrentSong().Title)
-	} else {
-		slog.Warn("Current song is null")
-	}
-
-	slog.Warn("Song queue:")
-	for _, elem := range p.GetSongQueue() {
-		slog.Warn(elem.Title)
-	}
-	slog.Warn("Playlist count is ", len(p.GetSongQueue()))
+	return songDuration, songPosition, nil
 }
