@@ -173,12 +173,14 @@ func (p *Player) Play(startAt int, song *Song) {
 	case <-p.StopInterrupt:
 		slog.Info("Song is interrupted for stop, stopping playback")
 
-		// if p.GetVoiceConnection() != nil {
-		// 	p.GetVoiceConnection().Speaking(false)
-		// }
 		p.GetEncodingSession().Cleanup()
 		p.SetSongQueue(make([]*Song, 0))
 		p.SetCurrentStatus(StatusResting)
+		p.SetCurrentSong(nil)
+		p.SkipInterrupt = make(chan bool, 1)
+		p.StopInterrupt = make(chan bool, 1)
+
+		// p.SetStreamingSession(nil) // crashes here
 
 		return
 	}
