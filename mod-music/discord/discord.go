@@ -32,7 +32,7 @@ func NewDiscord(session *discordgo.Session) *Discord {
 
 	return &Discord{
 		// Player:            player.NewPlayer(guildID),
-		Players:           make(map[string]player.IPlayer),
+		//Players:           make(map[string]player.IPlayer),
 		Session:           session,
 		IsInstanceActive:  true,
 		prefix:            config.DiscordCommandPrefix,
@@ -45,7 +45,7 @@ func (d *Discord) Start(guildID string) {
 
 	d.Session.AddHandler(d.Commands)
 	d.GuildID = guildID
-	d.Player = player.NewPlayer(guildID)
+	d.Player = player.NewPlayer(guildID, d.Session)
 }
 
 func (d *Discord) Stop() {

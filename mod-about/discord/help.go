@@ -55,7 +55,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 
 	embedMsg := embed.NewEmbed().
 		SetTitle(fmt.Sprintf("ℹ️ %v — Command Usage", version.AppName)).
-		SetDescription("Some commands are aliased for shortness.\n\n`[title]` - track name\n`[url]` - YouTube URL\n`[id]` - track id from *History*\n`[stream]` - valid stream URL (radio).").
+		SetDescription("Some commands are aliased for shortness.\n\n*[title]* - track name\n*[url]* - YouTube URL\n*[id]* - track id from *History*\n*[stream]* - valid stream URL (radio).").
 		// AddField("", "**Demo**\n"+hello+hi).
 		AddField("", "**Playback**\n"+play+skip+pause+stop).
 		AddField("", "").

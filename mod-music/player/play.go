@@ -1,7 +1,6 @@
 package player
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -42,13 +41,31 @@ func (p *Player) Play(startAt int, song *Song) error {
 		return fmt.Errorf("failed to encode file: %w", err)
 	}
 	p.SetEncodingSession(encoding)
-	defer p.GetEncodingSession().Cleanup()
+	//defer p.GetEncodingSession().Cleanup()
 
 	// Connect to Discord channel and be ready
-	err = p.setupVoiceConnection()
-	if err != nil {
-		return err
+	// https://github.com/bwmarrin/discordgo/issues/1357
+	voiceConnection, ok := p.GetDiscordSession().VoiceConnections[p.GetGuildID()]
+	if !ok {
+		slog.Warn("No voice connection found. Attempting to join voice channel")
+		voiceConnection, err = p.GetDiscordSession().ChannelVoiceJoin(p.GetGuildID(), p.GetChannelID(), true, false)
+		if err != nil {
+			return fmt.Errorf("failed to join voice channel: %w", err)
+		}
+	} else {
+		slog.Info("Found voice connection", voiceConnection.ChannelID)
+		// voiceConnection.ChangeChannel(p.GetChannelID(), false, false)
 	}
+
+	p.SetVoiceConnection(voiceConnection)
+	// defer p.GetVoiceConnection().Close()
+
+	err = p.GetVoiceConnection().Speaking(true)
+	if err != nil {
+		slog.Error(err)
+		return fmt.Errorf("failed to start speaking: %w", err)
+	}
+	// defer p.GetVoiceConnection().Speaking(false)
 
 	// Send encoding to Discord stream
 	done := make(chan error, 1)
@@ -175,14 +192,24 @@ func (p *Player) Play(startAt int, song *Song) error {
 	case <-p.StopInterrupt:
 		slog.Info("Song is interrupted due to stop signal")
 
-		p.GetStreamingSession().SetPaused(true)
-		p.GetEncodingSession().Cleanup()
-		p.SetSongQueue(make([]*Song, 0))
+		p.GetVoiceConnection().Speaking(false)
+		p.GetVoiceConnection().Disconnect()
+
 		p.SetCurrentStatus(StatusResting)
+
+		p.GetEncodingSession().Cleanup()
+		if p.GetVoiceConnection() != nil {
+			p.GetVoiceConnection().Speaking(false)
+			p.SetStreamingSession(nil)
+		}
+
+		p.SetSongQueue(make([]*Song, 0))
+
 		p.SetCurrentSong(nil)
 
 		p.SkipInterrupt = make(chan bool, 1)
 		p.StopInterrupt = make(chan bool, 1)
+		p.SwitchChannelInterrupt = make(chan bool, 1)
 
 		slog.Info("..finish processing stop signal")
 		return nil
@@ -190,13 +217,10 @@ func (p *Player) Play(startAt int, song *Song) error {
 	case <-p.SwitchChannelInterrupt:
 		slog.Info("Song is interrupted due to switch channel signal")
 
-		p.GetStreamingSession().SetPaused(true)
-		p.GetVoiceConnection().Speaking(false)
-		p.GetVoiceConnection().ChangeChannel(p.GetChannelID(), false, false)
-		p.GetVoiceConnection().Speaking(true)
-		p.GetStreamingSession().SetPaused(false)
+		p.GetVoiceConnection().Disconnect()
+		p.GetEncodingSession().Cleanup()
 
-		p.Play(0, p.GetCurrentSong())
+		go p.Play(0, p.GetCurrentSong())
 
 		slog.Info("..finish processing switch channel signal")
 		return nil
@@ -209,7 +233,26 @@ func (p *Player) Play(startAt int, song *Song) error {
 	if len(p.GetSongQueue()) == 0 {
 		time.Sleep(250 * time.Millisecond)
 		slog.Info("Audio done")
+
+		p.GetVoiceConnection().Speaking(false)
+		p.GetVoiceConnection().Disconnect()
+
 		p.SetCurrentStatus(StatusResting)
+
+		p.GetEncodingSession().Cleanup()
+		if p.GetVoiceConnection() != nil {
+			p.GetVoiceConnection().Speaking(false)
+			p.SetStreamingSession(nil)
+		}
+
+		p.SetSongQueue(make([]*Song, 0))
+
+		p.SetCurrentSong(nil)
+
+		p.SkipInterrupt = make(chan bool, 1)
+		p.StopInterrupt = make(chan bool, 1)
+		p.SwitchChannelInterrupt = make(chan bool, 1)
+
 		return nil
 	}
 
@@ -246,22 +289,6 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 		EncodingLineLog:         config.DcaEncodingLineLog,
 		UserAgent:               config.DcaUserAgent,
 	}, nil
-}
-
-func (p *Player) setupVoiceConnection() error {
-	startTime := time.Now()
-	timeout := 3 * time.Second
-	for time.Since(startTime) <= timeout {
-		vc := p.GetVoiceConnection()
-		if vc != nil && vc.Ready {
-			vc.ChangeChannel(p.GetChannelID(), false, false)
-			if err := vc.Speaking(true); err == nil {
-				return nil
-			}
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-	return errors.New("failed to setup voice connection: timed out after 3 seconds")
 }
 
 func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, streamingSession *dca.StreamingSession, song *Song) (duration, position time.Duration, err error) {

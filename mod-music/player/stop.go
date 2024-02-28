@@ -13,9 +13,9 @@ func (p *Player) Stop() error {
 		return fmt.Errorf("voice connection is not initialized")
 	}
 
-	if p.GetCurrentSong() == nil {
-		return fmt.Errorf("current song is missing")
-	}
+	// if p.GetCurrentSong() == nil {
+	// 	return fmt.Errorf("current song is missing")
+	// }
 
 	p.StopInterrupt <- true
 

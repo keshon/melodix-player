@@ -20,65 +20,67 @@ import (
 func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string, enqueueOnly bool) {
 	d.changeAvatar(s)
 
-	// If param actually has a value
 	if param == "" {
 		return
 	}
 
-	// Wait message
 	embedStr := "Please wait..."
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4).
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
-
 	pleaseWaitMessage, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	if err != nil {
-		slog.Warnf("Error sending 'please wait' message: %v", err)
+		slog.Error("Error sending 'please wait' message: %v", err)
 	}
 
-	paramType, songsList := parseParameter(param)
+	originType, origins := parseOriginParameter(param)
 
-	// Check if any songs were found
-	if len(songsList) <= 0 {
+	if len(origins) <= 0 {
 		embedStr = "No songs or streams were found by your query."
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
 			SetColor(0x9f00d4).MessageEmbed
 
-		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
+		_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
+		if err != nil {
+			slog.Error("Error sending 'please wait' message: %v", err)
+		}
 		return
 	}
 
-	// Join voice channel message
-	c, _ := s.State.Channel(m.Message.ChannelID)
-	g, _ := s.State.Guild(c.GuildID)
+	channel, _ := s.State.Channel(m.Message.ChannelID)
+	guild, _ := s.State.Guild(channel.GuildID)
 
-	if len(g.VoiceStates) == 0 {
+	if len(guild.VoiceStates) == 0 {
 		embedStr = "You are not in a voice channel, please join one first."
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
 			SetColor(0x9f00d4).MessageEmbed
-
-		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
+		_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
+		if err != nil {
+			slog.Error("Error sending 'please wait' message: %v", err)
+		}
 		return
 	}
 
-	// Fill-in playlist
-	playlist, err := createPlaylist(paramType, songsList, d, m)
+	songs, err := fetchSongs(originType, origins, d, m)
 	if err != nil {
 		embedStr = fmt.Sprintf("%v\n\n*details:*\n`%v`", "Error forming playlist", err)
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
 			SetDescription(embedStr).
 			SetColor(0x9f00d4).MessageEmbed
-		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
+		_, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
+		if err != nil {
+			slog.Error("Error sending 'please wait' message: %v", err)
+		}
 		return
 	}
 
-	if len(playlist) == 0 {
+	if len(songs) == 0 {
 		embedStr = "There are no songs in the playlist."
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
@@ -90,8 +92,10 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 
 	// Enqueue playlist to the player
-	err = playOrEnqueue(d, playlist, s, m, enqueueOnly, pleaseWaitMessage.ID)
+	err = playOrEnqueue(d, songs, s, m, enqueueOnly, pleaseWaitMessage.ID)
 	if err != nil {
+		slog.Error(err)
+
 		embedStr = fmt.Sprintf("%v\n\n*details:*\n`%v`", "Error enqueuing/playing playlist", err)
 		embedMsg = embed.NewEmbed().
 			SetColor(0x9f00d4).
@@ -103,26 +107,25 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 }
 
-// createPlaylist creates a playlist of songs based on the parameter type and list of songs.
-func createPlaylist(paramType string, songsList []string, d *Discord, m *discordgo.MessageCreate) ([]*player.Song, error) {
+func fetchSongs(originType string, songsOrigins []string, d *Discord, m *discordgo.MessageCreate) ([]*player.Song, error) {
 	var playlist []*player.Song
 
 	youtube := sources.NewYoutube()
 	stream := sources.NewStream()
 
 	slog.Info("Getting songs list and their type:")
-	for _, param := range songsList {
-		slog.Info(" - ", param, paramType)
+	for _, songOrigin := range songsOrigins {
+		slog.Info(" - ", songOrigin, originType)
 	}
 
-	for _, param := range songsList {
+	for _, songOrigin := range songsOrigins {
 
 		var songs []*player.Song
 		var err error
 
-		switch paramType {
+		switch originType {
 		case "history_id":
-			id, err := strconv.Atoi(param)
+			id, err := strconv.Atoi(songOrigin)
 			if err != nil {
 				slog.Error("Cannot convert string id to int id")
 				continue
@@ -133,19 +136,19 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 				continue
 			}
 		case "youtube_title":
-			songs, err = youtube.FetchSongsByTitle(param)
+			songs, err = youtube.FetchSongsByTitle(songOrigin)
 			if err != nil {
 				slog.Warnf("Error fetching songs by title: %v", err)
 				continue
 			}
 		case "youtube_url":
-			songs, err = youtube.FetchSongsByURLs([]string{param})
+			songs, err = youtube.FetchSongsByURLs([]string{songOrigin})
 			if err != nil {
 				slog.Warnf("Error fetching songs by URL: %v", err)
 				continue
 			}
 		case "stream_url":
-			songs, err = stream.FetchStreamsByURLs([]string{param})
+			songs, err = stream.FetchStreamsByURLs([]string{songOrigin})
 			if err != nil {
 				slog.Warnf("Error fetching stream by URL: %v", err)
 				continue
@@ -186,8 +189,10 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 			s.ChannelMessageSend(m.Message.ChannelID, "Error connecting to voice channel")
 			return err
 		}
+
 		d.Player.SetVoiceConnection(conn)
 		d.Player.SetChannelID(vs.ChannelID)
+
 		conn.LogLevel = discordgo.LogWarning
 	}
 
@@ -217,8 +222,13 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 				time.Sleep(250 * time.Millisecond)
 			}
 		}()
-		slog.Warn(d.Player.GetCurrentStatus().String())
-		d.Player.Unpause(vs.ChannelID)
+
+		slog.Warn("Current status is", d.Player.GetCurrentStatus().String())
+
+		err := d.Player.Unpause(vs.ChannelID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -286,36 +296,30 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 	s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
 }
 
-// ParseParameter parses the type and parameters from the input parameter string.
-func parseParameter(param string) (string, []string) {
-	// Trim spaces at the beginning and end
+// parseOriginParameter parses the origin parameter and returns the appropriate type and value.
+//
+// param string - the parameter to be parsed
+// (string, []string) - the type and value to be returned
+func parseOriginParameter(param string) (string, []string) {
 	param = strings.TrimSpace(param)
 
 	if len(param) == 0 {
 		return "", []string{}
 	}
 
-	// Check if the parameter is a URL
 	u, err := url.Parse(param)
 	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
-		// If it's a URL, split by ",", " ", new line, or carriage return
-		paramSlice := strings.FieldsFunc(param, func(r rune) bool {
-			return r == '\n' || r == '\r' || r == ' ' || r == '\t'
-		})
-
-		if isYouTubeURL(u.Host) {
+		paramSlice := strings.Fields(param)
+		if u.Host == "www.youtube.com" || u.Host == "youtube.com" || u.Host == "youtu.be" {
 			return "youtube_url", paramSlice
-		} else {
-			return "stream_url", paramSlice
 		}
+		return "stream_url", paramSlice
 	}
 
-	// Check if the parameter is an ID
 	params := strings.Fields(param)
 	allValidIDs := true
-	for _, param := range params {
-		_, err := strconv.Atoi(param)
-		if err != nil {
+	for _, id := range params {
+		if _, err := strconv.Atoi(id); err != nil {
 			allValidIDs = false
 			break
 		}
@@ -324,12 +328,6 @@ func parseParameter(param string) (string, []string) {
 		return "history_id", params
 	}
 
-	// Treat it as a single title if it's not a URL or ID
 	encodedTitle := url.QueryEscape(param)
 	return "youtube_title", []string{encodedTitle}
-}
-
-// isYouTubeURL checks if the host is a YouTube URL.
-func isYouTubeURL(host string) bool {
-	return host == "www.youtube.com" || host == "youtube.com" || host == "youtu.be"
 }

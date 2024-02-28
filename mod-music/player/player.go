@@ -33,6 +33,10 @@ type IPlayer interface {
 	SetCurrentSong(song *Song)
 	GetChannelID() string
 	SetChannelID(channelID string)
+	GetDiscordSession() *discordgo.Session
+	SetDiscordSession(session *discordgo.Session)
+	GetGuildID() string
+	SetGuildID(guildID string)
 }
 
 type Player struct {
@@ -44,6 +48,8 @@ type Player struct {
 	queue                  []*Song
 	status                 PlaybackStatus
 	channelID              string
+	guildID                string
+	session                *discordgo.Session
 	SkipInterrupt          chan bool
 	StopInterrupt          chan bool
 	SwitchChannelInterrupt chan bool
@@ -111,7 +117,7 @@ func (status PlaybackStatus) StringEmoji() string {
 	return statuses[status]
 }
 
-func NewPlayer(guildID string) IPlayer {
+func NewPlayer(guildID string, session *discordgo.Session) IPlayer {
 	return &Player{
 		vc:                     nil,
 		stream:                 nil,
@@ -119,6 +125,8 @@ func NewPlayer(guildID string) IPlayer {
 		song:                   nil,
 		queue:                  make([]*Song, 0),
 		status:                 StatusResting,
+		guildID:                guildID,
+		session:                session,
 		SkipInterrupt:          make(chan bool, 1),
 		StopInterrupt:          make(chan bool, 1),
 		SwitchChannelInterrupt: make(chan bool, 1),
@@ -197,4 +205,20 @@ func (p *Player) GetChannelID() string {
 
 func (p *Player) SetChannelID(channelID string) {
 	p.channelID = channelID
+}
+
+func (p *Player) GetDiscordSession() *discordgo.Session {
+	return p.session
+}
+
+func (p *Player) SetDiscordSession(session *discordgo.Session) {
+	p.session = session
+}
+
+func (p *Player) GetGuildID() string {
+	return p.guildID
+}
+
+func (p *Player) SetGuildID(guildID string) {
+	p.guildID = guildID
 }

@@ -3,20 +3,18 @@ package player
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/gookit/slog"
 )
 
 func (p *Player) Unpause(channelID string) error {
 	slog.Info("Resuming playback")
-	slog.Error(p.GetChannelID())
 
 	if p.GetCurrentStatus() == StatusPlaying || p.GetCurrentStatus() == StatusError {
 		return fmt.Errorf("the track is already playing (or error) %v", p.GetCurrentStatus().String())
 	}
 
-	// Switch channel if needed
+	// Set new channel if needed
 	if p.GetChannelID() != channelID {
 		p.SetChannelID(channelID)
 
@@ -41,21 +39,25 @@ func (p *Player) Unpause(channelID string) error {
 				slog.Error("Error: ", err)
 			}
 		}
+		return nil
 	} else {
-		p.GetStreamingSession().SetPaused(false)
-
-		startTime := time.Now()
-		timeout := 3 * time.Second
-		for time.Since(startTime) <= timeout {
-			if !p.GetStreamingSession().Paused() {
-				p.SetCurrentStatus(StatusPlaying)
-				slog.Warn("Audio playback", p.GetCurrentStatus().String())
-				return nil
-			}
-			time.Sleep(100 * time.Millisecond)
+		finished, err := p.GetStreamingSession().Finished()
+		if err != nil {
+			slog.Error("Error: ", err)
+		}
+		if finished {
+			return errors.New("failed to resume audio playback: stream finished")
 		}
 
-	}
+		p.GetStreamingSession().SetPaused(false)
 
-	return errors.New("failed to resume audio playback: timed out after 3 seconds")
+		if !p.GetStreamingSession().Paused() {
+			p.SetCurrentStatus(StatusPlaying) // we assume it's playing which may be not 100% true
+			slog.Info("Stream paused?", p.GetStreamingSession().Paused())
+			slog.Warn("Audio playback", p.GetCurrentStatus().String())
+			return nil
+		}
+
+		return fmt.Errorf("failed to resume audio playback: stream paused")
+	}
 }
