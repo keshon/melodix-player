@@ -19,7 +19,12 @@ func (p *Player) Unpause() error {
 	if p.GetStreamingSession() == nil {
 		if p.GetCurrentSong() != nil {
 			slog.Info("Current song is not nil")
-			p.Play(0, p.GetCurrentSong())
+
+			err := p.Play(0, p.GetCurrentSong())
+			if err != nil {
+				slog.Error("Error: ", err)
+			}
+
 		} else {
 			slog.Warn("Current song is nil")
 
@@ -31,17 +36,17 @@ func (p *Player) Unpause() error {
 	} else {
 		slog.Info("Streaming session is not nil")
 		if p.GetCurrentStatus() == StatusResting {
-			// slog.Warn("call for stream cleanup")
-			// p.GetStreamingSession().Stop() //!!!
 
 			if p.GetCurrentSong() != nil {
 				slog.Info("Current song is not nil")
+
 				err := p.Play(0, p.GetCurrentSong())
 				if err != nil {
 					slog.Error("Error: ", err)
 				}
 			} else {
 				slog.Warn("Current song is nil")
+
 				err := p.Play(0, nil)
 				if err != nil {
 					slog.Error("Error: ", err)
@@ -51,10 +56,11 @@ func (p *Player) Unpause() error {
 	}
 
 	// Unpause streaming session
-	p.GetStreamingSession().SetPaused(false)
-	// if !p.GetStreamingSession().Paused() {
-	// 	p.SetCurrentStatus(StatusPlaying)
-	// }
+	if p.GetStreamingSession() != nil {
+		p.GetStreamingSession().SetPaused(false)
+	} else {
+		slog.Warn("Streaming session is nil")
+	}
 
 	return nil
 }

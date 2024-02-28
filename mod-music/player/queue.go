@@ -22,7 +22,6 @@ func (p *Player) Dequeue() (*Song, error) {
 		return nil, errors.New("queue is empty")
 	}
 
-	slog.Warn("Player")
 	slog.Info("Dequeuing first track from queue:")
 	for id, elem := range p.GetSongQueue() {
 		slog.Warn(id, " - ", elem.Title)
@@ -36,7 +35,6 @@ func (p *Player) Dequeue() (*Song, error) {
 
 // ClearQueue clears the song queue.
 func (p *Player) ClearQueue() error {
-	slog.Warn("Player")
 	slog.Info("Clearing song queue...")
 
 	p.Lock()

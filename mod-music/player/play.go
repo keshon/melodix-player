@@ -1,6 +1,7 @@
 package player
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -14,7 +15,7 @@ import (
 
 // Play starts playing audio from the given start position or song.
 func (p *Player) Play(startAt int, song *Song) error {
-	// Get current song (from queue or as arg)
+	// Get current song (from queue / as arg)
 	var currentSong *Song
 	if song == nil {
 		var err error
@@ -45,17 +46,17 @@ func (p *Player) Play(startAt int, song *Song) error {
 	defer p.GetEncodingSession().Cleanup()
 
 	// Connect to Discord channel and be ready
-	p.setupVoiceConnection()
+	err = p.setupVoiceConnection()
+	if err != nil {
+		return err
+	}
 
 	// Send encoding to Discord stream
 	done := make(chan error, 1)
 	stream := dca.NewStream(p.GetEncodingSession(), p.GetVoiceConnection(), done)
 	p.SetStreamingSession(stream)
-
-	// Set player status
 	p.SetCurrentStatus(StatusPlaying)
 
-	// Add current track to history
 	// Add current song playback duration stat to history
 	historySong := &history.Song{
 		Name:        p.GetCurrentSong().Title,
@@ -91,17 +92,18 @@ func (p *Player) Play(startAt int, song *Song) error {
 		}
 	}()
 
-	// Handle signals
+	// Handle signals (done / skip / stop)
 	select {
 	case <-done:
-		if err != nil && err != io.EOF {
-			slog.Errorf("Song is done but an unexpected error occurred: %v", err)
+		slog.Info("Song is interrupted due to done signal")
 
+		p.SetCurrentStatus(StatusResting)
+
+		if err != nil && err != io.EOF {
 			time.Sleep(250 * time.Millisecond)
 			if p.GetVoiceConnection() != nil {
 				p.GetVoiceConnection().Speaking(false)
 			}
-			p.SetCurrentStatus(StatusResting)
 			p.GetEncodingSession().Cleanup()
 
 			return fmt.Errorf("unexpected error occurred: %w", err)
@@ -123,13 +125,12 @@ func (p *Player) Play(startAt int, song *Song) error {
 		}
 
 		if p.GetCurrentSong().Source != SourceStream {
-			// handle song
-			slog.Warn("Song got done signal, checking if should restart")
+			// Song
+			slog.Info("Checking for song metrics if interruption was unintentional")
 
-			songDuration, songPosition, err := p.getSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
+			songDuration, songPosition, err := p.calculateSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
 
 			if err != nil {
-				slog.Warnf("Error getting song metrics: %v", err)
 				return fmt.Errorf("error getting song metrics: %w", err)
 			}
 
@@ -139,46 +140,44 @@ func (p *Player) Play(startAt int, song *Song) error {
 				p.GetEncodingSession().Cleanup()
 				p.GetVoiceConnection().Speaking(false)
 
-				slog.Warnf("Restarting song %v from interrupted position %v", p.GetCurrentSong().Title, int(startAt))
+				slog.Infof("Interruption detected, restarting song %v from %v", p.GetCurrentSong().Title, int(startAt))
 				p.Play(int(startAt), p.GetCurrentSong())
 			}
+
 		} else {
-			// handle stream
-			slog.Warn("Stream got done signal, should always restart")
+			// Stream
+			slog.Info("Song is a stream, should always restart")
 
 			p.GetEncodingSession().Cleanup()
 			p.GetVoiceConnection().Speaking(false)
 
-			slog.Warnf("Restarting stream %v", p.GetCurrentSong().Title)
+			slog.Infof("Restarting stream %v", p.GetCurrentSong().Title)
 			p.Play(0, p.GetCurrentSong())
 		}
 
-		// h := history.NewHistory()
-
 		time.Sleep(250 * time.Millisecond)
-
 		if err := h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID); err != nil {
-			return fmt.Errorf("error adding stats count stats to history: %v", err)
+			return fmt.Errorf("error adding playback count stats to history: %v", err)
 		}
-	case <-p.SkipInterrupt:
-		slog.Info("Song is interrupted for skip, stopping playback")
 
+		slog.Info("..finish processing done signal")
+		// no return here is needed as song is done normally and we may proceed to next song
+	case <-p.SkipInterrupt:
+		slog.Info("Song is interrupted due to skip signal")
+
+		p.SetCurrentStatus(StatusResting)
+		p.GetEncodingSession().Cleanup()
 		if p.GetVoiceConnection() != nil {
 			p.GetVoiceConnection().Speaking(false)
 		}
-		p.GetEncodingSession().Cleanup()
 
+		slog.Info("..finish processing skip signal")
 		return nil
-
 	case <-p.StopInterrupt:
-		slog.Info("Song is interrupted for stop, stopping playback")
+		slog.Info("Song is interrupted due to stop signal")
 
-		p.GetStreamingSession().TryLock()
 		p.GetStreamingSession().SetPaused(true)
-		p.GetStreamingSession().Unlock()
-
 		p.GetEncodingSession().Cleanup()
-
 		p.SetSongQueue(make([]*Song, 0))
 		p.SetCurrentStatus(StatusResting)
 		p.SetCurrentSong(nil)
@@ -186,21 +185,22 @@ func (p *Player) Play(startAt int, song *Song) error {
 		p.SkipInterrupt = make(chan bool, 1)
 		p.StopInterrupt = make(chan bool, 1)
 
+		slog.Info("..finish processing stop signal")
 		return nil
 	}
 
-	// if len(p.GetSongQueue()) == 0 {
-	// 	time.Sleep(250 * time.Millisecond)
-	// 	slog.Info("Audio done")
-	// 	p.Stop()
-	// 	p.SetCurrentStatus(StatusResting)
-	// 	return nil
-	// }
+	p.GetVoiceConnection().Speaking(false)
 
-	// p.GetVoiceConnection().Speaking(false)
-	// time.Sleep(250 * time.Millisecond)
-	// slog.Info("Play next in queue")
-	// go p.Play(0, nil)
+	if len(p.GetSongQueue()) == 0 {
+		time.Sleep(250 * time.Millisecond)
+		slog.Info("Audio done")
+		p.SetCurrentStatus(StatusResting)
+		return nil
+	}
+
+	time.Sleep(250 * time.Millisecond)
+	slog.Warn("Play next in queue (after all signals passed)")
+	go p.Play(0, nil)
 
 	return nil
 }
@@ -233,53 +233,43 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 	}, nil
 }
 
-func (p *Player) setupVoiceConnection() {
-	for {
+func (p *Player) setupVoiceConnection() error {
+	startTime := time.Now()
+	timeout := 3 * time.Second
+
+	for time.Since(startTime) <= timeout {
 		vc := p.GetVoiceConnection()
-		if vc == nil || !vc.Ready {
-			time.Sleep(100 * time.Millisecond)
-			slog.Warn("Voice connection is nil or not ready. Retrying...")
-			continue
+		if vc != nil && vc.Ready {
+			if err := vc.Speaking(true); err == nil {
+				return nil
+			}
 		}
-
-		err := vc.Speaking(true)
-		if err != nil {
-			slog.Warnf("Error connecting to Discord voice: %v. Retrying...", err)
-			vc.Speaking(false)
-		}
-
-		// Break out of the loop if the voice connection is ready
-		if vc.Ready {
-			break
-		}
+		time.Sleep(100 * time.Millisecond)
 	}
+	return errors.New("failed to setup voice connection: timed out after 3 seconds")
 }
 
-// getSongMetrics calculates playback metrics for a song.
-func (p *Player) getSongMetrics(encoding *dca.EncodeSession, streaming *dca.StreamingSession, song *Song) (songDuration, songPosition time.Duration, err error) {
-	encodingDuration := encoding.Stats().Duration
-	encodingStartTime := time.Duration(encoding.Options().StartTime) * time.Second
+// calculateSongMetrics calculates playback metrics for a song.
+func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, streamingSession *dca.StreamingSession, song *Song) (duration, position time.Duration, err error) {
+	encodingDuration := encodingSession.Stats().Duration
+	encodingStartTime := time.Duration(encodingSession.Options().StartTime) * time.Second
 
-	streamingPosition := streaming.PlaybackPosition()
+	streamingPosition := streamingSession.PlaybackPosition()
 	delay := encodingDuration - streamingPosition
 
 	params, err := utils.ParseQueryParamsFromURL(song.DownloadURL)
 	if err != nil {
-		slog.Warnf("Failed to parse download URL parameters: %v", err)
 		return 0, 0, err
 	}
-	slog.Debug(params)
 
-	// Convert duration string to time.Duration
-	songDuration, err = time.ParseDuration(fmt.Sprintf("%vs", params.Duration)) // was 'duration'
+	duration, err = time.ParseDuration(fmt.Sprintf("%vs", params.Duration)) // was 'duration'
 	if err != nil {
-		slog.Errorf("Error parsing duration:", err)
 		return 0, 0, err
 	}
-	songPosition = encodingStartTime + streamingPosition + delay.Abs() // delay is negative so we make it positive to jump ahead
+	position = encodingStartTime + streamingPosition + delay.Abs() // delay is negative so we make it positive to jump ahead
 
-	slog.Infof("Total duration: %s, Stopped at: %s", songDuration, songPosition)
-	slog.Infof("Encoding ahead of streaming: %s, Encoding started time: %s", delay, encodingStartTime)
+	slog.Debugf("Total song duration: %s, Stopped at: %s", duration, position)
+	slog.Debugf("Encoding ahead of streaming: %s, Encoding started time: %s", delay, encodingStartTime)
 
-	return songDuration, songPosition, nil
+	return duration, position, nil
 }

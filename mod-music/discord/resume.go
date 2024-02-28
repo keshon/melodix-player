@@ -1,6 +1,8 @@
 package discord
 
 import (
+	"time"
+
 	"github.com/gookit/slog"
 
 	embed "github.com/Clinet/discordgo-embed"
@@ -16,6 +18,8 @@ func (d *Discord) handleResumeCommand(s *discordgo.Session, m *discordgo.Message
 		slog.Error("Error resuming player:", err)
 		return
 	}
+
+	time.Sleep(250 * time.Millisecond)
 
 	embedStr := d.Player.GetCurrentStatus().StringEmoji() + " " + d.Player.GetCurrentStatus().String()
 	embedMsg := embed.NewEmbed().

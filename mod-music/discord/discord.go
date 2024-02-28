@@ -85,7 +85,6 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	slog.Warn("Discord")
 	slog.Infof("Received command \"%v\" (canonical \"%v\"), parameter \"%v\"", command, canonical, parameter)
 
 	switch canonical {

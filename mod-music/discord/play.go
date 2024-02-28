@@ -110,7 +110,6 @@ func createPlaylist(paramType string, songsList []string, d *Discord, m *discord
 	youtube := sources.NewYoutube()
 	stream := sources.NewStream()
 
-	slog.Warn("Discord")
 	slog.Info("Getting songs list and their type:")
 	for _, param := range songsList {
 		slog.Info(" - ", param, paramType)
@@ -194,12 +193,11 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 	previousPlaylistExist := len(d.Player.GetSongQueue())
 
 	// Enqueue songs
-	slog.Info("Enqueuing the playlist...")
+	slog.Info("Enqueuing the playlist to the player...")
 	for _, song := range playlist {
 		d.Player.Enqueue(song)
 	}
 
-	slog.Warn("Discord")
 	slog.Info("Player's song queue:")
 	for _, song := range d.Player.GetSongQueue() {
 		slog.Info(" - ", song.Title, song.Source)

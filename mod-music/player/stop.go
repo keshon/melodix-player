@@ -1,6 +1,8 @@
 package player
 
 import (
+	"fmt"
+
 	"github.com/gookit/slog"
 )
 
@@ -9,12 +11,14 @@ func (p *Player) Stop() error {
 	slog.Info("Stopping audio playback and disconnecting from voice channel")
 
 	if p.GetVoiceConnection() == nil {
-		return nil
+		return fmt.Errorf("voice connection is not initialized")
+	}
+
+	if p.GetCurrentSong() == nil {
+		return fmt.Errorf("current song is missing")
 	}
 
 	p.StopInterrupt <- true
-	p.SetSongQueue(make([]*Song, 0))
-	p.SetCurrentSong(nil)
 
 	return nil
 }
