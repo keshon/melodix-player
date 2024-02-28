@@ -3,11 +3,16 @@ package discord
 import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
+	"github.com/gookit/slog"
 )
 
 // handleStopCommand handles the stop command for Discord.
 func (d *Discord) handleStopCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	d.Player.Stop()
+	err := d.Player.Stop()
+	if err != nil {
+		slog.Error("Error stopping:", err)
+		return
+	}
 
 	embedStr := "⏹ " + "Stopped playback"
 	embedMsg := embed.NewEmbed().

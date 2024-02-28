@@ -12,8 +12,8 @@ import (
 	"github.com/keshon/melodix-discord-player/mod-music/utils"
 )
 
-// Play starts playing the current or specified song.
-func (p *Player) Play(startAt int, song *Song) {
+// Play starts playing audio from the given start position or song.
+func (p *Player) Play(startAt int, song *Song) error {
 	// Get current song (from queue or as arg)
 	var currentSong *Song
 	if song == nil {
@@ -21,7 +21,7 @@ func (p *Player) Play(startAt int, song *Song) {
 		currentSong, err = p.Dequeue()
 		if err != nil {
 			slog.Error(err)
-			return
+			return fmt.Errorf("failed to dequeue song: %w", err)
 		}
 	} else {
 		currentSong = song
@@ -31,15 +31,15 @@ func (p *Player) Play(startAt int, song *Song) {
 	// Setup encoding
 	options, err := p.createEncodeOptions(startAt)
 	if err != nil {
-		slog.Fatalf("Failed to create encode options: %v", err)
-		return
+		slog.Errorf("Failed to create encode options: %v", err)
+		return fmt.Errorf("failed to create encode options: %w", err)
 	}
 
 	// Start encoding
 	encoding, err := dca.EncodeFile(p.GetCurrentSong().DownloadURL, options)
 	if err != nil {
 		slog.Error(err)
-		return
+		return fmt.Errorf("failed to encode file: %w", err)
 	}
 	p.SetEncodingSession(encoding)
 	defer p.GetEncodingSession().Cleanup()
@@ -104,22 +104,22 @@ func (p *Player) Play(startAt int, song *Song) {
 			p.SetCurrentStatus(StatusResting)
 			p.GetEncodingSession().Cleanup()
 
-			return
+			return fmt.Errorf("unexpected error occurred: %w", err)
 		}
 
 		if p.GetVoiceConnection() == nil {
 			slog.Warn("VoiceConnection is nil")
-			return
+			return nil
 		}
 
 		if p.GetStreamingSession() == nil {
 			slog.Warn("StreamingSession is nil")
-			return
+			return nil
 		}
 
 		if p.GetCurrentSong() == nil {
 			slog.Warn("CurrentSong is nil")
-			return
+			return nil
 		}
 
 		if p.GetCurrentSong().Source != SourceStream {
@@ -130,7 +130,7 @@ func (p *Player) Play(startAt int, song *Song) {
 
 			if err != nil {
 				slog.Warnf("Error getting song metrics: %v", err)
-				return
+				return fmt.Errorf("error getting song metrics: %w", err)
 			}
 
 			if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
@@ -141,7 +141,6 @@ func (p *Player) Play(startAt int, song *Song) {
 
 				slog.Warnf("Restarting song %v from interrupted position %v", p.GetCurrentSong().Title, int(startAt))
 				p.Play(int(startAt), p.GetCurrentSong())
-
 			}
 		} else {
 			// handle stream
@@ -159,7 +158,7 @@ func (p *Player) Play(startAt int, song *Song) {
 		time.Sleep(250 * time.Millisecond)
 
 		if err := h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID); err != nil {
-			slog.Warnf("Error adding stats count stats to history: %v", err)
+			return fmt.Errorf("error adding stats count stats to history: %v", err)
 		}
 	case <-p.SkipInterrupt:
 		slog.Info("Song is interrupted for skip, stopping playback")
@@ -168,35 +167,42 @@ func (p *Player) Play(startAt int, song *Song) {
 			p.GetVoiceConnection().Speaking(false)
 		}
 		p.GetEncodingSession().Cleanup()
-		return
+
+		return nil
 
 	case <-p.StopInterrupt:
 		slog.Info("Song is interrupted for stop, stopping playback")
 
+		p.GetStreamingSession().TryLock()
+		p.GetStreamingSession().SetPaused(true)
+		p.GetStreamingSession().Unlock()
+
 		p.GetEncodingSession().Cleanup()
+
 		p.SetSongQueue(make([]*Song, 0))
 		p.SetCurrentStatus(StatusResting)
 		p.SetCurrentSong(nil)
+
 		p.SkipInterrupt = make(chan bool, 1)
 		p.StopInterrupt = make(chan bool, 1)
 
-		// p.SetStreamingSession(nil) // crashes here
-
-		return
+		return nil
 	}
 
-	if len(p.GetSongQueue()) == 0 {
-		time.Sleep(250 * time.Millisecond)
-		slog.Info("Audio done")
-		p.Stop()
-		p.SetCurrentStatus(StatusResting)
-		return
-	}
+	// if len(p.GetSongQueue()) == 0 {
+	// 	time.Sleep(250 * time.Millisecond)
+	// 	slog.Info("Audio done")
+	// 	p.Stop()
+	// 	p.SetCurrentStatus(StatusResting)
+	// 	return nil
+	// }
 
-	p.GetVoiceConnection().Speaking(false)
-	time.Sleep(250 * time.Millisecond)
-	slog.Info("Play next in queue")
-	go p.Play(0, nil)
+	// p.GetVoiceConnection().Speaking(false)
+	// time.Sleep(250 * time.Millisecond)
+	// slog.Info("Play next in queue")
+	// go p.Play(0, nil)
+
+	return nil
 }
 
 func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
@@ -228,18 +234,23 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 }
 
 func (p *Player) setupVoiceConnection() {
-	for p.GetVoiceConnection() == nil || !p.GetVoiceConnection().Ready {
-		time.Sleep(100 * time.Millisecond)
-
-		if p.GetVoiceConnection() == nil {
-			slog.Warn("Voice connection is nil. Retrying...")
+	for {
+		vc := p.GetVoiceConnection()
+		if vc == nil || !vc.Ready {
+			time.Sleep(100 * time.Millisecond)
+			slog.Warn("Voice connection is nil or not ready. Retrying...")
 			continue
 		}
 
-		err := p.GetVoiceConnection().Speaking(true)
+		err := vc.Speaking(true)
 		if err != nil {
 			slog.Warnf("Error connecting to Discord voice: %v. Retrying...", err)
-			p.GetVoiceConnection().Speaking(false)
+			vc.Speaking(false)
+		}
+
+		// Break out of the loop if the voice connection is ready
+		if vc.Ready {
+			break
 		}
 	}
 }

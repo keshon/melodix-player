@@ -3,6 +3,7 @@ package discord
 import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
+	"github.com/gookit/slog"
 )
 
 // handleSkipCommand handles the skip command for Discord.
@@ -16,7 +17,11 @@ func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCr
 
 	skipPhrase, _ := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 
-	d.Player.Skip()
+	err := d.Player.Skip()
+	if err != nil {
+		slog.Error("Error skipping:", err)
+		return
+	}
 
 	if len(d.Player.GetSongQueue()) == 0 {
 		embedStr := "⏹ " + "Stopped playback"

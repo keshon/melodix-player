@@ -1,6 +1,7 @@
 package player
 
 import (
+	"errors"
 	"time"
 
 	"github.com/gookit/slog"
@@ -8,31 +9,38 @@ import (
 	"github.com/keshon/melodix-discord-player/mod-music/history"
 )
 
-func (p *Player) Skip() {
+func (p *Player) Skip() error {
 	slog.Warn("Song queue length: ", len(p.GetSongQueue()))
 
 	if p.GetVoiceConnection() == nil {
-		return
+		return errors.New("voice connection is nil")
 	}
 
 	if p.GetCurrentSong() == nil {
-		return
+		return errors.New("current song is nil")
 	}
 
 	h := history.NewHistory()
 
 	if len(p.GetSongQueue()) == 0 {
 		slog.Warn("..stop")
+
 		h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
+
 		p.Stop()
 	} else {
 		if len(p.SkipInterrupt) == 0 {
-			slog.Warn("..skip to", p.songQueue[0].Title)
+			slog.Warn("..skip to", p.GetSongQueue()[0].Title)
+
 			h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
+
 			p.SkipInterrupt <- true
+
 			time.Sleep(250 * time.Millisecond)
 			p.Play(0, nil)
+
 		}
 	}
 
+	return nil
 }

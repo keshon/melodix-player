@@ -207,6 +207,7 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 
 	if enqueueOnly {
 		showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, false)
+		slog.Warn(d.Player.GetCurrentStatus().String())
 	} else {
 		go func() {
 			for {
@@ -217,7 +218,7 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 				time.Sleep(250 * time.Millisecond)
 			}
 		}()
-
+		slog.Warn(d.Player.GetCurrentStatus().String())
 		d.Player.Unpause()
 	}
 

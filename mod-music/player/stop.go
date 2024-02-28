@@ -1,26 +1,20 @@
 package player
 
-import "github.com/gookit/slog"
+import (
+	"github.com/gookit/slog"
+)
 
-// Stop stops audio playback and disconnects from the voice channel.
-func (p *Player) Stop() {
+// Stop stops the audio playback and disconnects from the voice channel.
+func (p *Player) Stop() error {
 	slog.Info("Stopping audio playback and disconnecting from voice channel")
 
-	p.StopInterrupt <- true
-
-	p.SetCurrentStatus(StatusResting)
-
 	if p.GetVoiceConnection() == nil {
-		return
+		return nil
 	}
 
-	err := p.GetVoiceConnection().Disconnect()
-	if err != nil {
-		slog.Errorf("Error disconnecting voice connection: %v", err)
-	}
-
-	p.SetVoiceConnection(nil)
-	p.SetStreamingSession(nil)
+	p.StopInterrupt <- true
+	p.SetSongQueue(make([]*Song, 0))
 	p.SetCurrentSong(nil)
 
+	return nil
 }

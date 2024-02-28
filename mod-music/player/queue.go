@@ -35,14 +35,17 @@ func (p *Player) Dequeue() (*Song, error) {
 }
 
 // ClearQueue clears the song queue.
-func (p *Player) ClearQueue() {
+func (p *Player) ClearQueue() error {
 	slog.Warn("Player")
 	slog.Info("Clearing song queue...")
 
 	p.Lock()
 	defer p.Unlock()
+
 	if p.GetSongQueue() == nil {
-		return
+		return nil
 	}
+
 	p.SetSongQueue(make([]*Song, 0))
+	return nil
 }
