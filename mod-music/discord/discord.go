@@ -64,15 +64,12 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	command, parameter, err := parseCommand(m.Message.Content, d.prefix)
+	command, parameter, err := parseCommandAndParameter(m.Message.Content, d.prefix)
 	if err != nil {
 		return
 	}
 
-	slog.Warn("Discord")
-	slog.Info("Received command, parameter:", command, parameter)
-
-	commandAliases := [][]string{
+	aliases := [][]string{
 		{"pause", "!"},
 		{"resume", "r", "!>"},
 		{"play", "p", ">"},
@@ -83,24 +80,19 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"history", "time", "t"},
 	}
 
-	canonicalCommand := getCanonicalCommand(command, commandAliases)
-	if canonicalCommand == "" {
+	canonical := getCanonicalCommand(command, aliases)
+	if canonical == "" {
 		return
 	}
 
-	switch canonicalCommand {
+	slog.Warn("Discord")
+	slog.Infof("Received command \"%v\" (canonical \"%v\"), parameter \"%v\"", command, canonical, parameter)
+
+	switch canonical {
 	case "pause":
-		if parameter == "" && d.Player.GetCurrentStatus() == player.StatusPlaying {
-			d.handlePauseCommand(s, m)
-			return
-		}
-		fallthrough
+		d.handlePauseCommand(s, m)
 	case "resume":
-		if parameter == "" && d.Player.GetCurrentStatus() == player.StatusPaused || d.Player.GetCurrentStatus() == player.StatusResting {
-			d.handleResumeCommand(s, m)
-			return
-		}
-		fallthrough
+		d.handleResumeCommand(s, m)
 	case "play":
 		d.handlePlayCommand(s, m, parameter, false)
 	case "skip":
@@ -113,20 +105,18 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		d.handleStopCommand(s, m)
 	case "history":
 		d.handleHistoryCommand(s, m, parameter)
-	default:
-		// Unknown command
 	}
 }
 
-// parseCommand parses the command and parameter from the Discord input based on the provided pattern.
-func parseCommand(content, pattern string) (string, string, error) {
+// parseCommandAndParameter parses the command and parameter from the Discord input based on the provided pattern.
+func parseCommandAndParameter(content, pattern string) (string, string, error) {
 	if !strings.HasPrefix(content, pattern) {
 		return "", "", fmt.Errorf("pattern not found")
 	}
 
-	content = content[len(pattern):] // Strip the pattern
+	content = content[len(pattern):]
 
-	words := strings.Fields(content) // Split by whitespace, handling multiple spaces
+	words := strings.Fields(content)
 	if len(words) == 0 {
 		return "", "", fmt.Errorf("no command found")
 	}

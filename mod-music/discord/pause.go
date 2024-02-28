@@ -2,6 +2,7 @@ package discord
 
 import (
 	"github.com/gookit/slog"
+	"github.com/keshon/melodix-discord-player/mod-music/player"
 
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
@@ -10,6 +11,10 @@ import (
 // handlePauseCommand handles the pause command for Discord.
 func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
+
+	if d.Player.GetCurrentStatus() != player.StatusPlaying {
+		return
+	}
 
 	err := d.Player.Pause()
 	if err != nil {
