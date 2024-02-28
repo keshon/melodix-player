@@ -6,9 +6,8 @@ import (
 	"github.com/gookit/slog"
 )
 
-// Stop stops the audio playback and disconnects from the voice channel.
 func (p *Player) Stop() error {
-	slog.Info("Stopping audio playback and disconnecting from voice channel")
+	slog.Info("Sending stop signal...")
 
 	if p.GetVoiceConnection() == nil {
 		return fmt.Errorf("voice connection is not initialized")

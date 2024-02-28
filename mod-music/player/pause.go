@@ -1,37 +1,40 @@
 package player
 
 import (
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gookit/slog"
 )
 
-// Pause pauses audio playback.
 func (p *Player) Pause() error {
 	slog.Info("Pausing audio playback")
 
-	// Check if current song exists
 	if p.GetCurrentSong() == nil {
 		return fmt.Errorf("no song is currently playing")
 	}
 
-	// Check if the current status is playing
 	if p.GetCurrentStatus() != StatusPlaying {
 		return fmt.Errorf("the current status is not playing")
 	}
 
-	// Check if the streaming session is initialized
 	if p.GetStreamingSession() == nil {
 		return fmt.Errorf("the streaming session is not initialized")
 	}
 
-	// Pause the streaming session
 	p.GetStreamingSession().SetPaused(true)
 
-	// Update the status to paused
-	if p.GetStreamingSession().Paused() {
-		p.SetCurrentStatus(StatusPaused)
+	startTime := time.Now()
+	timeout := 3 * time.Second
+	for time.Since(startTime) <= timeout {
+		if p.GetStreamingSession().Paused() {
+			p.SetCurrentStatus(StatusPaused)
+			slog.Warn("Audio playback", p.GetCurrentStatus().String())
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	return nil
+	return errors.New("failed to pause audio playback: timed out after 3 seconds")
 }

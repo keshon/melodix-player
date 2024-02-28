@@ -187,6 +187,7 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 			return err
 		}
 		d.Player.SetVoiceConnection(conn)
+		d.Player.SetChannelID(vs.ChannelID)
 		conn.LogLevel = discordgo.LogWarning
 	}
 
@@ -217,7 +218,7 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 			}
 		}()
 		slog.Warn(d.Player.GetCurrentStatus().String())
-		d.Player.Unpause()
+		d.Player.Unpause(vs.ChannelID)
 	}
 
 	return nil
@@ -240,7 +241,7 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 		if len(d.Player.GetSongQueue()) > 0 {
 			content += fmt.Sprintf("\nNo song is currently playing, but the queue is filled with songs. Use `%vplay` command to toggle the playback\n\n", d.prefix)
 		} else {
-			content += fmt.Sprintf("\nNo song is currently playing. Use the `%vplay [title/url/id/stream]` command to start. \nType `%vhelp` for more information.\n\n", d.prefix, d.prefix)
+			content += fmt.Sprintf("\nNo song is currently playing.\nUse the `%vplay [title/url/id/stream]` command to start. \nType `%vhelp` for more information.\n\n", d.prefix, d.prefix)
 		}
 	}
 

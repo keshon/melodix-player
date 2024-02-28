@@ -21,7 +21,7 @@ func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.Mess
 
 	pleaseWaitMessage, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	if err != nil {
-		slog.Warnf("Error sending 'please wait' message: %v", err)
+		slog.Error("Error sending 'please wait' message", err)
 	}
 
 	showStatusMessage(d, s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0, false)

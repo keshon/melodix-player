@@ -6,17 +6,11 @@ import (
 	"github.com/gookit/slog"
 )
 
-// Enqueue adds a song to the queue.
 func (p *Player) Enqueue(song *Song) {
-	slog.Warn("Player")
 	slog.Info("Enqueuing:", song.Title)
 	p.SetSongQueue(append(p.GetSongQueue(), song))
-
-	//p.SetCurrentSong(song)
-
 }
 
-// Dequeue removes and returns the first song from the queue.
 func (p *Player) Dequeue() (*Song, error) {
 	if len(p.GetSongQueue()) == 0 {
 		return nil, errors.New("queue is empty")
@@ -33,9 +27,8 @@ func (p *Player) Dequeue() (*Song, error) {
 	return firstSong, nil
 }
 
-// ClearQueue clears the song queue.
 func (p *Player) ClearQueue() error {
-	slog.Info("Clearing song queue...")
+	slog.Info("Clearing song queue")
 
 	p.Lock()
 	defer p.Unlock()

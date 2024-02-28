@@ -18,7 +18,7 @@ type IPlayer interface {
 	ClearQueue() error
 	Stop() error
 	Pause() error
-	Unpause() error
+	Unpause(channelID string) error
 	Lock()
 	Unlock()
 	GetCurrentStatus() PlaybackStatus
@@ -31,18 +31,22 @@ type IPlayer interface {
 	GetStreamingSession() *dca.StreamingSession
 	GetCurrentSong() *Song
 	SetCurrentSong(song *Song)
+	GetChannelID() string
+	SetChannelID(channelID string)
 }
 
 type Player struct {
 	sync.Mutex
-	vc            *discordgo.VoiceConnection
-	stream        *dca.StreamingSession
-	encoding      *dca.EncodeSession
-	song          *Song
-	queue         []*Song
-	status        PlaybackStatus
-	SkipInterrupt chan bool
-	StopInterrupt chan bool
+	vc                     *discordgo.VoiceConnection
+	stream                 *dca.StreamingSession
+	encoding               *dca.EncodeSession
+	song                   *Song
+	queue                  []*Song
+	status                 PlaybackStatus
+	channelID              string
+	SkipInterrupt          chan bool
+	StopInterrupt          chan bool
+	SwitchChannelInterrupt chan bool
 }
 
 type Song struct {
@@ -109,16 +113,19 @@ func (status PlaybackStatus) StringEmoji() string {
 
 func NewPlayer(guildID string) IPlayer {
 	return &Player{
-		vc:            nil,
-		stream:        nil,
-		encoding:      nil,
-		song:          nil,
-		queue:         make([]*Song, 0),
-		status:        StatusResting,
-		SkipInterrupt: make(chan bool, 1),
-		StopInterrupt: make(chan bool, 1),
+		vc:                     nil,
+		stream:                 nil,
+		encoding:               nil,
+		song:                   nil,
+		queue:                  make([]*Song, 0),
+		status:                 StatusResting,
+		SkipInterrupt:          make(chan bool, 1),
+		StopInterrupt:          make(chan bool, 1),
+		SwitchChannelInterrupt: make(chan bool, 1),
 	}
 }
+
+// Setters and Getters
 
 func (p *Player) Lock() {
 	p.Mutex.Lock()
@@ -182,4 +189,12 @@ func (p *Player) SetStreamingSession(stream *dca.StreamingSession) {
 	p.Lock()
 	defer p.Unlock()
 	p.stream = stream
+}
+
+func (p *Player) GetChannelID() string {
+	return p.channelID
+}
+
+func (p *Player) SetChannelID(channelID string) {
+	p.channelID = channelID
 }

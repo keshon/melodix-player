@@ -17,12 +17,10 @@ import (
 	kkdai_youtube "github.com/kkdai/youtube/v2"
 )
 
-// Youtube is a struct that encapsulates the YouTube functionality.
 type Youtube struct {
 	youtubeClient *kkdai_youtube.Client
 }
 
-// NewYoutube creates a new instance of kkdai_youtube.
 func NewYoutube() *Youtube {
 	return &Youtube{
 		youtubeClient: &kkdai_youtube.Client{},

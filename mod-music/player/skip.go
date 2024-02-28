@@ -10,6 +10,8 @@ import (
 )
 
 func (p *Player) Skip() error {
+	slog.Info("Skipping...")
+
 	if p.GetVoiceConnection() == nil {
 		return errors.New("voice connection is not initialized")
 	}
@@ -21,12 +23,12 @@ func (p *Player) Skip() error {
 	h := history.NewHistory()
 
 	if len(p.GetSongQueue()) == 0 {
-		slog.Warn("..stop")
+		slog.Warn("is actually stopping...")
 		h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
 		p.Stop()
 	} else {
 		if len(p.SkipInterrupt) == 0 {
-			slog.Warn("..skip to", p.GetSongQueue()[0].Title)
+			slog.Warn("is actually skipping to", p.GetSongQueue()[0].Title)
 			h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
 			p.SkipInterrupt <- true
 			time.Sleep(250 * time.Millisecond)

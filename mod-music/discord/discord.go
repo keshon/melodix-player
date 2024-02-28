@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/keshon/melodix-discord-player/mod-music/utils"
 )
 
-// Discord represents the Melodix instance for Discord.
 type Discord struct {
 	Player               player.IPlayer
 	Players              map[string]player.IPlayer
@@ -24,7 +24,6 @@ type Discord struct {
 	rateLimitDuration    time.Duration
 }
 
-// NewDiscord creates a new instance of Discord.
 func NewDiscord(session *discordgo.Session) *Discord {
 	config, err := config.NewConfig()
 	if err != nil {
@@ -41,7 +40,6 @@ func NewDiscord(session *discordgo.Session) *Discord {
 	}
 }
 
-// Start starts the Discord instance.
 func (d *Discord) Start(guildID string) {
 	slog.Infof(`Discord instance of mod-music started for guild id %v`, guildID)
 
@@ -54,7 +52,6 @@ func (d *Discord) Stop() {
 	d.IsInstanceActive = false
 }
 
-// Commands handles incoming Discord commands.
 func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.GuildID != d.GuildID {
 		return
@@ -107,7 +104,6 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-// parseCommandAndParameter parses the command and parameter from the Discord input based on the provided pattern.
 func parseCommandAndParameter(content, pattern string) (string, string, error) {
 	if !strings.HasPrefix(content, pattern) {
 		return "", "", fmt.Errorf("pattern not found")
@@ -129,7 +125,6 @@ func parseCommandAndParameter(content, pattern string) (string, string, error) {
 	return command, parameter, nil
 }
 
-// getCanonicalCommand gets the canonical command from aliases using the given alias.
 func getCanonicalCommand(alias string, commandAliases [][]string) string {
 	for _, aliases := range commandAliases {
 		for _, a := range aliases {
@@ -141,11 +136,9 @@ func getCanonicalCommand(alias string, commandAliases [][]string) string {
 	return ""
 }
 
-// changeAvatar changes bot avatar with randomly picked avatar image within allowed rate limit
 func (d *Discord) changeAvatar(s *discordgo.Session) {
-	// Check if the rate limit duration has passed since the last execution
 	if time.Since(d.lastChangeAvatarTime) < d.rateLimitDuration {
-		slog.Info("Rate-limited. Skipping changeAvatar.")
+		//slog.Info("Rate-limited. Skipping changeAvatar.")
 		return
 	}
 
@@ -167,7 +160,6 @@ func (d *Discord) changeAvatar(s *discordgo.Session) {
 		return
 	}
 
-	// Update the last execution time
 	d.lastChangeAvatarTime = time.Now()
 }
 
@@ -178,4 +170,22 @@ func findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (*di
 		}
 	}
 	return nil, false
+}
+
+func findVoiceChannelWithUser(d *Discord, s *discordgo.Session, m *discordgo.MessageCreate) (string, error) {
+	channel, err := s.State.Channel(m.Message.ChannelID)
+	if err != nil {
+		return "", err
+	}
+
+	guild, err := s.State.Guild(channel.GuildID)
+	if err != nil {
+		return "", err
+	}
+
+	vs, found := findUserVoiceState(m.Message.Author.ID, guild.VoiceStates)
+	if !found {
+		return "", errors.New("user not found in voice channel")
+	}
+	return vs.ChannelID, nil
 }

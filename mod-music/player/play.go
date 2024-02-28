@@ -13,7 +13,6 @@ import (
 	"github.com/keshon/melodix-discord-player/mod-music/utils"
 )
 
-// Play starts playing audio from the given start position or song.
 func (p *Player) Play(startAt int, song *Song) error {
 	// Get current song (from queue / as arg)
 	var currentSong *Song
@@ -57,7 +56,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 	p.SetStreamingSession(stream)
 	p.SetCurrentStatus(StatusPlaying)
 
-	// Add current song playback duration stat to history
+	// Add song playback duration to history
 	historySong := &history.Song{
 		Name:        p.GetCurrentSong().Title,
 		UserURL:     p.GetCurrentSong().UserURL,
@@ -125,7 +124,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 		}
 
 		if p.GetCurrentSong().Source != SourceStream {
-			// Song
+			// Treat as a song
 			slog.Info("Checking for song metrics if interruption was unintentional")
 
 			songDuration, songPosition, err := p.calculateSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
@@ -145,7 +144,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 			}
 
 		} else {
-			// Stream
+			// Treat as a stream
 			slog.Info("Song is a stream, should always restart")
 
 			p.GetEncodingSession().Cleanup()
@@ -160,8 +159,8 @@ func (p *Player) Play(startAt int, song *Song) error {
 			return fmt.Errorf("error adding playback count stats to history: %v", err)
 		}
 
-		slog.Info("..finish processing done signal")
-		// no return here is needed as song is done normally and we may proceed to next song
+		slog.Info("..finished processing done signal (it's not over yet)")
+		// No return here needed because song is done normally and we may proceed to next one (if any)
 	case <-p.SkipInterrupt:
 		slog.Info("Song is interrupted due to skip signal")
 
@@ -171,7 +170,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 			p.GetVoiceConnection().Speaking(false)
 		}
 
-		slog.Info("..finish processing skip signal")
+		slog.Info("..finished processing skip signal")
 		return nil
 	case <-p.StopInterrupt:
 		slog.Info("Song is interrupted due to stop signal")
@@ -187,7 +186,23 @@ func (p *Player) Play(startAt int, song *Song) error {
 
 		slog.Info("..finish processing stop signal")
 		return nil
+
+	case <-p.SwitchChannelInterrupt:
+		slog.Info("Song is interrupted due to switch channel signal")
+
+		p.GetStreamingSession().SetPaused(true)
+		p.GetVoiceConnection().Speaking(false)
+		p.GetVoiceConnection().ChangeChannel(p.GetChannelID(), false, false)
+		p.GetVoiceConnection().Speaking(true)
+		p.GetStreamingSession().SetPaused(false)
+
+		p.Play(0, p.GetCurrentSong())
+
+		slog.Info("..finish processing switch channel signal")
+		return nil
 	}
+
+	// ...continue from here if song is done normally
 
 	p.GetVoiceConnection().Speaking(false)
 
@@ -199,7 +214,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 	}
 
 	time.Sleep(250 * time.Millisecond)
-	slog.Warn("Play next in queue (after all signals passed)")
+	slog.Warn("Play next in queue after all signals passed")
 	go p.Play(0, nil)
 
 	return nil
@@ -236,10 +251,10 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 func (p *Player) setupVoiceConnection() error {
 	startTime := time.Now()
 	timeout := 3 * time.Second
-
 	for time.Since(startTime) <= timeout {
 		vc := p.GetVoiceConnection()
 		if vc != nil && vc.Ready {
+			vc.ChangeChannel(p.GetChannelID(), false, false)
 			if err := vc.Speaking(true); err == nil {
 				return nil
 			}
@@ -249,7 +264,6 @@ func (p *Player) setupVoiceConnection() error {
 	return errors.New("failed to setup voice connection: timed out after 3 seconds")
 }
 
-// calculateSongMetrics calculates playback metrics for a song.
 func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, streamingSession *dca.StreamingSession, song *Song) (duration, position time.Duration, err error) {
 	encodingDuration := encodingSession.Stats().Duration
 	encodingStartTime := time.Duration(encodingSession.Options().StartTime) * time.Second

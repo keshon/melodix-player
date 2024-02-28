@@ -10,13 +10,16 @@ import (
 func (d *Discord) handleStopCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	err := d.Player.Stop()
 	if err != nil {
-		slog.Error("Error stopping:", err)
+		slog.Error("Error stopping player", err)
 		return
 	}
 
-	embedStr := "⏹ " + "Stopped playback"
+	embedStr := "⏹ " + "The playback has been stopped.\nThe queue is now empty."
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
-	s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+	_, err = s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
+	if err != nil {
+		slog.Error("Error sending 'stopped playback' message", err)
+	}
 }

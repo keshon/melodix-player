@@ -14,12 +14,14 @@ func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCr
 	embedMsg := embed.NewEmbed().
 		SetDescription(embedStr).
 		SetColor(0x9f00d4).MessageEmbed
-
-	skipPhrase, _ := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
-
-	err := d.Player.Skip()
+	skipPhrase, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
 	if err != nil {
-		slog.Error("Error skipping:", err)
+		slog.Error("Error sending 'skipping' message", err)
+	}
+
+	err = d.Player.Skip()
+	if err != nil {
+		slog.Error("Error skipping player", err)
 		return
 	}
 
@@ -28,7 +30,9 @@ func (d *Discord) handleSkipCommand(s *discordgo.Session, m *discordgo.MessageCr
 		embedMsg := embed.NewEmbed().
 			SetDescription(embedStr).
 			SetColor(0x9f00d4).MessageEmbed
-
-		s.ChannelMessageEditEmbed(m.Message.ChannelID, skipPhrase.ID, embedMsg)
+		_, err = s.ChannelMessageEditEmbed(m.Message.ChannelID, skipPhrase.ID, embedMsg)
+		if err != nil {
+			slog.Error("Error sending 'stopped playback' message", err)
+		}
 	}
 }
