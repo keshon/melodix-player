@@ -53,18 +53,30 @@ func (p *Player) Play(startAt int, song *Song) error {
 		if err != nil {
 			return fmt.Errorf("failed to join voice channel: %w", err)
 		}
-	} else {
-		slog.Info("Found voice connection", voiceConnection.ChannelID)
-		// voiceConnection.ChangeChannel(p.GetChannelID(), false, false)
 	}
 
+	slog.Info("Found voice connection", voiceConnection.ChannelID)
+	// voiceConnection.ChangeChannel(p.GetChannelID(), false, false)
+
+	slog.Info("Setting it as active", voiceConnection.ChannelID)
 	p.SetVoiceConnection(voiceConnection)
 	// defer p.GetVoiceConnection().Close()
 
 	err = p.GetVoiceConnection().Speaking(true)
 	if err != nil {
-		slog.Error(err)
-		return fmt.Errorf("failed to start speaking: %w", err)
+		slog.Error("Failed to start speaking in existing voice connection", err)
+		slog.Info("Attempting for a new join to voice channel and setting it as active")
+		voiceConnection, err = p.GetDiscordSession().ChannelVoiceJoin(p.GetGuildID(), p.GetChannelID(), true, false)
+		if err != nil {
+			return fmt.Errorf("failed to join voice channel: %w", err)
+		}
+
+		p.SetVoiceConnection(voiceConnection)
+
+		err = p.GetVoiceConnection().Speaking(true)
+		if err != nil {
+			return fmt.Errorf("failed to start speaking after two attempts: %w", err)
+		}
 	}
 	// defer p.GetVoiceConnection().Speaking(false)
 
