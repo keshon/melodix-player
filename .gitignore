@@ -18,3 +18,11 @@ logs/
 
 # Ignore executable files in root directory
 /*.exe
+
+build/
+dist/
+
+*.exe~
+*.~
+
+.tools/
