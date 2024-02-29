@@ -169,7 +169,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 				p.GetEncodingSession().Cleanup()
 				p.GetVoiceConnection().Speaking(false)
 
-				slog.Infof("Interruption detected, restarting song %v from %v", p.GetCurrentSong().Title, int(startAt))
+				slog.Warnf("Interruption detected, restarting song %v from %v", p.GetCurrentSong().Title, int(startAt))
 				p.Play(int(startAt), p.GetCurrentSong())
 			}
 
@@ -208,18 +208,15 @@ func (p *Player) Play(startAt int, song *Song) error {
 		p.GetVoiceConnection().Speaking(false)
 		p.GetVoiceConnection().Disconnect()
 
-		p.SetCurrentStatus(StatusResting)
-
 		p.GetEncodingSession().Cleanup()
 		if p.GetVoiceConnection() != nil {
 			p.GetVoiceConnection().Speaking(false)
 			p.SetStreamingSession(nil)
 		}
 
+		p.SetCurrentStatus(StatusResting)
 		p.SetSongQueue(make([]*Song, 0))
-
 		p.SetCurrentSong(nil)
-
 		p.SkipInterrupt = make(chan bool, 1)
 		p.StopInterrupt = make(chan bool, 1)
 		p.SwitchChannelInterrupt = make(chan bool, 1)
@@ -251,18 +248,15 @@ func (p *Player) Play(startAt int, song *Song) error {
 		p.GetVoiceConnection().Speaking(false)
 		p.GetVoiceConnection().Disconnect()
 
-		p.SetCurrentStatus(StatusResting)
-
 		p.GetEncodingSession().Cleanup()
 		if p.GetVoiceConnection() != nil {
 			p.GetVoiceConnection().Speaking(false)
 			p.SetStreamingSession(nil)
 		}
 
+		p.SetCurrentStatus(StatusResting)
 		p.SetSongQueue(make([]*Song, 0))
-
 		p.SetCurrentSong(nil)
-
 		p.SkipInterrupt = make(chan bool, 1)
 		p.StopInterrupt = make(chan bool, 1)
 		p.SwitchChannelInterrupt = make(chan bool, 1)
@@ -283,7 +277,7 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 		return nil, fmt.Errorf("error loading config: %w", err)
 	}
 
-	return &dca.EncodeOptions{
+	options := &dca.EncodeOptions{
 		Volume:                  1.0,
 		FrameDuration:           config.DcaFrameDuration,
 		Bitrate:                 config.DcaBitrate,
@@ -302,11 +296,12 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 		FfmpegBinaryPath:        config.DcaFfmpegBinaryPath,
 		EncodingLineLog:         config.DcaEncodingLineLog,
 		UserAgent:               config.DcaUserAgent,
-	}, nil
+	}
+
+	return options, nil
 }
 
 func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, streamingSession *dca.StreamingSession, song *Song) (duration, position time.Duration, err error) {
-	slog.Error("We are at start of calculateSongMetrics")
 	encodingDuration := encodingSession.Stats().Duration
 	encodingStartTime := time.Duration(encodingSession.Options().StartTime) * time.Second
 

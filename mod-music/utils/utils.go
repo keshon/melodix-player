@@ -148,7 +148,7 @@ func TrimString(input string, limit int) string {
 // Return type:
 //
 //	int - the minimum of the two integers
-func min(a, b int) int {
+func Min(a, b int) int {
 	return a&((a-b)>>31) | b&(^((a - b) >> 31))
 }
 
@@ -167,7 +167,7 @@ func AbsInt(x int) int {
 //
 // x, y are the integers to find the absolute difference between.
 // int is the return type, representing the absolute difference.
-func absDiffInt(x, y int) int {
+func AbsDiffInt(x, y int) int {
 	diff := x - y
 	if diff < 0 {
 		return -diff
@@ -179,7 +179,7 @@ func absDiffInt(x, y int) int {
 //
 // x, y uint
 // uint
-func absDiffUint(x, y uint) uint {
+func AbsDiffUint(x, y uint) uint {
 	if x < y {
 		return y - x
 	}
@@ -200,40 +200,4 @@ func findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (fou
 		}
 	}
 	return
-}
-
-// VideoInfo struct represents the map response
-type VideoInfo struct {
-	C           string  `json:"c"`
-	CNR         int     `json:"cnr"`
-	Duration    float64 `json:"dur"`
-	EI          string  `json:"ei"`
-	Expire      int64   `json:"expire"`
-	FExp        int     `json:"fexp"`
-	FVIP        int     `json:"fvip"`
-	ID          string  `json:"id"`
-	InitCwndBPS int     `json:"initcwndbps"`
-	IP          string  `json:"ip"`
-	Itag        int     `json:"itag"`
-	LMT         int64   `json:"lmt"`
-	LSig        string  `json:"lsig"`
-	LSParams    string  `json:"lsparams"`
-	MH          string  `json:"mh"`
-	MIME        string  `json:"mime"`
-	MM          string  `json:"mm"`
-	MN          string  `json:"mn"`
-	MS          string  `json:"ms"`
-	MT          int64   `json:"mt"`
-	MV          string  `json:"mv"`
-	MVI         int     `json:"mvi"`
-	PL          int     `json:"pl"`
-	RateBypass  string  `json:"ratebypass"`
-	RequireSSL  string  `json:"requiressl"`
-	Sig         string  `json:"sig"`
-	Source      string  `json:"source"`
-	SParams     string  `json:"sparams"`
-	SVPUC       int     `json:"svpuc"`
-	TXP         int     `json:"txp"`
-	VPRV        int     `json:"vprv"`
-	XPC         string  `json:"xpc"`
 }

@@ -6,13 +6,6 @@ import (
 	"github.com/keshon/melodix-discord-player/internal/db"
 )
 
-type Thumbnail struct {
-	URL    string
-	Width  uint
-	Height uint
-}
-
-// Song represents a song with relevant information.
 type Song struct {
 	Name        string        // Name of the song
 	UserURL     string        // URL provided by the user
@@ -22,16 +15,19 @@ type Song struct {
 	ID          string        // Unique ID for the song
 }
 
-// History manages the history of songs played in the application.
+type Thumbnail struct {
+	URL    string
+	Width  uint
+	Height uint
+}
+
 type History struct{}
 
-// HistoryTrackInfo contains information about a history entry and its associated track.
 type HistoryTrackInfo struct {
 	History db.History
 	Track   db.Track
 }
 
-// IHistory defines the interface for managing the application's play history.
 type IHistory interface {
 	AddTrackToHistory(guildID string, song *Song) error
 	AddPlaybackAllStats(guildID, ytid string, duration float64) error
@@ -188,7 +184,6 @@ func (h *History) GetHistory(guildID string, sortBy string) ([]HistoryTrackInfo,
 
 // GetTrackFromHistory retrieves a track from the play history based on its ID and guild.
 func (h *History) GetTrackFromHistory(guildID string, trackID uint) (db.Track, error) {
-
 	exists, err := db.DoesHistoryExistForGuild(trackID, guildID)
 	if err != nil {
 		return db.Track{}, err
