@@ -3,6 +3,7 @@ package player
 import (
 	"fmt"
 	"io"
+	"net/url"
 	"time"
 
 	"github.com/gookit/slog"
@@ -229,6 +230,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 	// ...continue from here if song is done normally
 
 	p.GetVoiceConnection().Speaking(false)
+	// p.GetEncodingSession().Cleanup()
 
 	if len(p.GetSongQueue()) == 0 {
 		time.Sleep(250 * time.Millisecond)
@@ -292,18 +294,25 @@ func (p *Player) createEncodeOptions(startAt int) (*dca.EncodeOptions, error) {
 }
 
 func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, streamingSession *dca.StreamingSession, song *Song) (duration, position time.Duration, err error) {
+	slog.Error("We are at start of calculateSongMetrics")
 	encodingDuration := encodingSession.Stats().Duration
 	encodingStartTime := time.Duration(encodingSession.Options().StartTime) * time.Second
 
 	streamingPosition := streamingSession.PlaybackPosition()
 	delay := encodingDuration - streamingPosition
 
-	params, err := utils.ParseQueryParamsFromURL(song.DownloadURL)
+	parsedURL, err := url.Parse(song.DownloadURL)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("failed to parse URL: %v", err)
+	}
+	queryParams := parsedURL.Query()
+
+	dur, err := utils.ParseFloat64(queryParams.Get("dur"))
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to parse duration: %v", err)
 	}
 
-	duration, err = time.ParseDuration(fmt.Sprintf("%vs", params.Duration)) // was 'duration'
+	duration, err = time.ParseDuration(fmt.Sprintf("%vs", dur))
 	if err != nil {
 		return 0, 0, err
 	}

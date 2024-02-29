@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -83,21 +82,21 @@ func InferProtocolByPort(hostname string, port int) string {
 // parseInt parses the input string to an integer.
 //
 // It takes a string as input and returns an integer and an error.
-func parseInt(s string) (int, error) {
+func ParseInt(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
 // parseInt64 parses the input string into a 64-bit signed integer.
 //
 // It takes a string as a parameter and returns a 64-bit signed integer and an error.
-func parseInt64(s string) (int64, error) {
+func ParseInt64(s string) (int64, error) {
 	return strconv.ParseInt(s, 10, 64)
 }
 
 // parseFloat64 parses the input string as a 64-bit floating point number.
 //
 // It takes a string as input and returns a float64 and an error.
-func parseFloat64(s string) (float64, error) {
+func ParseFloat64(s string) (float64, error) {
 	return strconv.ParseFloat(s, 64)
 }
 
@@ -237,113 +236,4 @@ type VideoInfo struct {
 	TXP         int     `json:"txp"`
 	VPRV        int     `json:"vprv"`
 	XPC         string  `json:"xpc"`
-}
-
-// ParseQueryParamsFromURL parses query parameters from a URL.
-// Example: params, err := ParseQueryParamsFromURL("https://www.example.com/path?param1=value1&param2=value2")
-func ParseQueryParamsFromURL(urlString string) (*VideoInfo, error) {
-	parsedURL, err := url.Parse(urlString)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse URL: %v", err)
-	}
-
-	queryParams := parsedURL.Query()
-
-	videoInfo := &VideoInfo{}
-	videoInfo.C = queryParams.Get("c")
-
-	videoInfo.CNR, err = parseInt(queryParams.Get("cnr"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse cnr: %v", err)
-	}
-
-	videoInfo.Duration, err = parseFloat64(queryParams.Get("dur"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse duration: %v", err)
-	}
-
-	videoInfo.EI = queryParams.Get("ei")
-
-	videoInfo.Expire, err = parseInt64(queryParams.Get("expire"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse expire: %v", err)
-	}
-
-	videoInfo.FExp, err = parseInt(queryParams.Get("fexp"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse fexp: %v", err)
-	}
-
-	videoInfo.FVIP, err = parseInt(queryParams.Get("fvip"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse fvip: %v", err)
-	}
-	videoInfo.ID = queryParams.Get("id")
-
-	videoInfo.InitCwndBPS, err = parseInt(queryParams.Get("initcwndbps"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse initcwndbps: %v", err)
-	}
-
-	videoInfo.IP = queryParams.Get("ip")
-
-	videoInfo.Itag, err = parseInt(queryParams.Get("itag"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse itag: %v", err)
-	}
-
-	videoInfo.LMT, err = parseInt64(queryParams.Get("lmt"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse lmt: %v", err)
-	}
-
-	videoInfo.LSig = queryParams.Get("lsig")
-	videoInfo.LSParams = queryParams.Get("lsparams")
-	videoInfo.MH = queryParams.Get("mh")
-	videoInfo.MIME = queryParams.Get("mime")
-	videoInfo.MM = queryParams.Get("mm")
-	videoInfo.MN = queryParams.Get("mn")
-	videoInfo.MS = queryParams.Get("ms")
-
-	videoInfo.MT, err = parseInt64(queryParams.Get("mt"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse mt: %v", err)
-	}
-
-	videoInfo.MV = queryParams.Get("mv")
-
-	videoInfo.MVI, err = parseInt(queryParams.Get("mvi"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse mvi: %v", err)
-	}
-
-	videoInfo.PL, err = parseInt(queryParams.Get("pl"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse pl: %v", err)
-	}
-
-	videoInfo.RateBypass = queryParams.Get("ratebypass")
-	videoInfo.RequireSSL = queryParams.Get("requiressl")
-	videoInfo.Sig = queryParams.Get("sig")
-	videoInfo.Source = queryParams.Get("source")
-	videoInfo.SParams = queryParams.Get("sparams")
-
-	videoInfo.SVPUC, err = parseInt(queryParams.Get("svpuc"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse svpuc: %v", err)
-	}
-
-	videoInfo.TXP, err = parseInt(queryParams.Get("txp"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse txp: %v", err)
-	}
-
-	videoInfo.VPRV, err = parseInt(queryParams.Get("vprv"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse vprv: %v", err)
-	}
-
-	videoInfo.XPC = queryParams.Get("xpc")
-
-	return videoInfo, nil
 }
