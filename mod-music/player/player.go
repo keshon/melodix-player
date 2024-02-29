@@ -7,6 +7,7 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
+	"github.com/keshon/melodix-discord-player/mod-music/history"
 	"github.com/keshon/melodix-discord-player/mod-music/pkg/dca"
 )
 
@@ -50,6 +51,7 @@ type Player struct {
 	channelID              string
 	guildID                string
 	session                *discordgo.Session
+	history                history.IHistory
 	SkipInterrupt          chan bool
 	StopInterrupt          chan bool
 	SwitchChannelInterrupt chan bool
@@ -127,6 +129,7 @@ func NewPlayer(guildID string, session *discordgo.Session) IPlayer {
 		status:                 StatusResting,
 		guildID:                guildID,
 		session:                session,
+		history:                history.NewHistory(),
 		SkipInterrupt:          make(chan bool, 1),
 		StopInterrupt:          make(chan bool, 1),
 		SwitchChannelInterrupt: make(chan bool, 1),
@@ -221,4 +224,8 @@ func (p *Player) GetGuildID() string {
 
 func (p *Player) SetGuildID(guildID string) {
 	p.guildID = guildID
+}
+
+func (p *Player) GetHistory() history.IHistory {
+	return p.history
 }

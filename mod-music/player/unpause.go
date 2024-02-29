@@ -1,7 +1,6 @@
 package player
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/gookit/slog"
@@ -29,24 +28,24 @@ func (p *Player) Unpause(channelID string) error {
 
 			err := p.Play(0, p.GetCurrentSong())
 			if err != nil {
-				slog.Error("Error: ", err)
+				return fmt.Errorf("error: %v", err)
 			}
 		} else {
 			slog.Warn("Current song is nil")
 
 			err := p.Play(0, nil)
 			if err != nil {
-				slog.Error("Error: ", err)
+				return fmt.Errorf("error: %v", err)
 			}
 		}
 		return nil
 	} else {
 		finished, err := p.GetStreamingSession().Finished()
 		if err != nil {
-			slog.Error("Error: ", err)
+			return fmt.Errorf("error: %v", err)
 		}
 		if finished {
-			return errors.New("failed to resume audio playback: stream finished")
+			return fmt.Errorf("failed to resume audio playback: stream finished")
 		}
 
 		p.GetStreamingSession().SetPaused(false)

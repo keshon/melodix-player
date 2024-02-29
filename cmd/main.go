@@ -90,6 +90,9 @@ func createDiscordSession(token string) *discordgo.Session {
 	if err != nil {
 		log.Fatal("Error creating Discord session", err)
 	}
+
+	session.ShouldReconnectOnError = true // Not sure if this is needed
+
 	return session
 }
 
