@@ -96,7 +96,7 @@ Melodix provides various routes for different functionalities:
 - `GET /log/clear`: Clear log.
 - `GET /log/download`: Download log as a file.
 
-## Building Melodix
+## Building from sources
 
 Melodix is written in Go language, allowing it to run on a *server* or as a *local* program.
 
@@ -121,7 +121,6 @@ If you have any questions you can ask me in my [Discord server](https://discord.
 
 I drew inspiration from [Muzikas](https://github.com/FabijanZulj/Muzikas), a user-friendly Discord bot created by Fabijan Zulj.
 
-The banner images used in this project were sourced from [Freepik](https://www.freepik.com), attributed to contributors [@GarryKillian](https://www.freepik.com/author/garrykillian) and [@rawpixel.com](https://www.freepik.com/author/rawpixel-com).
 
 ## License
 
