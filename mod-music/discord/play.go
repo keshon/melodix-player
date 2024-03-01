@@ -50,8 +50,15 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	channel, _ := s.State.Channel(m.Message.ChannelID)
-	guild, _ := s.State.Guild(channel.GuildID)
+	channel, err := s.State.Channel(m.Message.ChannelID)
+	if err != nil {
+		slog.Error("Error getting channel: %v", err)
+	}
+
+	guild, err := s.State.Guild(channel.GuildID)
+	if err != nil {
+		slog.Error("Error getting guild: %v", err)
+	}
 
 	if len(guild.VoiceStates) == 0 {
 		embedStr = "You are not in a voice channel, please join one first."
@@ -66,7 +73,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	songs, err := fetchSongs(originType, origins, d, m)
+	songs, err := fetchSongsToList(originType, origins, d, m)
 	if err != nil {
 		embedStr = fmt.Sprintf("%v\n\n*details:*\n`%v`", "Error forming playlist", err)
 		embedMsg = embed.NewEmbed().
@@ -77,17 +84,6 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		if err != nil {
 			slog.Error("Error sending 'please wait' message: %v", err)
 		}
-		return
-	}
-
-	if len(songs) == 0 {
-		embedStr = "There are no songs in the playlist."
-		embedMsg = embed.NewEmbed().
-			SetColor(0x9f00d4).
-			SetDescription(embedStr).
-			SetColor(0x9f00d4).MessageEmbed
-
-		s.ChannelMessageEditEmbed(m.Message.ChannelID, pleaseWaitMessage.ID, embedMsg)
 		return
 	}
 
@@ -107,8 +103,8 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 }
 
-func fetchSongs(originType string, songsOrigins []string, d *Discord, m *discordgo.MessageCreate) ([]*player.Song, error) {
-	var playlist []*player.Song
+func fetchSongsToList(originType string, songsOrigins []string, d *Discord, m *discordgo.MessageCreate) ([]*player.Song, error) {
+	var songsList []*player.Song
 
 	youtube := sources.NewYoutube()
 	stream := sources.NewStream()
@@ -155,15 +151,19 @@ func fetchSongs(originType string, songsOrigins []string, d *Discord, m *discord
 			}
 		}
 
-		playlist = append(playlist, songs...)
+		songsList = append(songsList, songs...)
 	}
 
-	slog.Info("Up-to-date playlist now:")
-	for _, song := range playlist {
+	if len(songsList) == 0 {
+		return nil, errors.New("no songs were fetched to playlist")
+	}
+
+	slog.Info("Up-to-date songs list now is:")
+	for _, song := range songsList {
 		slog.Info(" - ", song.Title, song.Source)
 	}
 
-	return playlist, nil
+	return songsList, nil
 }
 
 func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
