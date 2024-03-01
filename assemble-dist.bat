@@ -4,12 +4,12 @@ rem
 rem ASSEMBLE DISTRIBUTION PACKAGE
 rem
 
-set TARGET_PLATFORM=windows
+set TARGET_PLATFORM=melodix-win
 set UPX_PATH=.tools\upx-3.96-win64\upx.exe
 
 rem Get the current date in the format YYYY-MM-DD
 for /f "tokens=1-3 delims=-" %%a in ('powershell -command "Get-Date -Format 'yyyy-MM-dd'"') do set CURRENT_DATE=%%a-%%b-%%c
-set OUTPUT_ARCHIVE=dist\windows-melodix-v%CURRENT_DATE%.zip
+set OUTPUT_ARCHIVE=dist\melodix-win-v%CURRENT_DATE%.zip
 
 rem Run build-release.bat
 call build-release.bat
