@@ -140,17 +140,13 @@ func (p *Player) Play(startAt int, song *Song) error {
 
 		p.SetCurrentStatus(StatusResting)
 
-		if errDone != nil /* && errDone != io.EOF*/ {
+		if errDone != nil && errDone != io.EOF { // ? Point of interest: handle EOF errors
 			time.Sleep(250 * time.Millisecond)
 			if p.GetVoiceConnection() != nil {
 				p.GetVoiceConnection().Speaking(false)
 			}
 
 			slog.Error("Unexpected error occurred", errDone)
-			if errDone != io.EOF {
-				slog.Warn("...is actually 'unexpected EOF'")
-			}
-
 			slog.Info("Resetting voice connection...")
 
 			if p.GetVoiceConnection() != nil {
@@ -345,6 +341,7 @@ func (p *Player) setupVoiceConnection() (*discordgo.VoiceConnection, error) {
 		return nil, fmt.Errorf("failed to join voice channel after multiple attempts: %w", err)
 	}
 
+	slog.Info("Successfully joined voice channel")
 	return voiceConnection, nil
 }
 
