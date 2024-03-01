@@ -78,64 +78,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 	defer p.GetEncodingSession().Cleanup()
 
 	// Set up voice connection for sending audio
-	// Helpful: https://github.com/bwmarrin/discordgo/issues/1357
-	// voiceConnection, ok := p.GetDiscordSession().VoiceConnections[p.GetGuildID()]
-	// p.GetDiscordSession().ShouldReconnectOnError = true
-	// if !ok {
-	// 	slog.Warn("No voice connection found. Attempting to join voice channel", p.GetChannelID())
-	// 	voiceConnection, err = p.GetDiscordSession().ChannelVoiceJoin(p.GetGuildID(), p.GetChannelID(), true, false)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to join voice channel: %w", err)
-	// 	}
-	// }
-
-	// slog.Info("Found voice connection", voiceConnection.ChannelID)
-	// slog.Info("Setting it as active", voiceConnection.ChannelID)
-	// p.SetVoiceConnection(voiceConnection)
-	// // defer p.GetVoiceConnection().Close()
-
-	// err = p.GetVoiceConnection().Speaking(true)
-	// if err != nil {
-	// 	slog.Error("Failed to start speaking in existing voice connection", err)
-	// 	slog.Info("Attempting for a new join to voice channel and setting it as active")
-	// 	voiceConnection, err = p.GetDiscordSession().ChannelVoiceJoin(p.GetGuildID(), p.GetChannelID(), true, false)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to join voice channel: %w", err)
-	// 	}
-
-	// 	p.SetVoiceConnection(voiceConnection)
-
-	// 	err = p.GetVoiceConnection().Speaking(true)
-	// 	if err != nil {
-	// 		return fmt.Errorf("failed to start speaking after two attempts: %w", err)
-	// 	}
-	// }
-	// // defer p.GetVoiceConnection().Speaking(false)
-	setupVoiceConnection := func() (*discordgo.VoiceConnection, error) {
-		session := p.GetDiscordSession()
-		guildID, channelID := p.GetGuildID(), p.GetChannelID()
-
-		var voiceConnection *discordgo.VoiceConnection
-		var err error
-
-		for attempts := 0; attempts < 5; attempts++ {
-			voiceConnection, err = session.ChannelVoiceJoin(guildID, channelID, false, false)
-			if err == nil {
-				break
-			}
-
-			slog.Warnf("Failed to join voice channel (attempt %d): %v", attempts+1, err)
-			time.Sleep(2 * time.Second) // Wait for 2 seconds before retrying
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("failed to join voice channel after multiple attempts (aww fuck!): %w", err)
-		}
-
-		return voiceConnection, nil
-	}
-
-	voiceConnection, err := setupVoiceConnection()
+	voiceConnection, err := p.setupVoiceConnection()
 	if err != nil {
 		return err
 	}
@@ -191,19 +134,33 @@ func (p *Player) Play(startAt int, song *Song) error {
 
 	// Handle signals (done / skip / stop)
 	select {
-	case err := <-done:
+	case errDone := <-done:
 		slog.Info("Song is interrupted due to done signal")
 
 		p.SetCurrentStatus(StatusResting)
 
-		if err != nil && err != io.EOF {
+		if errDone != nil && errDone != io.EOF {
 			time.Sleep(250 * time.Millisecond)
 			if p.GetVoiceConnection() != nil {
 				p.GetVoiceConnection().Speaking(false)
 			}
 
-			// p.GetEncodingSession().Cleanup() // TODO: Is this needed?
-			return fmt.Errorf("unexpected error occurred: %w", err)
+			slog.Error("unexpected error occurred", errDone)
+			slog.Info("Trying to reset voice connection just in case...")
+
+			if p.GetVoiceConnection() != nil {
+				p.GetVoiceConnection().Speaking(false)
+				p.GetVoiceConnection().Disconnect()
+			}
+
+			// Set up voice connection for sending audio
+			voiceConnection, err := p.setupVoiceConnection()
+			if err != nil {
+				return err
+			}
+
+			slog.Info("Found voice connection and setting it as active", voiceConnection.ChannelID)
+			p.SetVoiceConnection(voiceConnection)
 		}
 
 		if p.GetVoiceConnection() == nil {
@@ -213,7 +170,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 
 		if p.GetStreamingSession() == nil {
 			slog.Error("StreamingSession is nil")
-			//return nil // ! Quite unpredictable.
+			//return nil // !Potentially a risk to bypass this
 		}
 
 		if p.GetCurrentSong() != nil {
@@ -242,7 +199,6 @@ func (p *Player) Play(startAt int, song *Song) error {
 						}
 					}()
 
-					// p.GetEncodingSession().Cleanup()
 					return nil
 				}
 				// fallthrough
@@ -260,7 +216,6 @@ func (p *Player) Play(startAt int, song *Song) error {
 					}
 				}()
 
-				// p.GetEncodingSession().Cleanup() // TODO: Is this needed?
 				return nil
 			}
 		}
@@ -291,7 +246,6 @@ func (p *Player) Play(startAt int, song *Song) error {
 			p.SwitchChannelInterrupt = make(chan bool, 1)
 
 			slog.Info("Stop playing after all signals passed, audio is done")
-			// p.GetEncodingSession().Cleanup() // TODO: Is this needed?
 			return nil
 		}
 
@@ -301,13 +255,11 @@ func (p *Player) Play(startAt int, song *Song) error {
 		go func() {
 			err := p.Play(0, nil)
 			if err != nil {
-				slog.Error("Error: ", err)
+				slog.Error("Error playing next song after done signal: ", err)
 			}
 		}()
 
 		slog.Info("..finished processing done signal")
-
-		// p.GetEncodingSession().Cleanup() // TODO: Is this needed? Wasn't in the original code
 		return nil
 	case <-p.SkipInterrupt:
 		slog.Info("Song is interrupted due to skip signal")
@@ -319,8 +271,6 @@ func (p *Player) Play(startAt int, song *Song) error {
 		p.SetCurrentStatus(StatusResting)
 
 		slog.Info("..finished processing skip signal")
-
-		// p.GetEncodingSession().Cleanup() // TODO: Is this needed?
 		return nil
 	case <-p.StopInterrupt:
 		slog.Info("Song is interrupted due to stop signal")
@@ -340,8 +290,6 @@ func (p *Player) Play(startAt int, song *Song) error {
 		p.SwitchChannelInterrupt = make(chan bool, 1)
 
 		slog.Info("..finish processing stop signal")
-
-		// p.GetEncodingSession().Cleanup() // TODO: Is this needed?
 		return nil
 
 	case <-p.SwitchChannelInterrupt:
@@ -351,14 +299,43 @@ func (p *Player) Play(startAt int, song *Song) error {
 			p.GetVoiceConnection().Disconnect()
 		}
 
-		go p.Play(0, p.GetCurrentSong())
+		go func() {
+			err := p.Play(0, p.GetCurrentSong())
+			if err != nil {
+				slog.Error("Error playing next song after switch signal: ", err)
+			}
+		}()
 
 		slog.Info("..finish processing switch channel signal")
-
-		//p.GetEncodingSession().Cleanup() // TODO: Is this needed?
 		return nil
 	}
 
+}
+
+func (p *Player) setupVoiceConnection() (*discordgo.VoiceConnection, error) {
+	// Helpful: https://github.com/bwmarrin/discordgo/issues/1357
+
+	session := p.GetDiscordSession()
+	guildID, channelID := p.GetGuildID(), p.GetChannelID()
+
+	var voiceConnection *discordgo.VoiceConnection
+	var err error
+
+	for attempts := 0; attempts < 5; attempts++ {
+		voiceConnection, err = session.ChannelVoiceJoin(guildID, channelID, false, false)
+		if err == nil {
+			break
+		}
+
+		slog.Warnf("Failed to join voice channel (attempt %d): %v", attempts+1, err)
+		time.Sleep(2 * time.Second) // Wait for 2 seconds before retrying
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to join voice channel after multiple attempts (aww fuck!): %w", err)
+	}
+
+	return voiceConnection, nil
 }
 
 func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, streamingSession *dca.StreamingSession, song *Song) (duration, position time.Duration, err error) {
@@ -383,7 +360,7 @@ func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, stream
 	if err != nil {
 		return 0, 0, err
 	}
-	position = encodingStartTime + streamingPosition + delay.Abs() // delay is negative so we make it positive to jump ahead
+	position = encodingStartTime + streamingPosition + delay.Abs() // delay is added and not subtracted so we won't end up stuck in a restarting loop
 
 	slog.Debugf("Song stopped at:\t%s,\tSong duration:\t%s", position, duration)
 	slog.Debugf("Encoding started at:\t%s,\tEncoding ahead:\t%s", encodingStartTime, delay)
