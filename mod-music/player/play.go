@@ -15,6 +15,7 @@ import (
 )
 
 // Down below is One Big Fat Function to play a song
+// The reason it's not split and is so logging verbose is due its complex logic flow
 
 func (p *Player) Play(startAt int, song *Song) error {
 	// Get current song (from queue / as arg)
@@ -139,21 +140,24 @@ func (p *Player) Play(startAt int, song *Song) error {
 
 		p.SetCurrentStatus(StatusResting)
 
-		if errDone != nil && errDone != io.EOF {
+		if errDone != nil /* && errDone != io.EOF*/ {
 			time.Sleep(250 * time.Millisecond)
 			if p.GetVoiceConnection() != nil {
 				p.GetVoiceConnection().Speaking(false)
 			}
 
-			slog.Error("unexpected error occurred", errDone)
-			slog.Info("Trying to reset voice connection just in case...")
+			slog.Error("Unexpected error occurred", errDone)
+			if errDone != io.EOF {
+				slog.Warn("...is actually 'unexpected EOF'")
+			}
+
+			slog.Info("Resetting voice connection...")
 
 			if p.GetVoiceConnection() != nil {
 				p.GetVoiceConnection().Speaking(false)
 				p.GetVoiceConnection().Disconnect()
 			}
 
-			// Set up voice connection for sending audio
 			voiceConnection, err := p.setupVoiceConnection()
 			if err != nil {
 				return err
@@ -314,12 +318,13 @@ func (p *Player) Play(startAt int, song *Song) error {
 
 func (p *Player) setupVoiceConnection() (*discordgo.VoiceConnection, error) {
 	// Helpful: https://github.com/bwmarrin/discordgo/issues/1357
-
 	session := p.GetDiscordSession()
 	guildID, channelID := p.GetGuildID(), p.GetChannelID()
 
 	var voiceConnection *discordgo.VoiceConnection
 	var err error
+
+	session.ShouldReconnectOnError = true
 
 	for attempts := 0; attempts < 5; attempts++ {
 		voiceConnection, err = session.ChannelVoiceJoin(guildID, channelID, false, false)
@@ -327,12 +332,17 @@ func (p *Player) setupVoiceConnection() (*discordgo.VoiceConnection, error) {
 			break
 		}
 
+		if attempts > 0 {
+			slog.Warn("Failed to join voice channel after multiple attempts, attempting to disconnect and reconnect next iteration")
+			voiceConnection.Disconnect()
+		}
+
 		slog.Warnf("Failed to join voice channel (attempt %d): %v", attempts+1, err)
-		time.Sleep(2 * time.Second) // Wait for 2 seconds before retrying
+		time.Sleep(300 * time.Millisecond)
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to join voice channel after multiple attempts (aww fuck!): %w", err)
+		return nil, fmt.Errorf("failed to join voice channel after multiple attempts: %w", err)
 	}
 
 	return voiceConnection, nil
