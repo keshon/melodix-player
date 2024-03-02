@@ -19,8 +19,9 @@ import (
 func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
 
-	title := fmt.Sprintf("ℹ️ %v — About", version.AppName)
-	content := fmt.Sprintf("**%v**\n\n%v", version.AppFullName, version.AppDescription)
+	title := "ℹ️ About"
+	content := fmt.Sprintf("**%v** — %v", version.AppFullName, version.AppDescription)
+	content = fmt.Sprintf("%v\n\nProject repo: https://github.com/keshon/melodix-discord-player\n", content)
 
 	buildDate := "unknown"
 	if version.BuildDate != "" {
@@ -39,13 +40,13 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 	}
 
 	embedMsg := embed.NewEmbed().
-		SetDescription(fmt.Sprintf("**%v**\n\n%v", title, content)).
+		SetDescription(fmt.Sprintf("**%v**\n\n%v\n\n", title, content)).
 		AddField("```"+buildDate+"```", "Build date").
 		AddField("```"+goVer+"```", "Go version").
-		AddField("```Created by Innokentiy Sokolov```", "[Linkedin](https://www.linkedin.com/in/keshon), [GitHub](https://github.com/keshon), [Homepage](https://keshon.ru)").
+		AddField("```Innokentiy Sokolov```", "[Linkedin](https://www.linkedin.com/in/keshon), [GitHub](https://github.com/keshon), [Homepage](https://keshon.ru)").
 		InlineAllFields().
 		SetImage("attachment://" + filepath.Base(imagePath)).
-		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
+		SetColor(0x9f00d4).MessageEmbed
 
 	_, err = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
 		Content: "Check out this image!",

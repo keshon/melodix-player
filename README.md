@@ -1,9 +1,9 @@
-![# Header](https://github.com/keshon/melodix-discord-player/blob/master/assets/banner-readme.png)
+![# Header](https://github.com/keshon/melodix-player/blob/master/assets/banner-readme.png)
 
 
-# Melodix Discord Player
+# Melodix Player
 
-Melodix is a Discord music bot that just works even if connection errors are along the way.
+Melodix Player is a Discord music bot that just works even if connection errors are along the way.
 
 
 ## Features Overview
@@ -17,18 +17,18 @@ The bot aims to be an easy-to-use yet powerful music player beastie. Its key obj
 - Exposed Rest API to do various magic tasks outside of Discord commands.
 - Operate across multiple Discord servers.
 
-![# Playing Example](https://github.com/keshon/melodix-discord-player/blob/master/assets/playing.jpg)
+![# Playing Example](https://github.com/keshon/melodix-player/blob/master/assets/playing.jpg)
 
 
 ## Download binary
 
-Binaries (Windows only) are available at [Release page](https://github.com/keshon/melodix-discord-player/releases).
+Binaries (Windows only) are available at [Release page](https://github.com/keshon/melodix-player/releases).
 It is recommended to build binaries from source if you want to have the latest version.
 
 
 ## Discord Commands
 
-Melodix supports various commands with their respective aliases to control music playback. Some commands require additional parameters:
+Melodix Player supports various commands with their respective aliases to control music playback. Some commands require additional parameters:
 
 - Commands & Aliases:
   — `play` (`p`, `>`) — Parameters: YouTube video URL, history ID, or track title
@@ -73,7 +73,7 @@ Once 'bot' is added proceed to actual bot building.
 
 ## API Access and Routes
 
-Melodix provides various routes for different functionalities:
+Melodix Player provides various routes for different functionalities:
 
 #### Guild Routes
 
@@ -98,12 +98,13 @@ Melodix provides various routes for different functionalities:
 
 ## Building from sources
 
-Melodix is written in Go language, allowing it to run on a *server* or as a *local* program.
+This project is written in Go language, allowing it to run on a *server* or as a *local* program.
 
 **Local Usage**
-There are several scripts provided for building Melodix:
+There are several scripts provided for building Melodix Player from source.:
   — `bash-and-run.bat` (or `.sh` for Linux): Build the debug version and execute.
-  — `build-release.bat` (or `.sh` for Linux): Build the release version. Note: The UPX packer is called as a final step; if not installed, comment it out.
+  — `build-release.bat` (or `.sh` for Linux): Build the release version.
+  — `assemble-dist.bat`: Build the release version and assemble it as distribution package (Windows only, UPX pakager will be downloaded during the process).
 
 For local usage, run these scripts for your operating system and rename `.env.example` to `.env`, storing your Discord Bot Token in the `DISCORD_BOT_TOKEN` variable.
 Install [FFMPEG](https://ffmpeg.org/) (only recent version is supported). If your FFMPEG installation is portable specify path in the `DCA_FFMPEG_BINARY_PATH` variable.
@@ -113,7 +114,7 @@ To build and deploy the bot in a Docker environment refer to the `deploy/README.
 
 Once the binary file is built, the `.env` file is filled, and the Bot is added to your server, Melodix is ready for operation.
 
-## Where to get gently pats
+## Where to get support or gently pats
 
 If you have any questions you can ask me in my [Discord server](https://discord.gg/NVtdTka8ZT) to get support. Bear in mind there is no community whatsoever — just me.
 
