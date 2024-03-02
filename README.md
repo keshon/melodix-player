@@ -8,12 +8,12 @@ Melodix is a Discord music bot that just works even if connection errors are alo
 
 ## Features Overview
 
-The bot aims to be an easy-to-use yet powerful Discord music player beastie. Its key objectives include:
+The bot aims to be an easy-to-use yet powerful music player beastie. Its key objectives include:
 
 - Playback single/multiple tracks or playlists from Youtube added by title or URL.
 - Playback of radio streams added via URL.
 - Access the history of previously played tracks with sorting by play counts or duration.
-- Handling playback interruptions (in case of network failures) - Melodix will try to resume the playback.
+- Handling playback interruptions due to network failures — Melodix will try to resume the playback.
 - Exposed Rest API to do various magic tasks outside of Discord commands.
 - Operate across multiple Discord servers.
 
@@ -31,18 +31,18 @@ It is recommended to build binaries from source if you want to have the latest v
 Melodix supports various commands with their respective aliases to control music playback. Some commands require additional parameters:
 
 - Commands & Aliases:
-  - `pause` (`!`)
-  - `resume` (`!>`)
-  - `play` (`p`, `>`) - Parameters: YouTube video URL, history ID, or track title
-  - `skip` (`next`, `ff`, `>>`)
-  - `list` (`queue`, `l`, `q`)
-  - `add` (`a`, `+`) - Parameters: YouTube video URL or history ID, or track title
-  - `exit` (`stop`, `e`, `x`)
-  - `help` (`h`, `?`)
-  - `history` (`time`, `t`) - Parameters: `duration` or `count`
-  - `about` (`v`)
-  - `register`
-  - `unregister`
+  — `play` (`p`, `>`) — Parameters: YouTube video URL, history ID, or track title
+  — `skip` (`next`, `ff`, `>>`)
+  — `pause` (`!`)
+  — `resume` (`r`,`!>`)
+  — `stop` (`x`)
+  — `add` (`a`, `+`) — Parameters: YouTube video URL or history ID, or track title
+  — `list` (`queue`, `l`, `q`)
+  — `history` (`time`, `t`) — Parameters: `duration` or `count`
+  — `help` (`h`, `?`)
+  — `about` (`v`)
+  — `register`
+  — `unregister`
 
 Commands should be prefixed with `!` by default. For instance, `!play`, `!>>`, and so on.
 
@@ -62,7 +62,7 @@ To add Melodix to your Discord server:
 
 1. Create a bot at the [Discord Developer Portal](https://discord.com/developers/applications) and acquire the Bot's CLIENT_ID.
 2. Use the following link: `discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID_HERE&scope=bot&permissions=36727824`
-   - Replace `YOUR_CLIENT_ID_HERE` with your Bot's Client ID from step 1.
+   — Replace `YOUR_CLIENT_ID_HERE` with your Bot's Client ID from step 1.
 3. The Discord authorization page will open in your browser, allowing you to select a server.
 4. Choose the server where you want to add Melodix and click "Authorize".
 5. If prompted, complete the reCAPTCHA verification.
@@ -102,8 +102,8 @@ Melodix is written in Go language, allowing it to run on a *server* or as a *loc
 
 **Local Usage**
 There are several scripts provided for building Melodix:
-  - `bash-and-run.bat` (or `.sh` for Linux): Build the debug version and execute.
-  - `build-release.bat` (or `.sh` for Linux): Build the release version. Note: The UPX packer is called as a final step; if not installed, comment it out.
+  — `bash-and-run.bat` (or `.sh` for Linux): Build the debug version and execute.
+  — `build-release.bat` (or `.sh` for Linux): Build the release version. Note: The UPX packer is called as a final step; if not installed, comment it out.
 
 For local usage, run these scripts for your operating system and rename `.env.example` to `.env`, storing your Discord Bot Token in the `DISCORD_BOT_TOKEN` variable.
 Install [FFMPEG](https://ffmpeg.org/) (only recent version is supported). If your FFMPEG installation is portable specify path in the `DCA_FFMPEG_BINARY_PATH` variable.
@@ -121,6 +121,7 @@ If you have any questions you can ask me in my [Discord server](https://discord.
 
 I drew inspiration from [Muzikas](https://github.com/FabijanZulj/Muzikas), a user-friendly Discord bot created by Fabijan Zulj.
 
+As a result of Melodxi development, a new project was born: [Discord Bot Boilerplate](https://github.com/keshon/discord-bot-boilerplate) — a framework for building Discord bots .
 
 ## License
 

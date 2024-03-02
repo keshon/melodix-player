@@ -54,9 +54,33 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		slog.Error(err)
 		return
 	}
+	aliases := [][]string{
+		{"pause", "!"},
+		{"resume", "r", "!>"},
+		{"play", "p", ">"},
+		{"stop", "x"},
+		{"list", "queue", "l", "q"},
+		{"add", "a", "+"},
+		{"skip", "next", "ff", ">>"},
+		{"history", "time", "t"},
+		{"help", "h", "?"},
+		{"about", "v"},
+	}
 
-	switch command {
-	case "hello", "about", "v", "help", "h", "play", "p", ">", "pause", "!", "resume", "exit", "stop", "e", "x", "list", "queue", "l", "q", "add", "a", "+", "skip", "next", "ff", ">>", "history", "time", "t":
+	var commandsList []string
+	for _, alias := range aliases {
+		commandsList = append(commandsList, alias...)
+	}
+
+	found := false
+	for _, cmd := range commandsList {
+		if strings.EqualFold(command, cmd) {
+			found = true
+			break
+		}
+	}
+
+	if found {
 		guildID := m.GuildID
 		exists, err := db.DoesGuildExist(guildID)
 		if err != nil {

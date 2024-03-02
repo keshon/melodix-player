@@ -70,7 +70,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"pause", "!"},
 		{"resume", "r", "!>"},
 		{"play", "p", ">"},
-		{"exit", "stop", "e", "x"},
+		{"stop", "x"},
 		{"list", "queue", "l", "q"},
 		{"add", "a", "+"},
 		{"skip", "next", "ff", ">>"},
@@ -142,7 +142,7 @@ func (d *Discord) changeAvatar(s *discordgo.Session) {
 		return
 	}
 
-	imgPath, err := utils.GetRandomImagePathFromPath("./assets/avatars")
+	imgPath, err := utils.GetWeightedRandomImagePath("./assets/avatars")
 	if err != nil {
 		slog.Errorf("Error getting avatar path: %v", err)
 		return

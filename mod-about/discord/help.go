@@ -33,30 +33,26 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	avatarURL := utils.InferProtocolByPort(host, 443) + host + "/avatar/random?" + fmt.Sprint(time.Now().UnixNano())
 	prefix := d.CommandPrefix
 
-	// hello := fmt.Sprintf("`%vhello` — print «Hello World»\n", prefix)
-	// hi := fmt.Sprintf("`%vhi` — print «Hello Galaxy»\n", prefix)
-
-	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
-	about := fmt.Sprintf("`%vabout`, `%va` — show version\n", prefix, prefix)
-	register := fmt.Sprintf("`%vregister` — enable commands listening\n", prefix)
-	unregister := fmt.Sprintf("`%vunregister` — disable commands listening", prefix)
-
 	play := fmt.Sprintf("`%vplay [title/url/id/stream]` — play selected track/radio\n", prefix)
+	skip := fmt.Sprintf("`%vskip` — play next track\n", prefix)
 	pause := fmt.Sprintf("`%vpause`, `%vresume` — pause/resume playback\n", prefix, prefix)
-	stop := fmt.Sprintf("`%vexit` — stop playback and leave voice channel\n", prefix)
+	stop := fmt.Sprintf("`%vstop` — stop playback and leave voice channel\n", prefix)
 
 	queue := fmt.Sprintf("`%vadd [title/url/id]` — add track\n", prefix)
-	skip := fmt.Sprintf("`%vskip` — play next track\n", prefix)
 	list := fmt.Sprintf("`%vlist` — show current queue\n", prefix)
 
 	history := fmt.Sprintf("`%vhistory`\n", prefix)
 	historyByDuration := fmt.Sprintf(".. by duration `%vhistory duration`\n", prefix)
 	historyByPlaycount := fmt.Sprintf(".. by play count `%vhistory count`\n\n", prefix)
 
+	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
+	about := fmt.Sprintf("`%vabout`, `%vv` — show version\n", prefix, prefix)
+	register := fmt.Sprintf("`%vregister` — enable commands listening\n", prefix)
+	unregister := fmt.Sprintf("`%vunregister` — disable commands listening", prefix)
+
 	embedMsg := embed.NewEmbed().
 		SetTitle(fmt.Sprintf("ℹ️ %v — Command Usage", version.AppName)).
 		SetDescription("Some commands are aliased for shortness.\n\n*[title]* - track name\n*[url]* - YouTube URL\n*[id]* - track id from *History*\n*[stream]* - valid stream URL (radio).").
-		// AddField("", "**Demo**\n"+hello+hi).
 		AddField("", "**Playback**\n"+play+skip+pause+stop).
 		AddField("", "").
 		AddField("", "**Queue**\n"+queue+list).

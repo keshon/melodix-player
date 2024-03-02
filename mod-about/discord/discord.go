@@ -79,8 +79,8 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	switch getCanonicalCommand(command, [][]string{
-		{"help", "h"},
-		{"about", "a"},
+		{"help", "h", "?"},
+		{"about", "v"},
 	}) {
 	case "help":
 		d.handleHelpCommand(s, m)
