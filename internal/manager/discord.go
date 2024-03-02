@@ -7,9 +7,9 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 
-	"github.com/keshon/melodix-discord-player/internal/botsdef"
-	"github.com/keshon/melodix-discord-player/internal/config"
-	"github.com/keshon/melodix-discord-player/internal/db"
+	"github.com/keshon/melodix-player/internal/botsdef"
+	"github.com/keshon/melodix-player/internal/config"
+	"github.com/keshon/melodix-player/internal/db"
 )
 
 type GuildManager struct {

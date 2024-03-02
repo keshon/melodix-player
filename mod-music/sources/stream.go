@@ -8,7 +8,7 @@ import (
 
 	"github.com/gookit/slog"
 
-	"github.com/keshon/melodix-discord-player/mod-music/player"
+	"github.com/keshon/melodix-player/mod-music/player"
 )
 
 // Stream is a struct that encapsulates the Stream functionality.

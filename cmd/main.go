@@ -11,12 +11,12 @@ import (
 	"github.com/gookit/slog"
 	"github.com/gookit/slog/handler"
 
-	"github.com/keshon/melodix-discord-player/internal/botsdef"
-	"github.com/keshon/melodix-discord-player/internal/config"
-	"github.com/keshon/melodix-discord-player/internal/db"
-	"github.com/keshon/melodix-discord-player/internal/manager"
-	"github.com/keshon/melodix-discord-player/internal/rest"
-	"github.com/keshon/melodix-discord-player/internal/version"
+	"github.com/keshon/melodix-player/internal/botsdef"
+	"github.com/keshon/melodix-player/internal/config"
+	"github.com/keshon/melodix-player/internal/db"
+	"github.com/keshon/melodix-player/internal/manager"
+	"github.com/keshon/melodix-player/internal/rest"
+	"github.com/keshon/melodix-player/internal/version"
 )
 
 // main is the entry point of the program.

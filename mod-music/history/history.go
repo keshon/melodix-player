@@ -3,7 +3,7 @@ package history
 import (
 	"time"
 
-	"github.com/keshon/melodix-discord-player/internal/db"
+	"github.com/keshon/melodix-player/internal/db"
 )
 
 type Song struct {

@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/keshon/melodix-discord-player/internal/config"
+	"github.com/keshon/melodix-player/internal/config"
 )
 
 func TestStartRestServer(t *testing.T) {

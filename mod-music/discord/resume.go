@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-discord-player/mod-music/player"
+	"github.com/keshon/melodix-player/mod-music/player"
 
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"

@@ -8,9 +8,9 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-discord-player/internal/config"
-	"github.com/keshon/melodix-discord-player/internal/version"
-	"github.com/keshon/melodix-discord-player/mod-helloworld/utils"
+	"github.com/keshon/melodix-player/internal/config"
+	"github.com/keshon/melodix-player/internal/version"
+	"github.com/keshon/melodix-player/mod-helloworld/utils"
 )
 
 // handleHelpCommand handles the help command for the Discord bot.

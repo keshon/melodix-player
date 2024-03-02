@@ -3,9 +3,9 @@ package botsdef
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	about "github.com/keshon/melodix-discord-player/mod-about/discord"
-	helloWorld "github.com/keshon/melodix-discord-player/mod-helloworld/discord"
-	music "github.com/keshon/melodix-discord-player/mod-music/discord"
+	about "github.com/keshon/melodix-player/mod-about/discord"
+	helloWorld "github.com/keshon/melodix-player/mod-helloworld/discord"
+	music "github.com/keshon/melodix-player/mod-music/discord"
 )
 
 var Modules = []string{"hello", "about", "music"}

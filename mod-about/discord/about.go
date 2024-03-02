@@ -10,7 +10,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 
-	"github.com/keshon/melodix-discord-player/internal/version"
+	"github.com/keshon/melodix-player/internal/version"
 )
 
 // handleAboutCommand is a function to handle the about command in Discord.
@@ -21,7 +21,7 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 
 	title := "ℹ️ About"
 	content := fmt.Sprintf("**%v** — %v", version.AppFullName, version.AppDescription)
-	content = fmt.Sprintf("%v\n\nProject repo: https://github.com/keshon/melodix-discord-player\n", content)
+	content = fmt.Sprintf("%v\n\nProject repo: https://github.com/keshon/melodix-player\n", content)
 
 	buildDate := "unknown"
 	if version.BuildDate != "" {

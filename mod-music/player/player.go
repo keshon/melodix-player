@@ -7,8 +7,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	"github.com/keshon/melodix-discord-player/mod-music/history"
-	"github.com/keshon/melodix-discord-player/mod-music/pkg/dca"
+	"github.com/keshon/melodix-player/mod-music/history"
+	"github.com/keshon/melodix-player/mod-music/pkg/dca"
 )
 
 type IPlayer interface {

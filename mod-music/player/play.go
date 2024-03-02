@@ -8,10 +8,10 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-discord-player/internal/config"
-	"github.com/keshon/melodix-discord-player/mod-music/history"
-	"github.com/keshon/melodix-discord-player/mod-music/pkg/dca"
-	"github.com/keshon/melodix-discord-player/mod-music/utils"
+	"github.com/keshon/melodix-player/internal/config"
+	"github.com/keshon/melodix-player/mod-music/history"
+	"github.com/keshon/melodix-player/mod-music/pkg/dca"
+	"github.com/keshon/melodix-player/mod-music/utils"
 )
 
 // Down below is One Big Fat Function to play a song

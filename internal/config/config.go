@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/joho/godotenv"
-	"github.com/keshon/melodix-discord-player/mod-music/pkg/dca"
+	"github.com/keshon/melodix-player/mod-music/pkg/dca"
 )
 
 type Config struct {

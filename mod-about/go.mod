@@ -1,4 +1,4 @@
-module github.com/keshon/melodix-discord-player/mod-about
+module github.com/keshon/melodix-player/mod-about
 
 go 1.21.1
 
@@ -23,7 +23,6 @@ require (
 	github.com/gookit/slog v0.5.4 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/jonas747/ogg v0.0.0-20161220051205-b4f6f4cf3757 // indirect
-	github.com/keshon/melodix-discord-player/music v0.0.0-20240209060711-ea662915536e // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
@@ -37,7 +36,6 @@ require (
 	github.com/bwmarrin/discordgo v0.27.1 // indirect
 	github.com/gonum/stat v0.0.0-20181125101827-41a0da705a5b
 	github.com/gorilla/websocket v1.5.0 // indirect
-	github.com/keshon/melodix-discord-player v0.0.0-20240209060711-ea662915536e
 	github.com/kkdai/youtube/v2 v2.9.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.14.0 // indirect

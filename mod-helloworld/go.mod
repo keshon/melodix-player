@@ -1,4 +1,4 @@
-module github.com/keshon/melodix-discord-player/mod-helloworld
+module github.com/keshon/melodix-player/mod-helloworld
 
 go 1.21.1
 

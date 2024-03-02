@@ -11,9 +11,9 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-discord-player/internal/version"
-	"github.com/keshon/melodix-discord-player/mod-music/player"
-	"github.com/keshon/melodix-discord-player/mod-music/sources"
+	"github.com/keshon/melodix-player/internal/version"
+	"github.com/keshon/melodix-player/mod-music/player"
+	"github.com/keshon/melodix-player/mod-music/sources"
 )
 
 // handlePlayCommand handles the play command for Discord.

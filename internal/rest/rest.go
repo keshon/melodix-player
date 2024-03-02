@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-discord-player/internal/botsdef"
-	"github.com/keshon/melodix-discord-player/mod-music/history"
+	"github.com/keshon/melodix-player/internal/botsdef"
+	"github.com/keshon/melodix-player/mod-music/history"
 )
 
 type Rest struct {

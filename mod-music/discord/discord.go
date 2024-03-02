@@ -8,9 +8,9 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-discord-player/internal/config"
-	"github.com/keshon/melodix-discord-player/mod-music/player"
-	"github.com/keshon/melodix-discord-player/mod-music/utils"
+	"github.com/keshon/melodix-player/internal/config"
+	"github.com/keshon/melodix-player/mod-music/player"
+	"github.com/keshon/melodix-player/mod-music/utils"
 )
 
 type Discord struct {
@@ -97,7 +97,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		d.handleShowQueueCommand(s, m)
 	case "add":
 		d.handlePlayCommand(s, m, parameter, true)
-	case "exit":
+	case "stop":
 		d.handleStopCommand(s, m)
 	case "history":
 		d.handleHistoryCommand(s, m, parameter)
