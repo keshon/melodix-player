@@ -6,7 +6,7 @@
 Melodix Player is a Discord music bot that just works even if connection errors are along the way.
 
 
-## Features Overview
+## Features overview
 
 The bot aims to be an easy-to-use yet powerful music player beastie. Its key objectives include:
 
@@ -26,37 +26,40 @@ Binaries (Windows only) are available at [Release page](https://github.com/kesho
 It is recommended to build binaries from source if you want to have the latest version.
 
 
-## Discord Commands
+## Discord commands
 
 Melodix Player supports various commands with their respective aliases to control music playback. Some commands require additional parameters:
 
-- Commands & Aliases:
-  — `play` (`p`, `>`) — Parameters: YouTube video URL, history ID, or track title
-  — `skip` (`next`, `ff`, `>>`)
-  — `pause` (`!`)
-  — `resume` (`r`,`!>`)
-  — `stop` (`x`)
-  — `add` (`a`, `+`) — Parameters: YouTube video URL or history ID, or track title
-  — `list` (`queue`, `l`, `q`)
-  — `history` (`time`, `t`) — Parameters: `duration` or `count`
-  — `help` (`h`, `?`)
-  — `about` (`v`)
-  — `register`
-  — `unregister`
+ - Commands & Aliases:
+ - `play` (`p`, `>`) — Parameters: YouTube video URL, history ID, or track title
+ - `skip` (`next`, `ff`, `>>`)
+ - `pause` (`!`)
+ - `resume` (`r`,`!>`)
+ - `stop` (`x`)
+ - `add` (`a`, `+`) — Parameters: YouTube video URL or history ID, or track title
+ - `list` (`queue`, `l`, `q`)
+ - `history` (`time`, `t`) — Parameters: `duration` or `count`
+ - `help` (`h`, `?`)
+ - `about` (`v`)
+ - `register`
+ - `unregister`
 
 Commands should be prefixed with `!` by default. For instance, `!play`, `!>>`, and so on.
 
-To use the `play` and `add` commands, provide a YouTube video title, URL, or a history ID as a parameter, e.g.:
+### Examples
+To use the `play` command, provide a YouTube video title, URL, or a history ID as a parameter, e.g.:
 `!play Never Gonna Give You Up` 
 or 
 `!p https://www.youtube.com/watch?v=dQw4w9WgXcQ` 
 or 
 `!> 5` (assuming `5` is an id that can be seen from history: `!history`)
 
-Similarly, for adding a song to the queue, use a similar approach.
+Similarly, for adding a song to the queue, use a similar approach:
+`!add Never Gonna Give You Up` 
+`!resume` (to start playing)
 
 
-## Adding the Bot to a Discord Server
+## Adding the bot to a Discord server
 
 To add Melodix to your Discord server:
 
@@ -71,7 +74,7 @@ To add Melodix to your Discord server:
 
 Once 'bot' is added proceed to actual bot building.
 
-## API Access and Routes
+## API access and routes
 
 Melodix Player provides various routes for different functionalities:
 
