@@ -1,4 +1,4 @@
-![# Header](https://github.com/keshon/melodix-discord-player/blob/master/assets/banner.jpg)
+![# Header](https://github.com/keshon/melodix-discord-player/blob/master/assets/banner-readme.png)
 
 
 # Melodix Discord Player

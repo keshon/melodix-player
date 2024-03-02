@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
+	"path/filepath"
 
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 
-	"github.com/keshon/melodix-discord-player/internal/config"
 	"github.com/keshon/melodix-discord-player/internal/version"
-	"github.com/keshon/melodix-discord-player/mod-helloworld/utils"
 )
 
 // handleAboutCommand is a function to handle the about command in Discord.
@@ -20,21 +18,6 @@ import (
 // It takes a Discord session and a Discord message as parameters and does not return anything.
 func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	d.changeAvatar(s)
-
-	cfg, err := config.NewConfig()
-	if err != nil {
-		slog.Fatalf("Error loading config: %v", err)
-	}
-
-	var host string
-	if os.Getenv("HOST") == "" {
-		host = cfg.RestHostname
-	} else {
-		host = os.Getenv("HOST") // from docker environment
-	}
-
-	avatarURL := utils.InferProtocolByPort(host, 443) + host + "/avatar/random?" + fmt.Sprint(time.Now().UnixNano())
-	slog.Info(avatarURL)
 
 	title := fmt.Sprintf("ℹ️ %v — About", version.AppName)
 	content := fmt.Sprintf("**%v**\n\n%v", version.AppFullName, version.AppDescription)
@@ -49,16 +32,32 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 		goVer = version.GoVersion
 	}
 
+	imagePath := "assets/banner-about.png"
+	imageBytes, err := os.Open(imagePath)
+	if err != nil {
+		slog.Error("Error opening image file:", err)
+	}
+
 	embedMsg := embed.NewEmbed().
 		SetDescription(fmt.Sprintf("**%v**\n\n%v", title, content)).
 		AddField("```"+buildDate+"```", "Build date").
 		AddField("```"+goVer+"```", "Go version").
 		AddField("```Created by Innokentiy Sokolov```", "[Linkedin](https://www.linkedin.com/in/keshon), [GitHub](https://github.com/keshon), [Homepage](https://keshon.ru)").
 		InlineAllFields().
-		SetImage(avatarURL).
+		SetImage("attachment://" + filepath.Base(imagePath)).
 		SetColor(0x9f00d4).SetFooter(version.AppFullName).MessageEmbed
 
-	_, err = s.ChannelMessageSendEmbed(m.ChannelID, embedMsg)
+	_, err = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Content: "Check out this image!",
+		Embed:   embedMsg,
+		Files: []*discordgo.File{
+			{
+				Name:   filepath.Base(imagePath),
+				Reader: imageBytes,
+			},
+		},
+	})
+
 	if err != nil {
 		log.Fatal("Error sending embed message", err)
 	}
