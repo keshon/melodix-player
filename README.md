@@ -17,7 +17,7 @@ The bot aims to be an easy-to-use yet powerful music player. Its key objectives 
 - Exposed Rest API to perform various tasks outside of Discord commands.
 - Operation across multiple Discord servers.
 
-![Playing Example](https://github.com/keshon/melodix-player/blob/master/assets/playing.jpg)
+![Playing Example](https://github.com/keshon/melodix-player/blob/master/assets/demo.gif)
 
 ## Download Binary
 

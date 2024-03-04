@@ -17,7 +17,7 @@ El bot tiene como objetivo ser un reproductor de música fácil de usar pero pot
 - API Rest expuesta para realizar varias tareas fuera de los comandos de Discord.
 - Operación en varios servidores de Discord.
 
-![Ejemplo de Reproducción](https://github.com/keshon/melodix-player/blob/master/assets/playing.jpg)
+![Ejemplo de Reproducción](https://github.com/keshon/melodix-player/blob/master/assets/demo.gif)
 
 ## Descarga del Binario
 
