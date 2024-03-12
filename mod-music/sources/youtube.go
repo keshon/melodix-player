@@ -159,7 +159,7 @@ func (y *Youtube) getVideoURLFromTitle(title string) (string, error) {
 		return url, nil
 	}
 
-	return "", fmt.Errorf("No video found for the given title")
+	return "", fmt.Errorf("no video found for the given title")
 }
 
 // FetchSongsByIDs fetches songs by their IDs from the history.
@@ -170,12 +170,12 @@ func (y *Youtube) FetchSongsByIDs(guildID string, ids []int) ([]*player.Song, er
 	for _, id := range ids {
 		track, err := h.GetTrackFromHistory(guildID, uint(id))
 		if err != nil {
-			return nil, fmt.Errorf("Error getting track from history with ID %v", id)
+			return nil, fmt.Errorf("error getting track from history with ID %v", id)
 		}
 
 		song, err := y.getAllSongsFromURL(track.URL)
 		if err != nil {
-			return nil, fmt.Errorf("Error fetching new songs from URL: %v", err)
+			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
 		}
 
 		songs = append(songs, song...)
@@ -191,12 +191,12 @@ func (y *Youtube) FetchSongsByTitles(titles []string) ([]*player.Song, error) {
 	for _, title := range titles {
 		url, err := y.getVideoURLFromTitle(title)
 		if err != nil {
-			return nil, fmt.Errorf("Error getting YouTube video URL by title: %v", err)
+			return nil, fmt.Errorf("error getting YouTube video URL by title: %v", err)
 		}
 
 		songs, err = y.getAllSongsFromURL(url)
 		if err != nil {
-			return nil, fmt.Errorf("Error fetching new songs from URL: %v", err)
+			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
 		}
 	}
 
@@ -209,12 +209,12 @@ func (y *Youtube) FetchSongsByTitle(title string) ([]*player.Song, error) {
 
 	url, err := y.getVideoURLFromTitle(title)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting YouTube video URL by title: %v", err)
+		return nil, fmt.Errorf("error getting YouTube video URL by title: %v", err)
 	}
 
 	songs, err = y.getAllSongsFromURL(url)
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching new songs from URL: %v", err)
+		return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
 	}
 
 	return songs, nil
@@ -227,7 +227,7 @@ func (y *Youtube) FetchSongsByURLs(urls []string) ([]*player.Song, error) {
 	for _, url := range urls {
 		song, err := y.getAllSongsFromURL(url)
 		if err != nil {
-			return nil, fmt.Errorf("Error fetching new songs from URL: %v", err)
+			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
 		}
 
 		songs = append(songs, song...)
@@ -242,7 +242,7 @@ func (y *Youtube) FetchSongByURLs(url string) ([]*player.Song, error) {
 
 	song, err := y.getAllSongsFromURL(url)
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching new songs from URL: %v", err)
+		return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
 	}
 
 	songs = append(songs, song...)

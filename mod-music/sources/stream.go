@@ -8,18 +8,16 @@ import (
 
 	"github.com/gookit/slog"
 
+	"github.com/keshon/melodix-player/internal/config"
 	"github.com/keshon/melodix-player/mod-music/player"
 )
 
-// Stream is a struct that encapsulates the Stream functionality.
 type Stream struct{}
 
-// NewStream creates a new instance of stream.
 func NewStream() *Stream {
 	return &Stream{}
 }
 
-// FetchStreamsByURLs fetches stream URLs into Song struct.
 func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
 	var songs []*player.Song
 
@@ -35,7 +33,6 @@ func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
 		// Use CRC32 to hash name as unique id
 		hash := crc32.ChecksumIEEE([]byte(u.Host))
 
-		// Fetch the stream and check the content type
 		contentType, err := getContentType(u.String())
 		if err != nil {
 			slog.Errorf("Error fetching content type: %v", err)
@@ -49,7 +46,7 @@ func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
 				DownloadURL: u.String(),
 				Thumbnail:   player.Thumbnail{},
 				Duration:    -1,
-				ID:          fmt.Sprintf("%d", hash), // Convert hash to string
+				ID:          fmt.Sprintf("%d", hash),
 				Source:      player.SourceStream,
 			}
 			songs = append(songs, song)
@@ -61,11 +58,22 @@ func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
 	return songs, nil
 }
 
-// getContentType fetches the content type of a given URL.
 func getContentType(url string) (string, error) {
-	resp, err := http.Head(url)
+	req, err := http.NewRequest(http.MethodHead, url, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error creating request: %v", err)
+	}
+
+	conf, err := config.NewConfig()
+	if err != nil {
+		return "", fmt.Errorf("error loading config: %v", err)
+	}
+
+	req.Header.Set("User-Agent", conf.DcaUserAgent)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("error sending request: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -73,9 +81,7 @@ func getContentType(url string) (string, error) {
 }
 
 func isValidStream(contentType string) bool {
-	// List of common audio and video content types for radio streams
 	validContentTypes := []string{
-		// Audio content types
 		"application/flv",
 		"application/vnd.ms-wpl",
 		"audio/aac",
@@ -98,7 +104,6 @@ func isValidStream(contentType string) bool {
 		"audio/x-pn-realaudio",
 		"audio/x-scpls",
 		"audio/x-wav",
-		// Video content types
 		"video/3gpp",
 		"video/mp4",
 		"video/quicktime",
@@ -109,13 +114,11 @@ func isValidStream(contentType string) bool {
 		"video/x-ms-asf",
 	}
 
-	// Check if the content type is in the list of valid content types
 	for _, validType := range validContentTypes {
 		if contentType == validType {
 			return true
 		}
 	}
 
-	// If the content type is not in the list, consider it not valid stream
 	return false
 }
