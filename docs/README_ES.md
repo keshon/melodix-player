@@ -1,6 +1,6 @@
 ![# Header](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/banner-readme.png)
 
-[![Español](https://img.shields.io/badge/Español-README-blue)](/docs/README_ES.md) [![Français](https://img.shields.io/badge/Français-README-blue)](/docs/README_FR.md) [![中文](https://img.shields.io/badge/中文-README-blue)](/docs/README_CN.md) [![日本語](https://img.shields.io/badge/日本語-README-blue)](/docs/README_JP.md)
+[![Español](https://img.shields.io/badge/Español-README-blue)](./README_ES.md) [![Français](https://img.shields.io/badge/Français-README-blue)](./README_FR.md) [![中文](https://img.shields.io/badge/中文-README-blue)](./README_CN.md) [![日本語](https://img.shields.io/badge/日本語-README-blue)](./README_JP.md)
 
 # Melodix Player
 
