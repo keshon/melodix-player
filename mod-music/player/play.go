@@ -330,7 +330,9 @@ func (p *Player) setupVoiceConnection() (*discordgo.VoiceConnection, error) {
 
 		if attempts > 0 {
 			slog.Warn("Failed to join voice channel after multiple attempts, attempting to disconnect and reconnect next iteration")
-			voiceConnection.Disconnect()
+			if voiceConnection != nil {
+				voiceConnection.Disconnect()
+			}
 		}
 
 		slog.Warnf("Failed to join voice channel (attempt %d): %v", attempts+1, err)

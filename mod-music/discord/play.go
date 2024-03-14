@@ -12,6 +12,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/version"
+	"github.com/keshon/melodix-player/mod-music/history"
 	"github.com/keshon/melodix-player/mod-music/player"
 	"github.com/keshon/melodix-player/mod-music/sources"
 )
@@ -126,11 +127,31 @@ func fetchSongsToList(originType string, songsOrigins []string, d *Discord, m *d
 				slog.Error("Cannot convert string id to int id")
 				continue
 			}
-			songs, err = youtube.FetchSongsByIDs(m.GuildID, []int{id})
+
+			h := history.NewHistory()
+			track, err := h.GetTrackFromHistory(m.GuildID, uint(id))
 			if err != nil {
-				slog.Warnf("Error fetching songs by history ID: %v", err)
+				slog.Error("Error getting track from history with ID %v", id)
 				continue
 			}
+
+			var song []*player.Song
+			if youtube.IsYouTubeURL(track.URL) {
+				slog.Info("Track is from YouTube")
+				song, err = youtube.GetAllSongsFromURL(track.URL)
+				if err != nil {
+					slog.Error("error fetching new songs from URL: %v", err)
+					continue
+				}
+			} else {
+				slog.Info("Track is from Stream")
+				song, err = stream.FetchStreamsByURLs([]string{track.URL})
+				if err != nil {
+					slog.Error("error fetching new songs from URL: %v", err)
+					continue
+				}
+			}
+			songs = append(songs, song...)
 		case "youtube_title":
 			songs, err = youtube.FetchSongsByTitle(songOrigin)
 			if err != nil {

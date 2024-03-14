@@ -9,8 +9,12 @@ import (
 func (p *Player) Unpause(channelID string) error {
 	slog.Info("Resuming playback")
 
-	if p.GetCurrentStatus() == StatusPlaying || p.GetCurrentStatus() == StatusError {
-		return fmt.Errorf("the track is already playing (or error) %v", p.GetCurrentStatus().String())
+	if p.GetCurrentStatus() == StatusError {
+		return fmt.Errorf("error playing the track %v", p.GetCurrentStatus().String())
+	}
+
+	if p.GetCurrentStatus() == StatusPlaying {
+		return fmt.Errorf("the track is already playing (use 'add' command instead) %v", p.GetCurrentStatus().String())
 	}
 
 	// Set new channel if needed
