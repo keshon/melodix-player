@@ -17,7 +17,7 @@ Melodix Playerは、接続エラーが発生しても最善を尽くすDiscord�
 - Discordコマンド以外のさまざまなタスクを実行するための露出されたRest API。
 - 複数のDiscordサーバーでの動作。
 
-![再生の例](https://github.com/keshon/melodix-player/blob/master/assets/demo.gif)
+![再生の例](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/demo.gif)
 
 ## バイナリのダウンロード
 

@@ -17,7 +17,7 @@ Le bot vise à être un lecteur musical facile à utiliser mais puissant. Ses ob
 - API Rest exposée pour effectuer diverses tâches en dehors des commandes Discord.
 - Fonctionnement sur plusieurs serveurs Discord.
 
-![Exemple de lecture](https://github.com/keshon/melodix-player/blob/master/assets/demo.gif)
+![Exemple de lecture](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/demo.gif)
 
 ## Téléchargement du binaire
 

@@ -17,7 +17,7 @@ Melodix Player是一个Discord音乐机器人，即使在存在连接错误的�
 - 提供暴露的Rest API以执行在Discord命令之外的各种任务。
 - 跨多个Discord服务器运行。
 
-![播放示例](https://github.com/keshon/melodix-player/blob/master/assets/demo.gif)
+![播放示例](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/demo.gif)
 
 ## 下载二进制文件
 
