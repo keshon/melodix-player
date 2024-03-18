@@ -49,8 +49,7 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 		SetColor(0x9f00d4).MessageEmbed
 
 	_, err = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-		Content: "Check out this image!",
-		Embed:   embedMsg,
+		Embed: embedMsg,
 		Files: []*discordgo.File{
 			{
 				Name:   filepath.Base(imagePath),
