@@ -64,11 +64,21 @@ Para agregar Melodix a tu servidor de Discord:
    - Reemplaza `YOUR_CLIENT_ID_HERE` con el CLIENT_ID de tu bot obtenido en el paso 1.
 3. La página de autorización de Discord se abrirá en tu navegador, permitiéndote seleccionar un servidor.
 4. Elige el servidor donde deseas agregar Melodix y haz clic en "Autorizar".
-5. Si se solicita, completa la verificación reCAPTCHA.
-6. Concede a Melodix los permisos necesarios para que funcione correctamente.
-7. Haz clic en "Autorizar" para agregar Melodix a tu servidor.
+5. Concede a Melodix los permisos necesarios para que funcione correctamente.
 
 Una vez que el bot esté agregado, continúa con la construcción real del bot.
+
+## Construcción desde el Código Fuente
+
+Este proyecto está escrito en el lenguaje Go, lo que permite que se ejecute en un *servidor* o como un programa *local*.
+
+**Uso Local**
+Se proporcionan varios scripts para construir Melodix Player desde el código fuente:
+- `bash-and-run.bat` (o `.sh` para Linux): Construye la versión de depuración y la ejecuta.
+- `build-release.bat` (o `.sh` para Linux): Construye la versión de lanzamiento.
+- `assemble-dist.bat`: Construye la versión de lanzamiento y la ensambla como un paquete de distribución (solo Windows, el empaquetador UPX se descargará durante el proceso).
+
+Para el uso local, ejecuta estos scripts para tu sistema operativo y renombra `.env.example` a `.env`, almacenando tu Token de Bot de Discord en la variable `DISCORD_BOT_TOKEN`. Instala [FFMPEG](https://ffmpeg.org/) (solo se admite la versión más reciente). Si tu instalación de FFMPEG es portátil, especifica la ruta en la variable `DCA_FFMPEG_BINARY_PATH`.
 
 ## Acceso a la API y Rutas
 
@@ -94,18 +104,6 @@ Melodix Player proporciona varias rutas para diferentes funcionalidades:
 - `GET /log`: Muestra el registro actual.
 - `GET /log/clear`: Borra el registro.
 - `GET /log/download`: Descarga el registro como un archivo.
-
-## Construcción desde el Código Fuente
-
-Este proyecto está escrito en el lenguaje Go, lo que permite que se ejecute en un *servidor* o como un programa *local*.
-
-**Uso Local**
-Se proporcionan varios scripts para construir Melodix Player desde el código fuente:
-- `bash-and-run.bat` (o `.sh` para Linux): Construye la versión de depuración y la ejecuta.
-- `build-release.bat` (o `.sh` para Linux): Construye la versión de lanzamiento.
-- `assemble-dist.bat`: Construye la versión de lanzamiento y la ensambla como un paquete de distribución (solo Windows, el empaquetador UPX se descargará durante el proceso).
-
-Para el uso local, ejecuta estos scripts para tu sistema operativo y renombra `.env.example` a `.env`, almacenando tu Token de Bot de Discord en la variable `DISCORD_BOT_TOKEN`. Instala [FFMPEG](https://ffmpeg.org/) (solo se admite la versión más reciente). Si tu instalación de FFMPEG es portátil, especifica la ruta en la variable `DCA_FFMPEG_BINARY_PATH`.
 
 **Uso en Servidor**
 Para construir y desplegar el bot en un entorno Docker, consulta el archivo `docker/README.md` para obtener instrucciones específicas.

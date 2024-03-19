@@ -64,11 +64,26 @@ Melodix Player支持各种命令及其相应的别名来控制音乐播放。一
    - 用步骤1中获取的Bot的客户端ID替换`YOUR_CLIENT_ID_HERE`。
 3. Discord授权页面将在您的浏览器中打开，允许您选择一个服务器。
 4. 选择要添加Melodix的服务器，然后点击“Authorize”。
-5. 如果提示，请完成reCAPTCHA验证。
-6. 授予Melodix正常运行所需的权限。
-7. 点击“Authorize”将Melodix添加到您的服务器。
+5. 授予Melodix正常运行所需的权限。
 
 一旦机器人被添加，就可以继续进行实际的机器人构建。
+
+## 从源代码构建
+
+此项目使用Go语言编写，可在*服务器*或*本地*程序上运行。
+
+**本地使用**
+提供了几个脚本用于从源代码构建Melodix Player：
+- `bash-and-run.bat`（或Linux用的`.sh`）：构建调试版本并执行。
+- `build-release.bat`（或Linux用的`.sh`）：构建发布版本。
+- `assemble-dist.bat`：构建发布版本并将其组装为分发包（仅限Windows，在此过程中将下载UPX打包器）。
+
+对于本地使用，请针对您的操作系统运行这些脚本，并将`.env.example`重命名为`.env`，将您的Discord Bot Token存储在`DISCORD_BOT_TOKEN`变量中。安装[FFMPEG](https://ffmpeg.org/)（仅支持最新版本）。如果您的FFMPEG安装是便携式的，请在`DCA_FFMPEG_BINARY_PATH`变量中指定路径。
+
+**服务器使用**
+要在Docker环境中构建和部署机器人，请参阅`docker/README.md`以获取具体说明。
+
+一旦构建了二进制文件，填充了`.env`文件，并将Bot添加到服务器，Melodix就准备好运行了。
 
 ## API访问和路由
 
@@ -94,23 +109,6 @@ Melodix Player为不同功能提供了各种路由：
 - `GET /log`：显示当前日志。
 - `GET /log/clear`：清除日志。
 - `GET /log/download`：将日志下载为文件。
-
-## 从源代码构建
-
-此项目使用Go语言编写，可在*服务器*或*本地*程序上运行。
-
-**本地使用**
-提供了几个脚本用于从源代码构建Melodix Player：
-- `bash-and-run.bat`（或Linux用的`.sh`）：构建调试版本并执行。
-- `build-release.bat`（或Linux用的`.sh`）：构建发布版本。
-- `assemble-dist.bat`：构建发布版本并将其组装为分发包（仅限Windows，在此过程中将下载UPX打包器）。
-
-对于本地使用，请针对您的操作系统运行这些脚本，并将`.env.example`重命名为`.env`，将您的Discord Bot Token存储在`DISCORD_BOT_TOKEN`变量中。安装[FFMPEG](https://ffmpeg.org/)（仅支持最新版本）。如果您的FFMPEG安装是便携式的，请在`DCA_FFMPEG_BINARY_PATH`变量中指定路径。
-
-**服务器使用**
-要在Docker环境中构建和部署机器人，请参阅`docker/README.md`以获取具体说明。
-
-一旦构建了二进制文件，填充了`.env`文件，并将Bot添加到服务器，Melodix就准备好运行了。
 
 ## 获取支持的地方
 

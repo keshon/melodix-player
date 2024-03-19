@@ -64,11 +64,29 @@ Pour ajouter Melodix à votre serveur Discord :
    - Remplacez `VOTRE_ID_CLIENT_ICI` par l'ID_CLIENT de votre bot à partir de l'étape 1.
 3. La page d'autorisation Discord s'ouvrira dans votre navigateur, vous permettant de sélectionner un serveur.
 4. Choisissez le serveur où vous souhaitez ajouter Melodix et cliquez sur "Autoriser".
-5. Si on vous le demande, effectuez la vérification reCAPTCHA.
-6. Accordez à Melodix les permissions nécessaires pour son bon fonctionnement.
-7. Cliquez sur "Autoriser" pour ajouter Melodix à votre serveur.
+5. Accordez à Melodix les permissions nécessaires pour son bon fonctionnement.
 
 Une fois le bot ajouté, procédez à la construction réelle du bot.
+
+## Construction à partir des sources
+
+Ce projet est écrit en langage Go, ce qui lui permet de s'exécuter sur un *serveur* ou en tant que programme *local*.
+
+**Utilisation locale**
+Plusieurs scripts sont fournis pour construire Melodix Player à partir des sources :
+- `bash-and-run.bat` (ou `.sh` pour Linux) : Construire la version de débogage et l'exécuter.
+- `build-release.bat` (ou `.sh` pour Linux) : Construire la version de production.
+- `assemble-dist.bat` : Construire la version de production et l'assembler comme un package de distribution (uniquement pour Windows, le packager UPX sera téléchargé pendant le processus).
+
+Pour une utilisation locale, exécutez ces scripts pour votre système d'exploitation et renommez `.env.example` en `.env`, enregistrant votre jeton Discord Bot dans la variable `DISCORD_BOT_TOKEN`. Installez [FFMPEG](https://ffmpeg.org/) (seule la version récente est prise en charge). Si votre installation FFMPEG est portable, spécifiez le chemin dans la variable `DCA_FFMPEG_BINARY_PATH`.
+
+**Utilisation sur un serveur**
+Pour construire et déployer le bot dans un environnement Docker, consultez le fichier `docker/README.md` pour des instructions spécifiques.
+
+Une fois le fichier binaire construit, le fichier `.env` rempli et le bot ajouté à votre serveur, Melodix est prêt à fonctionner.
+
+## Où obtenir du support
+Si vous avez des questions, vous pouvez me les poser sur [mon serveur Discord](https://discord.gg/NVtdTka8ZT) pour obtenir de l'aide. Gardez à l'esprit qu'il n'y a aucune communauté - juste moi.
 
 ## Accès à l'API et Routes
 
@@ -94,26 +112,6 @@ Melodix Player fournit diverses routes pour différentes fonctionnalités :
 - `GET /log` : Afficher le journal actuel.
 - `GET /log/clear` : Effacer le journal.
 - `GET /log/download` : Télécharger le journal sous forme de fichier.
-
-## Construction à partir des sources
-
-Ce projet est écrit en langage Go, ce qui lui permet de s'exécuter sur un *serveur* ou en tant que programme *local*.
-
-**Utilisation locale**
-Plusieurs scripts sont fournis pour construire Melodix Player à partir des sources :
-- `bash-and-run.bat` (ou `.sh` pour Linux) : Construire la version de débogage et l'exécuter.
-- `build-release.bat` (ou `.sh` pour Linux) : Construire la version de production.
-- `assemble-dist.bat` : Construire la version de production et l'assembler comme un package de distribution (uniquement pour Windows, le packager UPX sera téléchargé pendant le processus).
-
-Pour une utilisation locale, exécutez ces scripts pour votre système d'exploitation et renommez `.env.example` en `.env`, enregistrant votre jeton Discord Bot dans la variable `DISCORD_BOT_TOKEN`. Installez [FFMPEG](https://ffmpeg.org/) (seule la version récente est prise en charge). Si votre installation FFMPEG est portable, spécifiez le chemin dans la variable `DCA_FFMPEG_BINARY_PATH`.
-
-**Utilisation sur un serveur**
-Pour construire et déployer le bot dans un environnement Docker, consultez le fichier `docker/README.md` pour des instructions spécifiques.
-
-Une fois le fichier binaire construit, le fichier `.env` rempli et le bot ajouté à votre serveur, Melodix est prêt à fonctionner.
-
-## Où obtenir du support
-Si vous avez des questions, vous pouvez me les poser sur [mon serveur Discord](https://discord.gg/NVtdTka8ZT) pour obtenir de l'aide. Gardez à l'esprit qu'il n'y a aucune communauté - juste moi.
 
 ## Remerciements
 
