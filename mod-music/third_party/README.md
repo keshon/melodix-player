@@ -1,6 +1,6 @@
-# pkg directory
+# third_party directory
 
-The `pkg` dir contains modified packages or a code snippets taken from internet.
+The `third_party` dir contains modified packages or a code snippets taken from internet.
 
 ## dca package - Go implementation for the DCA audio format
 This version was modified:

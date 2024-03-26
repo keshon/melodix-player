@@ -4,8 +4,9 @@ rem
 rem ASSEMBLE DISTRIBUTION PACKAGE
 rem
 
+rem Set the target platform and the path to UPX
 set TARGET_PLATFORM=melodix-win
-set UPX_PATH=.tools\upx-3.96-win64\upx.exe
+set UPX_PATH=tools\upx-3.96-win64\upx.exe
 
 rem Get the current date in the format YYYY-MM-DD
 for /f "tokens=1-3 delims=-" %%a in ('powershell -command "Get-Date -Format 'yyyy-MM-dd'"') do set CURRENT_DATE=%%a-%%b-%%c
@@ -17,6 +18,9 @@ if errorlevel 1 (
     echo "Build process failed."
     exit /b 1
 )
+
+rem Change directory to the root level
+cd ..
 
 rem Create or clear the "dist" directory for the target platform
 if exist dist\%TARGET_PLATFORM% rmdir /s /q dist\%TARGET_PLATFORM%
@@ -33,16 +37,19 @@ xcopy /E /I /Y docs dist\%TARGET_PLATFORM%\docs
 rem Use UPX packer if available, otherwise download and use it
 if not exist %UPX_PATH% (
     echo "UPX not found. Downloading UPX..."
-    mkdir .tools
-    powershell -command "& { Invoke-WebRequest -Uri 'https://github.com/upx/upx/releases/download/v3.96/upx-3.96-win64.zip' -OutFile '.tools\upx.zip' }"
-    powershell -command "& { Expand-Archive -Path '.tools\upx.zip' -DestinationPath '.tools' }"
-    del .tools\upx.zip
+    mkdir tools
+    powershell -command "& { Invoke-WebRequest -Uri 'https://github.com/upx/upx/releases/download/v3.96/upx-3.96-win64.zip' -OutFile 'tools\upx.zip' }"
+    powershell -command "& { Expand-Archive -Path 'tools\upx.zip' -DestinationPath 'tools' }"
+    del tools\upx.zip
 )
 
 rem Pack the binary with UPX
 %UPX_PATH% --best dist\%TARGET_PLATFORM%\melodix.exe
 
 rem Create a zip archive with version and current date
-powershell -command "& { Compress-Archive -Path '.\dist\%TARGET_PLATFORM%' -DestinationPath '%OUTPUT_ARCHIVE%' }"
+powershell -command "& { Compress-Archive -Path 'dist\%TARGET_PLATFORM%' -DestinationPath '%OUTPUT_ARCHIVE%' -Force}"
+
+rem Change directory back to the "scripts" subdirectory
+cd scripts
 
 echo "Build process completed successfully."
