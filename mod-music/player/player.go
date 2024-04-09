@@ -9,6 +9,7 @@ import (
 
 	"github.com/keshon/melodix-player/mod-music/history"
 	"github.com/keshon/melodix-player/mod-music/third_party/dca"
+	kkdai_youtube "github.com/kkdai/youtube/v2"
 )
 
 type IPlayer interface {
@@ -58,13 +59,14 @@ type Player struct {
 }
 
 type Song struct {
-	Title       string        // Title of the song
-	UserURL     string        // URL provided by the user
-	DownloadURL string        // URL for downloading the song
-	Thumbnail   Thumbnail     // Thumbnail image for the song
-	Duration    time.Duration // Duration of the song
-	ID          string        // Unique ID for the song
-	Source      SongSource    // Source type of the song
+	Title       string               // Title of the song
+	UserURL     string               // URL provided by the user
+	DownloadURL string               // URL for downloading the song
+	Thumbnail   Thumbnail            // Thumbnail image for the song
+	Duration    time.Duration        // Duration of the song
+	ID          string               // Unique ID for the song
+	Source      SongSource           // Source type of the song
+	SongRaw     *kkdai_youtube.Video // Raw data from the source
 }
 
 type Thumbnail struct {

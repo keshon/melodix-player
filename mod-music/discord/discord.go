@@ -75,6 +75,9 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"add", "a", "+"},
 		{"skip", "next", "ff", ">>"},
 		{"history", "time", "t"},
+		{"curl", "cu"},
+		{"cached", "cl"},
+		{"uploaded", "ul"},
 	}
 
 	canonical := getCanonicalCommand(command, aliases)
@@ -101,6 +104,12 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		d.handleStopCommand(s, m)
 	case "history":
 		d.handleHistoryCommand(s, m, parameter)
+	case "curl":
+		d.handleCacheUrlCommand(s, m, parameter)
+	case "cached":
+		d.handleCacheListCommand(s, m)
+	case "uploaded":
+		d.handleUploadListCommand(s, m)
 	}
 }
 

@@ -1,0 +1,7 @@
+package discord
+
+import "github.com/bwmarrin/discordgo"
+
+func (d *Discord) handleCacheListCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+	_, _ = s.ChannelMessageSend(m.ChannelID, "Not implemented yet!")
+}

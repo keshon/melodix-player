@@ -47,6 +47,7 @@ func (y *Youtube) GetSongFromVideoURL(url string) (*player.Song, error) {
 		Thumbnail:   thumbnail,
 		ID:          song.ID,
 		Source:      player.SourceYouTube,
+		SongRaw:     song,
 	}, nil
 }
 
