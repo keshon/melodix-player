@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -121,6 +122,22 @@ func fetchSongsToList(originType string, songsOrigins []string, d *Discord, m *d
 		var err error
 
 		switch originType {
+		case "filename":
+			slog.Error(originType)
+			songPath := "cache/" + m.GuildID + "/" + songOrigin
+
+			// check if path is valid
+			if _, err := os.Stat(songPath); os.IsNotExist(err) {
+				slog.Error("No such file or directory: %v", err)
+				continue
+			}
+
+			song := player.Song{
+				Title:       songOrigin,
+				DownloadURL: songPath,
+			}
+
+			songs = append(songs, &song)
 		case "history_id":
 			id, err := strconv.Atoi(songOrigin)
 			if err != nil {
@@ -328,6 +345,7 @@ func parseOriginParameter(param string) (string, []string) {
 		return "", []string{}
 	}
 
+	// Check if the parameter is a URL
 	u, err := url.Parse(param)
 	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
 		paramSlice := strings.Fields(param)
@@ -337,18 +355,26 @@ func parseOriginParameter(param string) (string, []string) {
 		return "stream_url", paramSlice
 	}
 
-	params := strings.Fields(param)
+	// Check if the parameter contains numeric IDs
 	allValidIDs := true
-	for _, id := range params {
+	for _, id := range strings.Fields(param) {
 		if _, err := strconv.Atoi(id); err != nil {
 			allValidIDs = false
 			break
 		}
 	}
 	if allValidIDs {
-		return "history_id", params
+		return "history_id", strings.Fields(param)
 	}
 
+	// Check if the parameter contains file extensions
+	for _, part := range strings.Fields(param) {
+		if strings.HasSuffix(part, ".aac") || strings.HasSuffix(part, ".opus") || strings.HasSuffix(part, ".mp3") {
+			return "filename", []string{part}
+		}
+	}
+
+	// If none of the above conditions are met, treat it as a YouTube title
 	encodedTitle := url.QueryEscape(param)
 	return "youtube_title", []string{encodedTitle}
 }
