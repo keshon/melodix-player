@@ -48,12 +48,12 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 		duration := utils.FormatDuration(elem.History.Duration)
 		fieldContent := fmt.Sprintf("```id %d```\t```x%d```\t```%v```\t```%v```", elem.History.TrackID, elem.History.PlayCount, duration, strings.ToLower(elem.Track.Source))
 
-		if remainingSpace := maxLimit - len(embedMsg.Fields) - len(fieldContent) - len(elem.Track.Title) - len(elem.Track.HumanURL); remainingSpace < 0 {
+		if remainingSpace := maxLimit - len(embedMsg.Fields) - len(fieldContent) - len(elem.Track.Title) - len(elem.Track.URL); remainingSpace < 0 {
 			break
 		}
 
-		if elem.Track.HumanURL != "" {
-			embedMsg.AddField(fieldContent, fmt.Sprintf("[%v](%v)\n\n", elem.Track.Title, elem.Track.HumanURL))
+		if elem.Track.URL != "" {
+			embedMsg.AddField(fieldContent, fmt.Sprintf("[%v](%v)\n\n", elem.Track.Title, elem.Track.URL))
 		} else {
 			embedMsg.AddField(fieldContent, fmt.Sprintf("%v\n\n", elem.Track.Title))
 		}

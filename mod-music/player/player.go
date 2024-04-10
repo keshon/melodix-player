@@ -58,13 +58,13 @@ type Player struct {
 }
 
 type Song struct {
-	Title        string        // Title of the song
-	UserURL      string        // URL provided by the user
-	DownloadPath string        // Path/URL for downloading the song
-	Thumbnail    Thumbnail     // Thumbnail image for the song
-	Duration     time.Duration // Duration of the song
-	ID           string        // Unique ID for the song
-	Source       SongSource    // Source type of the song
+	Title     string        // Title of the song
+	URL       string        // URL provided by the user
+	Filepath  string        // Path/URL for downloading the song
+	Thumbnail Thumbnail     // Thumbnail image for the song
+	Duration  time.Duration // Duration of the song
+	ID        string        // Unique ID for the song
+	Source    SongSource    // Source type of the song
 }
 
 type Thumbnail struct {

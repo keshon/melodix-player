@@ -73,7 +73,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 		return fmt.Errorf("failed to create encode options: %w", err)
 	}
 
-	encoding, err := dca.EncodeFile(p.GetCurrentSong().DownloadPath, options)
+	encoding, err := dca.EncodeFile(p.GetCurrentSong().Filepath, options)
 	if err != nil {
 		return fmt.Errorf("failed to encode file: %w", err)
 	}
@@ -104,13 +104,13 @@ func (p *Player) Play(startAt int, song *Song) error {
 
 	// Add song to history
 	historySong := &history.Song{
-		Title:        p.GetCurrentSong().Title,
-		HumanURL:     p.GetCurrentSong().UserURL,
-		DownloadPath: p.GetCurrentSong().DownloadPath,
-		Duration:     p.GetCurrentSong().Duration,
-		SongID:       songID,
-		Thumbnail:    history.Thumbnail(p.GetCurrentSong().Thumbnail),
-		Source:       p.GetCurrentSong().Source.String(),
+		Title:     p.GetCurrentSong().Title,
+		URL:       p.GetCurrentSong().URL,
+		Filepath:  p.GetCurrentSong().Filepath,
+		Duration:  p.GetCurrentSong().Duration,
+		SongID:    songID,
+		Thumbnail: history.Thumbnail(p.GetCurrentSong().Thumbnail),
+		Source:    p.GetCurrentSong().Source.String(),
 	}
 	p.GetHistory().AddTrackToHistory(p.GetVoiceConnection().GuildID, historySong)
 
@@ -368,7 +368,7 @@ func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, stream
 	streamingPosition := streamingSession.PlaybackPosition()
 	delay := encodingDuration - streamingPosition
 
-	parsedURL, err := url.Parse(song.DownloadPath)
+	parsedURL, err := url.Parse(song.Filepath)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to parse URL: %v", err)
 	}

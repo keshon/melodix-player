@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -256,4 +257,9 @@ func findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (fou
 		}
 	}
 	return
+}
+
+func IsYouTubeURL(url string) bool {
+	pattern := regexp.MustCompile(`^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.*$`)
+	return pattern.MatchString(strings.ToLower(url))
 }

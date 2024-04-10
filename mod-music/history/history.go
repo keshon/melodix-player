@@ -7,13 +7,13 @@ import (
 )
 
 type Song struct {
-	Title        string        // Title of the song
-	HumanURL     string        // URL provided by the user
-	DownloadPath string        // Path/URL for downloading the song
-	Thumbnail    Thumbnail     // Thumbnail image for the song
-	Duration     time.Duration // Duration of the song
-	SongID       string        // Unique ID for the song
-	Source       string        // Source type of the song
+	Title     string        // Title of the song
+	URL       string        // URL provided by the user
+	Filepath  string        // Path/URL for downloading the song
+	Thumbnail Thumbnail     // Thumbnail image for the song
+	Duration  time.Duration // Duration of the song
+	SongID    string        // Unique ID for the song
+	Source    string        // Source type of the song
 }
 
 type Thumbnail struct {
@@ -50,11 +50,11 @@ func (h *History) AddTrackToHistory(guildID string, song *Song) error {
 	existingTrack, err := db.GetTrackBySongID(song.SongID)
 	if err != nil {
 		newTrack := &db.Track{
-			SongID:       song.SongID,
-			Title:        song.Title,
-			HumanURL:     song.HumanURL,
-			Source:       song.Source,
-			DownloadPath: song.DownloadPath,
+			SongID:   song.SongID,
+			Title:    song.Title,
+			URL:      song.URL,
+			Source:   song.Source,
+			Filepath: song.Filepath,
 		}
 
 		if err := db.CreateTrack(newTrack); err != nil {
@@ -66,11 +66,11 @@ func (h *History) AddTrackToHistory(guildID string, song *Song) error {
 
 	if existingTrack == nil {
 		newTrack := &db.Track{
-			SongID:       song.SongID,
-			Title:        song.Title,
-			HumanURL:     song.HumanURL,
-			Source:       song.Source,
-			DownloadPath: song.DownloadPath,
+			SongID:   song.SongID,
+			Title:    song.Title,
+			URL:      song.URL,
+			Source:   song.Source,
+			Filepath: song.Filepath,
 		}
 		track = newTrack
 	} else {

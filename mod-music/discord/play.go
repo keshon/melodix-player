@@ -16,6 +16,7 @@ import (
 	"github.com/keshon/melodix-player/mod-music/history"
 	"github.com/keshon/melodix-player/mod-music/player"
 	"github.com/keshon/melodix-player/mod-music/sources"
+	"github.com/keshon/melodix-player/mod-music/utils"
 )
 
 // handlePlayCommand handles the play command for Discord.
@@ -132,9 +133,9 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			}
 
 			song := player.Song{
-				Title:        songOrigin,
-				DownloadPath: songPath,
-				Source:       player.SourceLocalFile,
+				Title:    songOrigin,
+				Filepath: songPath,
+				Source:   player.SourceLocalFile,
 			}
 
 			songs = append(songs, &song)
@@ -153,7 +154,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			var song []*player.Song
 			if track.Source == "YouTube" {
 				slog.Info("Track is from YouTube")
-				song, err = youtube.GetAllSongsFromURL(track.HumanURL)
+				song, err = youtube.GetAllSongsFromURL(track.URL)
 				if err != nil {
 					slog.Error("error fetching new songs from URL: %v", err)
 					continue
@@ -161,7 +162,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			}
 			if track.Source == "Stream" {
 				slog.Info("Track is from Stream")
-				song, err = stream.FetchStreamsByURLs([]string{track.HumanURL})
+				song, err = stream.FetchStreamsByURLs([]string{track.URL})
 				if err != nil {
 					slog.Error("error fetching new songs from URL: %v", err)
 					continue
@@ -170,9 +171,9 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			if track.Source == "LocalFile" {
 				slog.Info("Track is from LocalFile")
 				song = []*player.Song{{
-					Title:        track.Title,
-					DownloadPath: track.DownloadPath,
-					Source:       player.SourceLocalFile,
+					Title:    track.Title,
+					Filepath: track.Filepath,
+					Source:   player.SourceLocalFile,
 				}}
 			}
 
@@ -291,8 +292,8 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 
 	// Display current song information
 	if currentSong := d.Player.GetCurrentSong(); currentSong != nil {
-		if currentSong.UserURL != "" {
-			content += fmt.Sprintf("\n*[%v](%v)*\n\n", currentSong.Title, currentSong.UserURL)
+		if currentSong.URL != "" {
+			content += fmt.Sprintf("\n*[%v](%v)*\n\n", currentSong.Title, currentSong.URL)
 		} else {
 			content += fmt.Sprintf("\n%v\n\n", currentSong.Title)
 		}
@@ -337,8 +338,8 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 			}
 
 			// Display playlist entry
-			if elem.UserURL != "" {
-				content = fmt.Sprintf("%v\n` %v ` [%v](%v)", content, counter, elem.Title, elem.UserURL)
+			if elem.URL != "" {
+				content = fmt.Sprintf("%v\n` %v ` [%v](%v)", content, counter, elem.Title, elem.URL)
 			} else {
 				content = fmt.Sprintf("%v\n` %v ` %v", content, counter, elem.Title)
 			}
@@ -365,7 +366,7 @@ func parseOriginParameter(param string) (string, []string) {
 	u, err := url.Parse(param)
 	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
 		paramSlice := strings.Fields(param)
-		if u.Host == "www.youtube.com" || u.Host == "youtube.com" || u.Host == "youtu.be" {
+		if utils.IsYouTubeURL(u.Host) {
 			return "youtube_url", paramSlice
 		}
 		return "stream_url", paramSlice

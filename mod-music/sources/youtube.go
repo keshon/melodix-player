@@ -40,13 +40,13 @@ func (y *Youtube) GetSongFromVideoURL(url string) (*player.Song, error) {
 	}
 
 	return &player.Song{
-		Title:        song.Title,
-		UserURL:      url,
-		DownloadPath: song.Formats.WithAudioChannels()[0].URL,
-		Duration:     song.Duration,
-		Thumbnail:    thumbnail,
-		ID:           song.ID,
-		Source:       player.SourceYouTube,
+		Title:     song.Title,
+		URL:       url,
+		Filepath:  song.Formats.WithAudioChannels()[0].URL,
+		Duration:  song.Duration,
+		Thumbnail: thumbnail,
+		ID:        song.ID,
+		Source:    player.SourceYouTube,
 	}, nil
 }
 
@@ -173,7 +173,7 @@ func (y *Youtube) FetchSongsByIDs(guildID string, ids []int) ([]*player.Song, er
 			return nil, fmt.Errorf("error getting track from history with ID %v", id)
 		}
 
-		song, err := y.GetAllSongsFromURL(track.HumanURL)
+		song, err := y.GetAllSongsFromURL(track.URL)
 		if err != nil {
 			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
 		}
@@ -248,9 +248,4 @@ func (y *Youtube) FetchSongByURLs(url string) ([]*player.Song, error) {
 	songs = append(songs, song...)
 
 	return songs, nil
-}
-
-func (y *Youtube) IsYouTubeURL(url string) bool {
-	pattern := regexp.MustCompile(`^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.*$`)
-	return pattern.MatchString(strings.ToLower(url))
 }

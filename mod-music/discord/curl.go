@@ -14,6 +14,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/mod-music/sources"
+	"github.com/keshon/melodix-player/mod-music/utils"
 )
 
 const (
@@ -28,10 +29,19 @@ func (d *Discord) handleCacheUrlCommand(s *discordgo.Session, m *discordgo.Messa
 		return
 	}
 
+	if !utils.IsYouTubeURL(param) {
+		s.ChannelMessageSend(m.ChannelID, "Only YouTube URL supported")
+	}
+
 	yt := sources.NewYoutube()
 	song, err := yt.GetSongFromVideoURL(param)
 	if err != nil {
 		s.ChannelMessageSend(m.ChannelID, err.Error())
+		return
+	}
+
+	if song.Duration > 360*time.Minute {
+		s.ChannelMessageSend(m.ChannelID, "Song too long")
 		return
 	}
 
@@ -42,7 +52,7 @@ func (d *Discord) handleCacheUrlCommand(s *discordgo.Session, m *discordgo.Messa
 
 	// Download the video
 	videoFilePath := filepath.Join(uploadsFolder, filename+".mp4")
-	err = downloadURLToFile(videoFilePath, song.DownloadPath)
+	err = downloadURLToFile(videoFilePath, song.Filepath)
 	if err != nil {
 		slog.Error("Error downloading audio:", err)
 		return

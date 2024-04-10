@@ -1,13 +1,13 @@
 package db
 
 type Track struct {
-	ID           uint `gorm:"primaryKey;autoIncrement"`
-	SongID       string
-	Title        string
-	HumanURL     string
-	DownloadPath string
-	Source       string
-	Histories    []History `gorm:"foreignKey:TrackID"`
+	ID        uint `gorm:"primaryKey;autoIncrement"`
+	SongID    string
+	Title     string
+	URL       string
+	Filepath  string
+	Source    string
+	Histories []History `gorm:"foreignKey:TrackID"`
 }
 
 func CreateTrack(track *Track) error {
