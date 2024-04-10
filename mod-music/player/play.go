@@ -1,6 +1,8 @@
 package player
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/url"
@@ -9,6 +11,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
+
 	"github.com/keshon/melodix-player/mod-music/history"
 	"github.com/keshon/melodix-player/mod-music/third_party/dca"
 	"github.com/keshon/melodix-player/mod-music/utils"
@@ -70,7 +73,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 		return fmt.Errorf("failed to create encode options: %w", err)
 	}
 
-	encoding, err := dca.EncodeFile(p.GetCurrentSong().DownloadURL, options)
+	encoding, err := dca.EncodeFile(p.GetCurrentSong().DownloadPath, options)
 	if err != nil {
 		return fmt.Errorf("failed to encode file: %w", err)
 	}
@@ -93,18 +96,25 @@ func (p *Player) Play(startAt int, song *Song) error {
 	p.SetStreamingSession(stream)
 	p.SetCurrentStatus(StatusPlaying)
 
+	// Create song ID
+	songID := GetMD5Hash(p.GetCurrentSong().Title)
+	if p.GetCurrentSong().ID != "" {
+		songID = p.GetCurrentSong().ID
+	}
+
 	// Add song to history
 	historySong := &history.Song{
-		Name:        p.GetCurrentSong().Title,
-		UserURL:     p.GetCurrentSong().UserURL,
-		DownloadURL: p.GetCurrentSong().DownloadURL,
-		Duration:    p.GetCurrentSong().Duration,
-		ID:          p.GetCurrentSong().ID,
-		Thumbnail:   history.Thumbnail(p.GetCurrentSong().Thumbnail),
+		Title:        p.GetCurrentSong().Title,
+		HumanURL:     p.GetCurrentSong().UserURL,
+		DownloadPath: p.GetCurrentSong().DownloadPath,
+		Duration:     p.GetCurrentSong().Duration,
+		SongID:       songID,
+		Thumbnail:    history.Thumbnail(p.GetCurrentSong().Thumbnail),
+		Source:       p.GetCurrentSong().Source.String(),
 	}
 	p.GetHistory().AddTrackToHistory(p.GetVoiceConnection().GuildID, historySong)
 
-	if err := p.GetHistory().AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID); err != nil {
+	if err := p.GetHistory().AddPlaybackCountStats(p.GetVoiceConnection().GuildID, songID); err != nil {
 		slog.Errorf("error adding playback count stats to history: %v", err)
 	}
 
@@ -122,7 +132,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 			select {
 			case <-ticker.C:
 				if p.GetVoiceConnection() != nil && p.GetStreamingSession() != nil && p.GetCurrentSong() != nil && !p.GetStreamingSession().Paused() {
-					err := p.GetHistory().AddPlaybackDurationStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID, float64(interval.Seconds()))
+					err := p.GetHistory().AddPlaybackDurationStats(p.GetVoiceConnection().GuildID, songID, float64(interval.Seconds()))
 					if err != nil {
 						slog.Warnf("Error adding playback duration stats to history: %v", err)
 					}
@@ -217,7 +227,11 @@ func (p *Player) Play(startAt int, song *Song) error {
 				}()
 
 				return nil
+
+			case p.GetCurrentSong().Source == SourceLocalFile:
+				// do nothing
 			}
+
 		}
 
 		if p.GetCurrentSong() == nil {
@@ -354,7 +368,7 @@ func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, stream
 	streamingPosition := streamingSession.PlaybackPosition()
 	delay := encodingDuration - streamingPosition
 
-	parsedURL, err := url.Parse(song.DownloadURL)
+	parsedURL, err := url.Parse(song.DownloadPath)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to parse URL: %v", err)
 	}
@@ -375,4 +389,10 @@ func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, stream
 	slog.Debugf("Encoding started at:\t%s,\tEncoding ahead:\t%s", encodingStartTime, delay)
 
 	return duration, position, nil
+}
+
+func GetMD5Hash(text string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
 }

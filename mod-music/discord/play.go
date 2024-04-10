@@ -75,7 +75,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		return
 	}
 
-	songs, err := fetchSongsToList(originType, origins, d, m)
+	songs, err := getSongsFromSources(originType, origins, m.GuildID)
 	if err != nil {
 		embedStr = fmt.Sprintf("%v\n\n*details:*\n`%v`", "Error forming playlist", err)
 		embedMsg = embed.NewEmbed().
@@ -105,7 +105,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 	}
 }
 
-func fetchSongsToList(originType string, songsOrigins []string, d *Discord, m *discordgo.MessageCreate) ([]*player.Song, error) {
+func getSongsFromSources(originType string, songsOrigins []string, guildID string) ([]*player.Song, error) {
 	var songsList []*player.Song
 
 	youtube := sources.NewYoutube()
@@ -122,19 +122,19 @@ func fetchSongsToList(originType string, songsOrigins []string, d *Discord, m *d
 		var err error
 
 		switch originType {
-		case "filename":
+		case "local_file":
 			slog.Error(originType)
-			songPath := "cache/" + m.GuildID + "/" + songOrigin
+			songPath := "cache/" + guildID + "/" + songOrigin
 
-			// check if path is valid
 			if _, err := os.Stat(songPath); os.IsNotExist(err) {
 				slog.Error("No such file or directory: %v", err)
 				continue
 			}
 
 			song := player.Song{
-				Title:       songOrigin,
-				DownloadURL: songPath,
+				Title:        songOrigin,
+				DownloadPath: songPath,
+				Source:       player.SourceLocalFile,
 			}
 
 			songs = append(songs, &song)
@@ -144,30 +144,38 @@ func fetchSongsToList(originType string, songsOrigins []string, d *Discord, m *d
 				slog.Error("Cannot convert string id to int id")
 				continue
 			}
-
 			h := history.NewHistory()
-			track, err := h.GetTrackFromHistory(m.GuildID, uint(id))
+			track, err := h.GetTrackFromHistory(guildID, uint(id))
 			if err != nil {
 				slog.Error("Error getting track from history with ID %v", id)
 				continue
 			}
-
 			var song []*player.Song
-			if youtube.IsYouTubeURL(track.URL) {
+			if track.Source == "YouTube" {
 				slog.Info("Track is from YouTube")
-				song, err = youtube.GetAllSongsFromURL(track.URL)
-				if err != nil {
-					slog.Error("error fetching new songs from URL: %v", err)
-					continue
-				}
-			} else {
-				slog.Info("Track is from Stream")
-				song, err = stream.FetchStreamsByURLs([]string{track.URL})
+				song, err = youtube.GetAllSongsFromURL(track.HumanURL)
 				if err != nil {
 					slog.Error("error fetching new songs from URL: %v", err)
 					continue
 				}
 			}
+			if track.Source == "Stream" {
+				slog.Info("Track is from Stream")
+				song, err = stream.FetchStreamsByURLs([]string{track.HumanURL})
+				if err != nil {
+					slog.Error("error fetching new songs from URL: %v", err)
+					continue
+				}
+			}
+			if track.Source == "LocalFile" {
+				slog.Info("Track is from LocalFile")
+				song = []*player.Song{{
+					Title:        track.Title,
+					DownloadPath: track.DownloadPath,
+					Source:       player.SourceLocalFile,
+				}}
+			}
+
 			songs = append(songs, song...)
 		case "youtube_title":
 			songs, err = youtube.FetchSongsByTitle(songOrigin)
@@ -283,7 +291,11 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 
 	// Display current song information
 	if currentSong := d.Player.GetCurrentSong(); currentSong != nil {
-		content += fmt.Sprintf("\n*[%v](%v)*\n\n", currentSong.Title, currentSong.UserURL)
+		if currentSong.UserURL != "" {
+			content += fmt.Sprintf("\n*[%v](%v)*\n\n", currentSong.Title, currentSong.UserURL)
+		} else {
+			content += fmt.Sprintf("\n%v\n\n", currentSong.Title)
+		}
 		embedMsg.SetThumbnail(currentSong.Thumbnail.URL)
 	} else {
 		if len(d.Player.GetSongQueue()) > 0 {
@@ -303,9 +315,9 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 		// Separate counter variable starting from 1
 		counter := 1
 
-		for i, song := range playlist {
+		for i, elem := range playlist {
 			// Skip the first song if it's already playing
-			if i == 0 && d.Player.GetCurrentSong() != nil && song == d.Player.GetCurrentSong() {
+			if i == 0 && d.Player.GetCurrentSong() != nil && elem == d.Player.GetCurrentSong() {
 				continue
 			}
 
@@ -325,7 +337,11 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 			}
 
 			// Display playlist entry
-			content = fmt.Sprintf("%v\n` %v ` [%v](%v)", content, counter, song.Title, song.UserURL)
+			if elem.UserURL != "" {
+				content = fmt.Sprintf("%v\n` %v ` [%v](%v)", content, counter, elem.Title, elem.UserURL)
+			} else {
+				content = fmt.Sprintf("%v\n` %v ` %v", content, counter, elem.Title)
+			}
 			counter++
 		}
 	}
@@ -369,8 +385,8 @@ func parseOriginParameter(param string) (string, []string) {
 
 	// Check if the parameter contains file extensions
 	for _, part := range strings.Fields(param) {
-		if strings.HasSuffix(part, ".aac") || strings.HasSuffix(part, ".opus") || strings.HasSuffix(part, ".mp3") {
-			return "filename", []string{part}
+		if strings.HasSuffix(part, ".ac3") || strings.HasSuffix(part, ".aac") || strings.HasSuffix(part, ".opus") || strings.HasSuffix(part, ".mp3") || strings.HasSuffix(part, ".m4a") {
+			return "local_file", []string{part}
 		}
 	}
 

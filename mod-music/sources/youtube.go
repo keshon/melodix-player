@@ -40,14 +40,13 @@ func (y *Youtube) GetSongFromVideoURL(url string) (*player.Song, error) {
 	}
 
 	return &player.Song{
-		Title:       song.Title,
-		UserURL:     url,
-		DownloadURL: song.Formats.WithAudioChannels()[0].URL,
-		Duration:    song.Duration,
-		Thumbnail:   thumbnail,
-		ID:          song.ID,
-		Source:      player.SourceYouTube,
-		SongRaw:     song,
+		Title:        song.Title,
+		UserURL:      url,
+		DownloadPath: song.Formats.WithAudioChannels()[0].URL,
+		Duration:     song.Duration,
+		Thumbnail:    thumbnail,
+		ID:           song.ID,
+		Source:       player.SourceYouTube,
 	}, nil
 }
 
@@ -174,7 +173,7 @@ func (y *Youtube) FetchSongsByIDs(guildID string, ids []int) ([]*player.Song, er
 			return nil, fmt.Errorf("error getting track from history with ID %v", id)
 		}
 
-		song, err := y.GetAllSongsFromURL(track.URL)
+		song, err := y.GetAllSongsFromURL(track.HumanURL)
 		if err != nil {
 			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
 		}

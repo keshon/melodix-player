@@ -41,13 +41,13 @@ func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
 
 		if isValidStream(contentType) {
 			song = &player.Song{
-				Title:       u.Host,
-				UserURL:     u.String(),
-				DownloadURL: u.String(),
-				Thumbnail:   player.Thumbnail{},
-				Duration:    -1,
-				ID:          fmt.Sprintf("%d", hash),
-				Source:      player.SourceStream,
+				Title:        u.Host,
+				UserURL:      u.String(),
+				DownloadPath: u.String(),
+				Thumbnail:    player.Thumbnail{},
+				Duration:     -1,
+				ID:           fmt.Sprintf("%d", hash),
+				Source:       player.SourceStream,
 			}
 			songs = append(songs, song)
 		} else {

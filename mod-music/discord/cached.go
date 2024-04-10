@@ -2,7 +2,6 @@ package discord
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,12 +18,12 @@ func (d *Discord) handleCacheListCommand(s *discordgo.Session, m *discordgo.Mess
 	_, err := os.Stat(cacheGuildFolder)
 	if os.IsNotExist(err) {
 		// Cache folder does not exist, send a message indicating no files are cached
-		s.ChannelMessageSend(m.ChannelID, "No files cached for this guild.")
+		s.ChannelMessageSend(m.ChannelID, "No files cached for this guild ("+m.GuildID+").")
 		return
 	}
 
 	// Get a list of files in the cache folder
-	files, err := ioutil.ReadDir(cacheGuildFolder)
+	files, err := os.ReadDir(cacheGuildFolder)
 	if err != nil {
 		// Error reading the cache folder, send an error message
 		s.ChannelMessageSend(m.ChannelID, "Error reading cache folder.")
@@ -38,7 +37,7 @@ func (d *Discord) handleCacheListCommand(s *discordgo.Session, m *discordgo.Mess
 	// Iterate over the files and append their names and IDs to the buffer
 	for _, file := range files {
 		// Append file name and ID to the buffer
-		fileList.WriteString(fmt.Sprintf("- %s\n", file.Name()))
+		fileList.WriteString(fmt.Sprintf("- `%s`\n", file.Name()))
 	}
 
 	// Send the list of cached files as a message

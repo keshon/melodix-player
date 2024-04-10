@@ -7,12 +7,13 @@ import (
 )
 
 type Song struct {
-	Name        string        // Name of the song
-	UserURL     string        // URL provided by the user
-	DownloadURL string        // URL for downloading the song
-	Thumbnail   Thumbnail     // Thumbnail image for the song
-	Duration    time.Duration // Duration of the song
-	ID          string        // Unique ID for the song
+	Title        string        // Title of the song
+	HumanURL     string        // URL provided by the user
+	DownloadPath string        // Path/URL for downloading the song
+	Thumbnail    Thumbnail     // Thumbnail image for the song
+	Duration     time.Duration // Duration of the song
+	SongID       string        // Unique ID for the song
+	Source       string        // Source type of the song
 }
 
 type Thumbnail struct {
@@ -30,9 +31,9 @@ type HistoryTrackInfo struct {
 
 type IHistory interface {
 	AddTrackToHistory(guildID string, song *Song) error
-	AddPlaybackAllStats(guildID, ytid string, duration float64) error
-	AddPlaybackCountStats(guildID, ytid string) error
-	AddPlaybackDurationStats(guildID, ytid string, duration float64) error
+	AddPlaybackAllStats(guildID, songID string, duration float64) error
+	AddPlaybackCountStats(guildID, songID string) error
+	AddPlaybackDurationStats(guildID, songID string, duration float64) error
 	GetHistory(guildID string, sortBy string) ([]HistoryTrackInfo, error)
 	GetTrackFromHistory(guildID string, trackID uint) (db.Track, error)
 }
@@ -46,26 +47,30 @@ func NewHistory() IHistory {
 func (h *History) AddTrackToHistory(guildID string, song *Song) error {
 	var track *db.Track
 
-	existingTrack, err := db.GetTrackByYTID(song.ID)
+	existingTrack, err := db.GetTrackBySongID(song.SongID)
 	if err != nil {
 		newTrack := &db.Track{
-			YTID: song.ID,
-			Name: song.Name,
-			URL:  song.UserURL,
+			SongID:       song.SongID,
+			Title:        song.Title,
+			HumanURL:     song.HumanURL,
+			Source:       song.Source,
+			DownloadPath: song.DownloadPath,
 		}
 
 		if err := db.CreateTrack(newTrack); err != nil {
 			return err
 		}
 
-		existingTrack, _ = db.GetTrackByYTID(song.ID)
+		existingTrack, _ = db.GetTrackBySongID(song.SongID)
 	}
 
 	if existingTrack == nil {
 		newTrack := &db.Track{
-			YTID: song.ID,
-			Name: song.Name,
-			URL:  song.UserURL,
+			SongID:       song.SongID,
+			Title:        song.Title,
+			HumanURL:     song.HumanURL,
+			Source:       song.Source,
+			DownloadPath: song.DownloadPath,
 		}
 		track = newTrack
 	} else {
@@ -89,9 +94,9 @@ func (h *History) AddTrackToHistory(guildID string, song *Song) error {
 }
 
 // AddPlaybackStats updates all playback statistics (duration and count) for a track.
-func (h *History) AddPlaybackAllStats(guildID, ytid string, duration float64) error {
+func (h *History) AddPlaybackAllStats(guildID, songID string, duration float64) error {
 
-	existingTrackRecord, err := db.GetTrackByYTID(ytid)
+	existingTrackRecord, err := db.GetTrackBySongID(songID)
 	if err != nil {
 		return err
 	}
@@ -108,9 +113,9 @@ func (h *History) AddPlaybackAllStats(guildID, ytid string, duration float64) er
 }
 
 // AddPlaybackCountStats updates playback count statistics for a track.
-func (h *History) AddPlaybackCountStats(guildID, ytid string) error {
+func (h *History) AddPlaybackCountStats(guildID, songID string) error {
 
-	existingTrackRecord, err := db.GetTrackByYTID(ytid)
+	existingTrackRecord, err := db.GetTrackBySongID(songID)
 	if err != nil {
 		return err
 	}
@@ -127,9 +132,9 @@ func (h *History) AddPlaybackCountStats(guildID, ytid string) error {
 }
 
 // AddPlaybackDurationStats updates playback duration statistics for a track.
-func (h *History) AddPlaybackDurationStats(guildID, ytid string, duration float64) error {
+func (h *History) AddPlaybackDurationStats(guildID, songID string, duration float64) error {
 
-	existingTrackRecord, err := db.GetTrackByYTID(ytid)
+	existingTrackRecord, err := db.GetTrackBySongID(songID)
 	if err != nil {
 		return err
 	}

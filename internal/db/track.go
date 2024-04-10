@@ -1,11 +1,13 @@
 package db
 
 type Track struct {
-	ID        uint `gorm:"primaryKey;autoIncrement"`
-	YTID      string
-	Name      string
-	URL       string
-	Histories []History `gorm:"foreignKey:TrackID"`
+	ID           uint `gorm:"primaryKey;autoIncrement"`
+	SongID       string
+	Title        string
+	HumanURL     string
+	DownloadPath string
+	Source       string
+	Histories    []History `gorm:"foreignKey:TrackID"`
 }
 
 func CreateTrack(track *Track) error {
@@ -20,9 +22,9 @@ func GetTrackByID(id uint) (*Track, error) {
 	return &track, nil
 }
 
-func GetTrackByYTID(ytid string) (*Track, error) {
+func GetTrackBySongID(songID string) (*Track, error) {
 	var track Track
-	if err := DB.Where("yt_id = ?", ytid).First(&track).Error; err != nil {
+	if err := DB.Where("song_id = ?", songID).First(&track).Error; err != nil {
 		return nil, err
 	}
 	return &track, nil

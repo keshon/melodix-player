@@ -28,3 +28,8 @@ dist/
 .tools/
 tools/*
 tools/
+
+*.mp3
+*.aac
+*.ac3
+*.m4a

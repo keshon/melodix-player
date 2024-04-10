@@ -42,7 +42,7 @@ func (d *Discord) handleCacheUrlCommand(s *discordgo.Session, m *discordgo.Messa
 
 	// Download the video
 	videoFilePath := filepath.Join(uploadsFolder, filename+".mp4")
-	err = downloadURLToFile(videoFilePath, song.DownloadURL)
+	err = downloadURLToFile(videoFilePath, song.DownloadPath)
 	if err != nil {
 		slog.Error("Error downloading audio:", err)
 		return

@@ -9,7 +9,6 @@ import (
 
 	"github.com/keshon/melodix-player/mod-music/history"
 	"github.com/keshon/melodix-player/mod-music/third_party/dca"
-	kkdai_youtube "github.com/kkdai/youtube/v2"
 )
 
 type IPlayer interface {
@@ -59,14 +58,13 @@ type Player struct {
 }
 
 type Song struct {
-	Title       string               // Title of the song
-	UserURL     string               // URL provided by the user
-	DownloadURL string               // URL for downloading the song
-	Thumbnail   Thumbnail            // Thumbnail image for the song
-	Duration    time.Duration        // Duration of the song
-	ID          string               // Unique ID for the song
-	Source      SongSource           // Source type of the song
-	SongRaw     *kkdai_youtube.Video // Raw data from the source
+	Title        string        // Title of the song
+	UserURL      string        // URL provided by the user
+	DownloadPath string        // Path/URL for downloading the song
+	Thumbnail    Thumbnail     // Thumbnail image for the song
+	Duration     time.Duration // Duration of the song
+	ID           string        // Unique ID for the song
+	Source       SongSource    // Source type of the song
 }
 
 type Thumbnail struct {
@@ -80,12 +78,14 @@ type SongSource int32
 const (
 	SourceYouTube SongSource = iota
 	SourceStream
+	SourceLocalFile
 )
 
 func (source SongSource) String() string {
 	sources := map[SongSource]string{
-		SourceYouTube: "YouTube",
-		SourceStream:  "Stream",
+		SourceYouTube:   "YouTube",
+		SourceStream:    "Stream",
+		SourceLocalFile: "LocalFile",
 	}
 
 	return sources[source]

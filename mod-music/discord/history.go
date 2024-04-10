@@ -2,6 +2,7 @@ package discord
 
 import (
 	"fmt"
+	"strings"
 
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
@@ -45,13 +46,17 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 		}
 
 		duration := utils.FormatDuration(elem.History.Duration)
-		fieldContent := fmt.Sprintf("```id: %d```    ```count: %d```    ```duration: %v```", elem.History.TrackID, elem.History.PlayCount, duration)
+		fieldContent := fmt.Sprintf("```id %d```\t```x%d```\t```%v```\t```%v```", elem.History.TrackID, elem.History.PlayCount, duration, strings.ToLower(elem.Track.Source))
 
-		if remainingSpace := maxLimit - len(embedMsg.Fields) - len(fieldContent) - len(elem.Track.Name) - len(elem.Track.URL); remainingSpace < 0 {
+		if remainingSpace := maxLimit - len(embedMsg.Fields) - len(fieldContent) - len(elem.Track.Title) - len(elem.Track.HumanURL); remainingSpace < 0 {
 			break
 		}
 
-		embedMsg.AddField(fieldContent, fmt.Sprintf("[%v](%v)\n▬▬▬\n", elem.Track.Name, elem.Track.URL))
+		if elem.Track.HumanURL != "" {
+			embedMsg.AddField(fieldContent, fmt.Sprintf("[%v](%v)\n\n", elem.Track.Title, elem.Track.HumanURL))
+		} else {
+			embedMsg.AddField(fieldContent, fmt.Sprintf("%v\n\n", elem.Track.Title))
+		}
 	}
 
 	_, err = s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg.MessageEmbed)
