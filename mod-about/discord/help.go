@@ -10,7 +10,7 @@ import (
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
 	"github.com/keshon/melodix-player/internal/version"
-	"github.com/keshon/melodix-player/mod-helloworld/utils"
+	"github.com/keshon/melodix-player/mod-about/utils"
 )
 
 // handleHelpCommand handles the help command for the Discord bot.
