@@ -8,6 +8,8 @@ services:
       - ./data/avatars:/usr/project/assets/avatars
       - ./data/database.sqlite3:/usr/project/database.db
       - ./data/all-levels.log:/usr/project/logs/all-levels.log
+      - ./data/cache:/usr/project/cache
+      - ./data/upload:/usr/project/upload
     environment:
       - HOST    
       - DISCORD_COMMAND_PREFIX
