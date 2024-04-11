@@ -63,7 +63,7 @@ type Song struct {
 	Filepath  string        // Path/URL for downloading the song
 	Thumbnail Thumbnail     // Thumbnail image for the song
 	Duration  time.Duration // Duration of the song
-	ID        string        // Unique ID for the song
+	SongID    string        // Unique ID for the song
 	Source    SongSource    // Source type of the song
 }
 

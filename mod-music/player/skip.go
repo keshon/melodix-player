@@ -24,12 +24,12 @@ func (p *Player) Skip() error {
 
 	if len(p.GetSongQueue()) == 0 {
 		slog.Warn("is actually stopping...")
-		h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
+		h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().SongID)
 		p.Stop()
 	} else {
 		if len(p.SkipInterrupt) == 0 {
 			slog.Warn("is actually skipping to", p.GetSongQueue()[0].Title)
-			h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().ID)
+			h.AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().SongID)
 			p.SkipInterrupt <- true
 			time.Sleep(250 * time.Millisecond)
 			p.Play(0, nil)

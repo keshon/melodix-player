@@ -97,9 +97,12 @@ func (p *Player) Play(startAt int, song *Song) error {
 	p.SetCurrentStatus(StatusPlaying)
 
 	// Create song ID
-	songID := GetMD5Hash(p.GetCurrentSong().Title)
-	if p.GetCurrentSong().ID != "" {
-		songID = p.GetCurrentSong().ID
+	var songID string
+	slog.Fatal(p.GetCurrentSong().SongID)
+	if len(p.GetCurrentSong().SongID) > 0 {
+		songID = p.GetCurrentSong().SongID
+	} else {
+		songID = GetMD5Hash(p.GetCurrentSong().Title)
 	}
 
 	// Add song to history

@@ -45,3 +45,19 @@ func GetAllTracks() ([]Track, error) {
 	}
 	return tracks, nil
 }
+
+func GetTrackByFilepath(filepath string) (*Track, error) {
+	var track Track
+	if err := DB.Where("filepath = ?", filepath).First(&track).Error; err != nil {
+		return nil, err
+	}
+	return &track, nil
+}
+
+func GetTrackByURL(url string) (*Track, error) {
+	var track Track
+	if err := DB.Where("url = ?", url).First(&track).Error; err != nil {
+		return nil, err
+	}
+	return &track, nil
+}

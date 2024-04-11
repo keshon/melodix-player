@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
+	"github.com/keshon/melodix-player/internal/db"
 	"github.com/keshon/melodix-player/internal/version"
 	"github.com/keshon/melodix-player/mod-music/history"
 	"github.com/keshon/melodix-player/mod-music/player"
@@ -124,22 +126,36 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 
 		switch originType {
 		case "local_file":
-			slog.Error(originType)
-			songPath := "cache/" + guildID + "/" + songOrigin
+			slog.Info("Local file: ", songOrigin)
+
+			songPath := filepath.Join("cache", guildID, songOrigin)
 
 			if _, err := os.Stat(songPath); os.IsNotExist(err) {
 				slog.Error("No such file or directory: %v", err)
 				continue
 			}
 
-			song := player.Song{
-				Title:    songOrigin,
-				Filepath: songPath,
-				Source:   player.SourceLocalFile,
+			var song *player.Song
+			existingTrack, err := db.GetTrackByFilepath(songPath)
+			if err == nil {
+				song = &player.Song{
+					SongID:   existingTrack.SongID,
+					Title:    existingTrack.Title,
+					Filepath: existingTrack.Filepath,
+				}
+			} else {
+				song = &player.Song{
+					Title:    songOrigin,
+					Filepath: songPath,
+				}
 			}
 
-			songs = append(songs, &song)
+			song.Source = player.SourceLocalFile
+
+			songs = append(songs, song)
 		case "history_id":
+			slog.Info("History ID: ", songOrigin)
+
 			id, err := strconv.Atoi(songOrigin)
 			if err != nil {
 				slog.Error("Cannot convert string id to int id")
@@ -147,11 +163,14 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			}
 			h := history.NewHistory()
 			track, err := h.GetTrackFromHistory(guildID, uint(id))
+			slog.Error(track)
 			if err != nil {
 				slog.Error("Error getting track from history with ID %v", id)
 				continue
 			}
+
 			var song []*player.Song
+
 			if track.Source == "YouTube" {
 				slog.Info("Track is from YouTube")
 				song, err = youtube.GetAllSongsFromURL(track.URL)
@@ -172,6 +191,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 				slog.Info("Track is from LocalFile")
 				song = []*player.Song{{
 					Title:    track.Title,
+					URL:      track.URL,
 					Filepath: track.Filepath,
 					Source:   player.SourceLocalFile,
 				}}
@@ -179,18 +199,24 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 
 			songs = append(songs, song...)
 		case "youtube_title":
+			slog.Info("Youtube title: ", songOrigin)
+
 			songs, err = youtube.FetchSongsByTitle(songOrigin)
 			if err != nil {
 				slog.Warnf("Error fetching songs by title: %v", err)
 				continue
 			}
 		case "youtube_url":
+			slog.Info("Youtube URL: ", songOrigin)
+
 			songs, err = youtube.FetchSongsByURLs([]string{songOrigin})
 			if err != nil {
 				slog.Warnf("Error fetching songs by URL: %v", err)
 				continue
 			}
 		case "stream_url":
+			slog.Info("Stream URL: ", songOrigin)
+
 			songs, err = stream.FetchStreamsByURLs([]string{songOrigin})
 			if err != nil {
 				slog.Warnf("Error fetching stream by URL: %v", err)
@@ -292,10 +318,10 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 
 	// Display current song information
 	if currentSong := d.Player.GetCurrentSong(); currentSong != nil {
-		if currentSong.URL != "" {
-			content += fmt.Sprintf("\n*[%v](%v)*\n\n", currentSong.Title, currentSong.URL)
+		if len(currentSong.URL) > 0 {
+			content += fmt.Sprintf("\n**`%v`**\n[%v](%v)\n\n", strings.ToLower(currentSong.Source.String()), currentSong.Title, currentSong.URL)
 		} else {
-			content += fmt.Sprintf("\n%v\n\n", currentSong.Title)
+			content += fmt.Sprintf("\n**`%v`**\n%v\n\n", strings.ToLower(currentSong.Source.String()), currentSong.Title)
 		}
 		embedMsg.SetThumbnail(currentSong.Thumbnail.URL)
 	} else {

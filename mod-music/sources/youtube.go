@@ -45,7 +45,7 @@ func (y *Youtube) GetSongFromVideoURL(url string) (*player.Song, error) {
 		Filepath:  song.Formats.WithAudioChannels()[0].URL,
 		Duration:  song.Duration,
 		Thumbnail: thumbnail,
-		ID:        song.ID,
+		SongID:    song.ID,
 		Source:    player.SourceYouTube,
 	}, nil
 }
@@ -95,8 +95,8 @@ func (y *Youtube) GetAllSongsFromURL(url string) ([]*player.Song, error) {
 		// Sort the songs based on the order of playlistVideos.Videos
 		sort.SliceStable(songs, func(i, j int) bool {
 			// Get the index of each song's video ID in the playlist
-			indexI := videoIndex[songs[i].ID]
-			indexJ := videoIndex[songs[j].ID]
+			indexI := videoIndex[songs[i].SongID]
+			indexJ := videoIndex[songs[j].SongID]
 
 			// Compare the indices to determine the order
 			return indexI < indexJ

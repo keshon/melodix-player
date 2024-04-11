@@ -46,7 +46,7 @@ func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
 				Filepath:  u.String(),
 				Thumbnail: player.Thumbnail{},
 				Duration:  -1,
-				ID:        fmt.Sprintf("%d", hash),
+				SongID:    fmt.Sprintf("%d", hash),
 				Source:    player.SourceStream,
 			}
 			songs = append(songs, song)
