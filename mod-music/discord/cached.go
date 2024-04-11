@@ -37,7 +37,7 @@ func (d *Discord) handleCacheListCommand(s *discordgo.Session, m *discordgo.Mess
 	// Iterate over the files and append their names and IDs to the buffer
 	for _, file := range files {
 		// Append file name and ID to the buffer
-		fileList.WriteString(fmt.Sprintf("- `%s`\n", file.Name()))
+		fileList.WriteString(fmt.Sprintf("`%s`\n", file.Name()))
 	}
 
 	// Send the list of cached files as a message

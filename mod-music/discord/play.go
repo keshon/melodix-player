@@ -141,6 +141,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 				song = &player.Song{
 					SongID:   existingTrack.SongID,
 					Title:    existingTrack.Title,
+					URL:      existingTrack.URL,
 					Filepath: existingTrack.Filepath,
 				}
 			} else {
@@ -190,6 +191,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			if track.Source == "LocalFile" {
 				slog.Info("Track is from LocalFile")
 				song = []*player.Song{{
+					SongID:   track.SongID,
 					Title:    track.Title,
 					URL:      track.URL,
 					Filepath: track.Filepath,
@@ -318,8 +320,16 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 
 	// Display current song information
 	if currentSong := d.Player.GetCurrentSong(); currentSong != nil {
+		var sourceLabels string
 		if len(currentSong.URL) > 0 {
-			content += fmt.Sprintf("\n**`%v`**\n[%v](%v)\n\n", strings.ToLower(currentSong.Source.String()), currentSong.Title, currentSong.URL)
+
+			if currentSong.Source == player.SourceLocalFile && utils.IsYouTubeURL(currentSong.URL) {
+				sourceLabels = "`youtube cached`"
+			} else {
+				sourceLabels = "`" + strings.ToLower(currentSong.Source.String()) + "`"
+			}
+
+			content += fmt.Sprintf("\n**`%v`**\n[%v](%v)\n\n", sourceLabels, currentSong.Title, currentSong.URL)
 		} else {
 			content += fmt.Sprintf("\n**`%v`**\n%v\n\n", strings.ToLower(currentSong.Source.String()), currentSong.Title)
 		}

@@ -96,28 +96,19 @@ func (p *Player) Play(startAt int, song *Song) error {
 	p.SetStreamingSession(stream)
 	p.SetCurrentStatus(StatusPlaying)
 
-	// Create song ID
-	var songID string
-	slog.Fatal(p.GetCurrentSong().SongID)
-	if len(p.GetCurrentSong().SongID) > 0 {
-		songID = p.GetCurrentSong().SongID
-	} else {
-		songID = GetMD5Hash(p.GetCurrentSong().Title)
-	}
-
 	// Add song to history
 	historySong := &history.Song{
 		Title:     p.GetCurrentSong().Title,
 		URL:       p.GetCurrentSong().URL,
 		Filepath:  p.GetCurrentSong().Filepath,
 		Duration:  p.GetCurrentSong().Duration,
-		SongID:    songID,
+		SongID:    p.GetCurrentSong().SongID,
 		Thumbnail: history.Thumbnail(p.GetCurrentSong().Thumbnail),
 		Source:    p.GetCurrentSong().Source.String(),
 	}
 	p.GetHistory().AddTrackToHistory(p.GetVoiceConnection().GuildID, historySong)
 
-	if err := p.GetHistory().AddPlaybackCountStats(p.GetVoiceConnection().GuildID, songID); err != nil {
+	if err := p.GetHistory().AddPlaybackCountStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().SongID); err != nil {
 		slog.Errorf("error adding playback count stats to history: %v", err)
 	}
 
@@ -135,7 +126,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 			select {
 			case <-ticker.C:
 				if p.GetVoiceConnection() != nil && p.GetStreamingSession() != nil && p.GetCurrentSong() != nil && !p.GetStreamingSession().Paused() {
-					err := p.GetHistory().AddPlaybackDurationStats(p.GetVoiceConnection().GuildID, songID, float64(interval.Seconds()))
+					err := p.GetHistory().AddPlaybackDurationStats(p.GetVoiceConnection().GuildID, p.GetCurrentSong().SongID, float64(interval.Seconds()))
 					if err != nil {
 						slog.Warnf("Error adding playback duration stats to history: %v", err)
 					}
