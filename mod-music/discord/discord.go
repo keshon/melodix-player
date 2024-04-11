@@ -31,8 +31,6 @@ func NewDiscord(session *discordgo.Session) *Discord {
 	}
 
 	return &Discord{
-		// Player:            player.NewPlayer(guildID),
-		//Players:           make(map[string]player.IPlayer),
 		Session:           session,
 		IsInstanceActive:  true,
 		prefix:            config.DiscordCommandPrefix,
@@ -109,7 +107,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	case "cached":
 		d.handleCacheListCommand(s, m)
 	case "uploaded":
-		d.handleUploadListCommand(s, m)
+		d.handleUploadListCommand(s, m, parameter)
 	}
 }
 

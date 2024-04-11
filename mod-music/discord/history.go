@@ -8,6 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/mod-music/history"
+	"github.com/keshon/melodix-player/mod-music/player"
 	"github.com/keshon/melodix-player/mod-music/utils"
 )
 
@@ -46,7 +47,13 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 		}
 
 		duration := utils.FormatDuration(elem.History.Duration)
-		fieldContent := fmt.Sprintf("```id %d```\t```x%d```\t```%v```\t```%v```", elem.History.TrackID, elem.History.PlayCount, duration, strings.ToLower(elem.Track.Source))
+		var sourceLabels string
+		if elem.Track.Source == player.SourceLocalFile.String() && utils.IsYouTubeURL(elem.Track.URL) {
+			sourceLabels = "`youtube cached`"
+		} else {
+			sourceLabels = "`" + strings.ToLower(elem.Track.Source) + "`"
+		}
+		fieldContent := fmt.Sprintf("```id %d```\t```x%d```\t```%v```\t```%v```", elem.History.TrackID, elem.History.PlayCount, duration, sourceLabels)
 
 		if remainingSpace := maxLimit - len(embedMsg.Fields) - len(fieldContent) - len(elem.Track.Title) - len(elem.Track.URL); remainingSpace < 0 {
 			break
