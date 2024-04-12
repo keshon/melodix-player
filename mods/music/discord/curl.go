@@ -67,9 +67,9 @@ func (d *Discord) handleCacheUrlCommand(s *discordgo.Session, m *discordgo.Messa
 	CreatePathIfNotExists(cacheGuildFolder)
 
 	// Extract audio from video
-	audioFilename := replaceSpacesWithDots(song.Title) + ".aac"
+	audioFilename := replaceSpacesWithDelimeter(song.Title) + ".mp3"
 	audioFilePath := filepath.Join(cacheGuildFolder, audioFilename)
-	err = ffpmegExtractAudioFromVideo(videoFilePath, audioFilePath)
+	err = ffmpegExtractAudioFromVideo(videoFilePath, audioFilePath)
 	if err != nil {
 		slog.Error("Error extracting audio:", err)
 		return
@@ -171,14 +171,14 @@ func downloadURLToFile(filepath string, url string) (err error) {
 	return err
 }
 
-func ffpmegExtractAudioFromVideo(videoFilePath, audioFilePath string) error {
-	cmd := exec.Command("ffmpeg", "-i", videoFilePath, "-vn", "-acodec", "copy", audioFilePath)
+func ffmpegExtractAudioFromVideo(videoFilePath, audioFilePath string) error {
+	cmd := exec.Command("ffmpeg", "-i", videoFilePath, "-vn", "-acodec", "libmp3lame", "-b:a", "256k", audioFilePath)
 	err := cmd.Run()
 	if err != nil {
 		return err
 	}
 
-	slog.Infof("Audio extracted and saved to: %s\n", audioFilePath)
+	fmt.Printf("Audio extracted and saved to: %s\n", audioFilePath)
 	return nil
 }
 
@@ -190,7 +190,7 @@ func CreatePathIfNotExists(path string) error {
 	return nil
 }
 
-func replaceSpacesWithDots(filename string) string {
+func replaceSpacesWithDelimeter(filename string) string {
 	// Replace spaces with dots using strings.ReplaceAll
 	newFilename := strings.ReplaceAll(filename, " ", "_")
 	return newFilename

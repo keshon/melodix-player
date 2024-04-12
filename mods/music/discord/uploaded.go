@@ -56,9 +56,9 @@ func (d *Discord) handleUploadListCommand(s *discordgo.Session, m *discordgo.Mes
 				// Extract audio from video
 				videoFilePath := filepath.Join(uploadsFolder, file.Name())
 				filenameNoExt := stripExtension(file.Name())
-				audioFilename := replaceSpacesWithDots(filenameNoExt) + ".aac"
+				audioFilename := replaceSpacesWithDelimeter(filenameNoExt) + ".mp3"
 				audioFilePath := filepath.Join(cacheGuildFolder, audioFilename)
-				err = ffpmegExtractAudioFromVideo(videoFilePath, audioFilePath)
+				err = ffmpegExtractAudioFromVideo(videoFilePath, audioFilePath)
 				if err != nil {
 					slog.Error("Error extracting audio:", err)
 					continue

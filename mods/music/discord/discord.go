@@ -58,7 +58,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	command, parameter, err := parseCommandAndParameter(m.Message.Content, d.prefix)
+	command, param, err := parseCommandAndParameter(m.Message.Content, d.prefix)
 	if err != nil {
 		return
 	}
@@ -82,7 +82,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	slog.Infof("Received command \"%v\" (canonical \"%v\"), parameter \"%v\"", command, canonical, parameter)
+	slog.Infof("Received command \"%v\" (canonical \"%v\"), param \"%v\"", command, canonical, param)
 
 	switch canonical {
 	case "pause":
@@ -90,23 +90,23 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	case "resume":
 		d.handleResumeCommand(s, m)
 	case "play":
-		d.handlePlayCommand(s, m, parameter, false)
+		d.handlePlayCommand(s, m, param, false)
 	case "skip":
 		d.handleSkipCommand(s, m)
 	case "list":
 		d.handleShowQueueCommand(s, m)
 	case "add":
-		d.handlePlayCommand(s, m, parameter, true)
+		d.handlePlayCommand(s, m, param, true)
 	case "stop":
 		d.handleStopCommand(s, m)
 	case "history":
-		d.handleHistoryCommand(s, m, parameter)
+		d.handleHistoryCommand(s, m, param)
 	case "curl":
-		d.handleCacheUrlCommand(s, m, parameter)
+		d.handleCacheUrlCommand(s, m, param)
 	case "cached":
-		d.handleCacheListCommand(s, m)
+		d.handleCacheListCommand(s, m, param)
 	case "uploaded":
-		d.handleUploadListCommand(s, m, parameter)
+		d.handleUploadListCommand(s, m, param)
 	}
 }
 
@@ -123,12 +123,12 @@ func parseCommandAndParameter(content, pattern string) (string, string, error) {
 	}
 
 	command := strings.ToLower(words[0])
-	parameter := ""
+	param := ""
 	if len(words) > 1 {
-		parameter = strings.Join(words[1:], " ")
-		parameter = strings.TrimSpace(parameter)
+		param = strings.Join(words[1:], " ")
+		param = strings.TrimSpace(param)
 	}
-	return command, parameter, nil
+	return command, param, nil
 }
 
 func getCanonicalCommand(alias string, commandAliases [][]string) string {
