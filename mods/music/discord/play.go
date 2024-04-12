@@ -15,10 +15,10 @@ import (
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/db"
 	"github.com/keshon/melodix-player/internal/version"
-	"github.com/keshon/melodix-player/mod-music/history"
-	"github.com/keshon/melodix-player/mod-music/player"
-	"github.com/keshon/melodix-player/mod-music/sources"
-	"github.com/keshon/melodix-player/mod-music/utils"
+	"github.com/keshon/melodix-player/mods/music/history"
+	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/sources"
+	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
 // handlePlayCommand handles the play command for Discord.

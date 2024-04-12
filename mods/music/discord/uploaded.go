@@ -9,7 +9,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/db"
-	"github.com/keshon/melodix-player/mod-music/player"
+	"github.com/keshon/melodix-player/mods/music/player"
 )
 
 func (d *Discord) handleUploadListCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {
@@ -55,7 +55,8 @@ func (d *Discord) handleUploadListCommand(s *discordgo.Session, m *discordgo.Mes
 
 				// Extract audio from video
 				videoFilePath := filepath.Join(uploadsFolder, file.Name())
-				audioFilename := sanitizeFilename(file.Name()) + ".aac"
+				filenameNoExt := stripExtension(file.Name())
+				audioFilename := replaceSpacesWithDots(filenameNoExt) + ".aac"
 				audioFilePath := filepath.Join(cacheGuildFolder, audioFilename)
 				err = ffpmegExtractAudioFromVideo(videoFilePath, audioFilePath)
 				if err != nil {

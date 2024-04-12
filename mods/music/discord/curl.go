@@ -7,15 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/db"
-	"github.com/keshon/melodix-player/mod-music/player"
-	"github.com/keshon/melodix-player/mod-music/sources"
+	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/sources"
 )
 
 const (
@@ -68,7 +67,7 @@ func (d *Discord) handleCacheUrlCommand(s *discordgo.Session, m *discordgo.Messa
 	CreatePathIfNotExists(cacheGuildFolder)
 
 	// Extract audio from video
-	audioFilename := sanitizeFilename(song.Title) + ".aac"
+	audioFilename := replaceSpacesWithDots(song.Title) + ".aac"
 	audioFilePath := filepath.Join(cacheGuildFolder, audioFilename)
 	err = ffpmegExtractAudioFromVideo(videoFilePath, audioFilePath)
 	if err != nil {
@@ -191,15 +190,31 @@ func CreatePathIfNotExists(path string) error {
 	return nil
 }
 
-func sanitizeFilename(filename string) string {
-	regex := regexp.MustCompile(`[^\w\-.]+`)
-	sanitized := regex.ReplaceAllString(filename, "_")
+func replaceSpacesWithDots(filename string) string {
+	// Replace spaces with dots using strings.ReplaceAll
+	newFilename := strings.ReplaceAll(filename, " ", "_")
+	return newFilename
+}
 
-	sanitized = strings.TrimSpace(sanitized)
+func stripExtension(filename string) string {
+	// Use filepath.Base to get the base name of the file
+	basename := filepath.Base(filename)
 
-	if len(sanitized) > maxFilenameLength {
-		sanitized = sanitized[:maxFilenameLength]
+	// Handle hidden files (names starting with a dot)
+	if strings.HasPrefix(basename, ".") {
+		return basename
 	}
 
-	return sanitized
+	// Use filepath.Ext to get the extension of the file
+	extension := filepath.Ext(basename)
+
+	// Handle case where there's no extension
+	if extension == "" {
+		return basename
+	}
+
+	// Remove the extension from the basename
+	nameWithoutExtension := strings.TrimSuffix(basename, extension)
+
+	return nameWithoutExtension
 }

@@ -9,13 +9,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
-	"github.com/keshon/melodix-player/mod-music/player"
-	"github.com/keshon/melodix-player/mod-music/utils"
+	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
 type Discord struct {
 	Player               player.IPlayer
-	Players              map[string]player.IPlayer
 	Session              *discordgo.Session
 	GuildID              string
 	IsInstanceActive     bool
@@ -39,7 +38,7 @@ func NewDiscord(session *discordgo.Session) *Discord {
 }
 
 func (d *Discord) Start(guildID string) {
-	slog.Infof(`Discord instance of mod-music started for guild id %v`, guildID)
+	slog.Infof(`Discord instance of mods/music started for guild id %v`, guildID)
 
 	d.Session.AddHandler(d.Commands)
 	d.GuildID = guildID

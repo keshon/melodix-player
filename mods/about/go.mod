@@ -1,4 +1,4 @@
-module github.com/keshon/melodix-player/mod-about
+module github.com/keshon/melodix-player/mods/about
 
 go 1.21.1
 

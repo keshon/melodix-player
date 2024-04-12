@@ -1,4 +1,4 @@
-module github.com/keshon/melodix-player/mod-music
+module github.com/keshon/melodix-player/mods/music
 
 go 1.21.1
 

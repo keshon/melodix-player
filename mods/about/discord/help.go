@@ -10,7 +10,7 @@ import (
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
 	"github.com/keshon/melodix-player/internal/version"
-	"github.com/keshon/melodix-player/mod-about/utils"
+	"github.com/keshon/melodix-player/mods/about/utils"
 )
 
 // handleHelpCommand handles the help command for the Discord bot.
@@ -41,9 +41,14 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	queue := fmt.Sprintf("`%vadd [title/url/id]` — add track\n", prefix)
 	list := fmt.Sprintf("`%vlist` — show current queue\n", prefix)
 
-	history := fmt.Sprintf("`%vhistory`\n", prefix)
-	historyByDuration := fmt.Sprintf(".. by duration `%vhistory duration`\n", prefix)
-	historyByPlaycount := fmt.Sprintf(".. by play count `%vhistory count`\n\n", prefix)
+	history := fmt.Sprintf("`%vhistory` — show played tracks\n", prefix)
+	historyByDuration := fmt.Sprintf("`%vhistory duration` — sort by duration \n", prefix)
+	historyByPlaycount := fmt.Sprintf("`%vhistory count` — sort by play count \n\n", prefix)
+
+	cached := fmt.Sprintf("`%vcached` — show chached tracks\n", prefix)
+	curl := fmt.Sprintf("`%vcurl [url]` — cache track (youtube only)\n", prefix)
+	uploaded := fmt.Sprintf("`%vuploaded` — show uploaded videos\n", prefix)
+	uploadedExtract := fmt.Sprintf("`%vuploaded extract` — cache audio from uploaded videos\n", prefix)
 
 	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
 	about := fmt.Sprintf("`%vabout`, `%vv` — show version\n", prefix, prefix)
@@ -58,6 +63,8 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 		AddField("", "**Queue**\n"+queue+list).
 		AddField("", "").
 		AddField("", "**History**\n"+history+historyByDuration+historyByPlaycount).
+		AddField("", "").
+		AddField("", "**Caching**\n"+cached+curl+uploaded+uploadedExtract).
 		AddField("", "").
 		AddField("", "**Information**\n"+help+about).
 		AddField("", "").

@@ -7,9 +7,9 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-player/mod-music/history"
-	"github.com/keshon/melodix-player/mod-music/player"
-	"github.com/keshon/melodix-player/mod-music/utils"
+	"github.com/keshon/melodix-player/mods/music/history"
+	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
 func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {

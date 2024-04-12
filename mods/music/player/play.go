@@ -12,9 +12,9 @@ import (
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
 
-	"github.com/keshon/melodix-player/mod-music/history"
-	"github.com/keshon/melodix-player/mod-music/third_party/dca"
-	"github.com/keshon/melodix-player/mod-music/utils"
+	"github.com/keshon/melodix-player/mods/music/history"
+	"github.com/keshon/melodix-player/mods/music/third_party/dca"
+	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
 // Down below is One Big Fat Function to play a song

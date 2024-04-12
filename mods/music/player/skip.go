@@ -6,7 +6,7 @@ import (
 
 	"github.com/gookit/slog"
 
-	"github.com/keshon/melodix-player/mod-music/history"
+	"github.com/keshon/melodix-player/mods/music/history"
 )
 
 func (p *Player) Skip() error {

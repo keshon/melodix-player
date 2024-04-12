@@ -11,8 +11,8 @@ import (
 	"sync"
 
 	"github.com/gookit/slog"
-	"github.com/keshon/melodix-player/mod-music/history"
-	"github.com/keshon/melodix-player/mod-music/player"
+	"github.com/keshon/melodix-player/mods/music/history"
+	"github.com/keshon/melodix-player/mods/music/player"
 
 	kkdai_youtube "github.com/kkdai/youtube/v2"
 )

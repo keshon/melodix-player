@@ -8,7 +8,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
-	"github.com/keshon/melodix-player/mod-about/utils"
+	"github.com/keshon/melodix-player/mods/about/utils"
 )
 
 type Discord struct {

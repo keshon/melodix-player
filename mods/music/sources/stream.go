@@ -9,7 +9,7 @@ import (
 	"github.com/gookit/slog"
 
 	"github.com/keshon/melodix-player/internal/config"
-	"github.com/keshon/melodix-player/mod-music/player"
+	"github.com/keshon/melodix-player/mods/music/player"
 )
 
 type Stream struct{}
