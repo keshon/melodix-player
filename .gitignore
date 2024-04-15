@@ -33,3 +33,7 @@ tools/
 *.aac
 *.ac3
 *.m4a
+*.mp4
+*.flv
+*.avi
+*.webm
