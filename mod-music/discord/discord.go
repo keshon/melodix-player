@@ -61,7 +61,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	command, parameter, err := parseCommandAndParameter(m.Message.Content, d.prefix)
+	command, params, err := splitCommandAndParameter(m.Message.Content, d.prefix)
 	if err != nil {
 		return
 	}
@@ -85,7 +85,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	slog.Infof("Received command \"%v\" (canonical \"%v\"), parameter \"%v\"", command, canonical, parameter)
+	slog.Infof("Received command \"%v\" (canonical \"%v\"), parameter \"%v\"", command, canonical, params)
 
 	switch canonical {
 	case "pause":
@@ -93,19 +93,19 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	case "resume":
 		d.handleResumeCommand(s, m)
 	case "play":
-		d.handlePlayCommand(s, m, parameter, false)
+		d.handlePlayCommand(s, m, params, false)
 	case "skip":
 		d.handleSkipCommand(s, m)
 	case "list":
 		d.handleShowQueueCommand(s, m)
 	case "add":
-		d.handlePlayCommand(s, m, parameter, true)
+		d.handlePlayCommand(s, m, params, true)
 	case "stop":
 		d.handleStopCommand(s, m)
 	case "history":
-		d.handleHistoryCommand(s, m, parameter)
+		d.handleHistoryCommand(s, m, params)
 	case "curl":
-		d.handleCacheUrlCommand(s, m, parameter)
+		d.handleCacheUrlCommand(s, m, params)
 	case "cached":
 		d.handleCacheListCommand(s, m)
 	case "uploaded":
@@ -113,14 +113,14 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func parseCommandAndParameter(content, pattern string) (string, string, error) {
-	if !strings.HasPrefix(content, pattern) {
-		return "", "", fmt.Errorf("pattern not found")
+func splitCommandAndParameter(content, commandPrefix string) (string, string, error) {
+	if !strings.HasPrefix(content, commandPrefix) {
+		return "", "", fmt.Errorf("command prefix not found")
 	}
 
-	content = content[len(pattern):]
+	commandAndParams := content[len(commandPrefix):]
 
-	words := strings.Fields(content)
+	words := strings.Fields(commandAndParams)
 	if len(words) == 0 {
 		return "", "", fmt.Errorf("no command found")
 	}

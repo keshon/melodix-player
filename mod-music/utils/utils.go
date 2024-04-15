@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -262,4 +263,23 @@ func findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (fou
 func IsYouTubeURL(url string) bool {
 	pattern := regexp.MustCompile(`^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.*$`)
 	return pattern.MatchString(strings.ToLower(url))
+}
+
+func IsAudioFile(fileName string) bool {
+	fileName = strings.ToLower(fileName)
+
+	audioExtensions := []string{".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a"}
+
+	for _, ext := range audioExtensions {
+		if strings.HasSuffix(fileName, ext) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func IsValidHttpUrl(u string) bool {
+	_, err := url.Parse(u)
+	return err == nil
 }

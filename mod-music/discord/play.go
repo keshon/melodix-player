@@ -39,7 +39,7 @@ func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCr
 		slog.Error("Error sending 'please wait' message: %v", err)
 	}
 
-	originType, origins := parseOriginParameter(param)
+	originType, origins := splitParamsToOriginsAndType(param)
 
 	if len(origins) <= 0 {
 		embedStr = "No songs or streams were found by your query."
@@ -391,43 +391,71 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 //
 // param string - the parameter to be parsed
 // (string, []string) - the type and value to be returned
-func parseOriginParameter(param string) (string, []string) {
+func splitParamsToOriginsAndType(param string) (string, []string) {
 	param = strings.TrimSpace(param)
 
 	if len(param) == 0 {
 		return "", []string{}
 	}
 
-	// Check if the parameter is a URL
-	u, err := url.Parse(param)
-	if err == nil && (u.Scheme == "http" || u.Scheme == "https") {
-		paramSlice := strings.Fields(param)
-		if utils.IsYouTubeURL(u.Host) {
-			return "youtube_url", paramSlice
-		}
-		return "stream_url", paramSlice
-	}
+	originType := ""
 
-	// Check if the parameter contains numeric IDs
-	allValidIDs := true
-	for _, id := range strings.Fields(param) {
-		if _, err := strconv.Atoi(id); err != nil {
-			allValidIDs = false
-			break
+	// If has youtube keywords (assuming it's a link)
+	if strings.Contains(param, "youtube") || strings.Contains(param, "youtu.be") {
+		slog.Info("Possbile youtube urls: ", param)
+		urlsSlice := strings.Fields(param)
+		ytUrls := []string{}
+		for _, url := range urlsSlice {
+			if utils.IsYouTubeURL(url) {
+				ytUrls = append(ytUrls, url)
+				originType = "youtube_url"
+			}
+		}
+		return originType, ytUrls
+	} else {
+		// Any non youtube link
+		if strings.HasPrefix(param, "https") || strings.HasPrefix(param, "http") {
+			slog.Info("Possible stream urls: ", param)
+			urlsSlice := strings.Fields(param)
+			streamUrls := []string{}
+			for _, url := range urlsSlice {
+				if utils.IsValidHttpUrl(url) {
+					streamUrls = append(streamUrls, url)
+					originType = "stream_url"
+				}
+			}
+			return originType, streamUrls
+		} else {
+			if strings.Contains(".mp3", param) || strings.Contains(".wav", param) || strings.Contains(".ogg", param) || strings.Contains(".flac", param) || strings.Contains(".aac", param) || strings.Contains(".m4a", param) {
+				slog.Info("Possible files: ", param)
+				// Check if the parameter contains numeric IDs
+				filesSlice := strings.Fields(param)
+				files := []string{}
+				for _, file := range filesSlice {
+					if utils.IsAudioFile(file) {
+						files = append(files, file)
+						originType = "local_file"
+					}
+				}
+				return originType, files
+			} else {
+				slog.Info("Possible history ids: ", param)
+				allValidIDs := true
+				for _, id := range strings.Fields(param) {
+					if _, err := strconv.Atoi(id); err != nil {
+						allValidIDs = false
+						break
+					}
+				}
+				if allValidIDs {
+					return "history_id", strings.Fields(param)
+				}
+
+				// Threat as normal text (song title on youtube)
+				// If none of the above conditions are met, treat it as a YouTube title
+				encodedTitle := url.QueryEscape(param)
+				return "youtube_title", []string{encodedTitle}
+			}
 		}
 	}
-	if allValidIDs {
-		return "history_id", strings.Fields(param)
-	}
-
-	// Check if the parameter contains file extensions
-	for _, part := range strings.Fields(param) {
-		if strings.HasSuffix(part, ".ac3") || strings.HasSuffix(part, ".aac") || strings.HasSuffix(part, ".opus") || strings.HasSuffix(part, ".mp3") || strings.HasSuffix(part, ".m4a") {
-			return "local_file", []string{part}
-		}
-	}
-
-	// If none of the above conditions are met, treat it as a YouTube title
-	encodedTitle := url.QueryEscape(param)
-	return "youtube_title", []string{encodedTitle}
 }
