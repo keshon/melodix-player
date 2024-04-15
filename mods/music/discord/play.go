@@ -426,7 +426,7 @@ func splitParamsToOriginsAndType(param string) (string, []string) {
 			}
 			return originType, streamUrls
 		} else {
-			if strings.Contains(".mp3", param) || strings.Contains(".wav", param) || strings.Contains(".ogg", param) || strings.Contains(".flac", param) || strings.Contains(".aac", param) || strings.Contains(".m4a", param) {
+			if strings.Contains(param, ".mp3") {
 				slog.Info("Possible files: ", param)
 				// Check if the parameter contains numeric IDs
 				filesSlice := strings.Fields(param)
