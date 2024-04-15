@@ -46,9 +46,10 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	historyByPlaycount := fmt.Sprintf("`%vhistory count` — sort by play count \n\n", prefix)
 
 	cached := fmt.Sprintf("`%vcached` — show chached tracks\n", prefix)
-	curl := fmt.Sprintf("`%vcurl [url]` — cache track (youtube only)\n", prefix)
+	cachedSync := fmt.Sprintf("`%vcached sync` — sync manually added files to cache\n", prefix)
+	curl := fmt.Sprintf("`%vcurl [url]` — cache track (youtube url only)\n", prefix)
 	uploaded := fmt.Sprintf("`%vuploaded` — show uploaded videos\n", prefix)
-	uploadedExtract := fmt.Sprintf("`%vuploaded extract` — cache audio from uploaded videos\n", prefix)
+	uploadedExtract := fmt.Sprintf("`%vuploaded extract` — cache audio from manually uploaded videos\n", prefix)
 
 	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
 	about := fmt.Sprintf("`%vabout`, `%vv` — show version\n", prefix, prefix)
@@ -64,7 +65,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 		AddField("", "").
 		AddField("", "**History**\n"+history+historyByDuration+historyByPlaycount).
 		AddField("", "").
-		AddField("", "**Caching**\n"+cached+curl+uploaded+uploadedExtract).
+		AddField("", "**Caching**\n"+cached+cachedSync+curl+uploaded+uploadedExtract).
 		AddField("", "").
 		AddField("", "**Information**\n"+help+about).
 		AddField("", "").
