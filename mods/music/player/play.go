@@ -1,17 +1,17 @@
 package player
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net/url"
+	"os/exec"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
-
 	"github.com/keshon/melodix-player/mods/music/history"
 	"github.com/keshon/melodix-player/mods/music/third_party/dca"
 	"github.com/keshon/melodix-player/mods/music/utils"
@@ -223,7 +223,31 @@ func (p *Player) Play(startAt int, song *Song) error {
 				return nil
 
 			case p.GetCurrentSong().Source == SourceLocalFile:
-				// do nothing
+				slog.Info("Source is a local file, checking for song metrics if unexpected interruption")
+
+				songDuration, songPosition, err := p.calculateSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
+
+				if err != nil {
+					return fmt.Errorf("error getting song metrics: %w", err)
+				}
+
+				if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
+					startAt := songPosition.Seconds()
+
+					p.GetVoiceConnection().Speaking(false)
+
+					slog.Warnf("Unexpected interruption confirmed, restarting song: \"%v\" from %vs", p.GetCurrentSong().Title, int(startAt))
+
+					go func() {
+						err := p.Play(int(startAt), p.GetCurrentSong())
+						if err != nil {
+							slog.Errorf("error restarting song: %w", err)
+						}
+					}()
+
+					return nil
+				}
+				// fallthrough
 			}
 
 		}
@@ -362,15 +386,25 @@ func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, stream
 	streamingPosition := streamingSession.PlaybackPosition()
 	delay := encodingDuration - streamingPosition
 
-	parsedURL, err := url.Parse(song.Filepath)
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to parse URL: %v", err)
-	}
-	queryParams := parsedURL.Query()
-
-	dur, err := utils.ParseFloat64(queryParams.Get("dur"))
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to parse duration: %v", err)
+	var dur float64
+	switch song.Source {
+	case SourceYouTube:
+		parsedURL, err := url.Parse(song.Filepath)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to parse URL: %v", err)
+		}
+		queryParams := parsedURL.Query()
+		dur, err = utils.ParseFloat64(queryParams.Get("dur"))
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to parse duration: %v", err)
+		}
+	case SourceLocalFile:
+		dur, err = getMP3Duration(song.Filepath)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to parse duration: %v", err)
+		}
+	default:
+		return 0, 0, fmt.Errorf("unknown source: %v", song.Source)
 	}
 
 	duration, err = time.ParseDuration(fmt.Sprintf("%vs", dur))
@@ -385,8 +419,25 @@ func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, stream
 	return duration, position, nil
 }
 
-func GetMD5Hash(text string) string {
-	hasher := md5.New()
-	hasher.Write([]byte(text))
-	return hex.EncodeToString(hasher.Sum(nil))
+func getMP3Duration(filePath string) (float64, error) {
+	cmd := exec.Command("ffmpeg", "-i", filePath, "-f", "null", "-")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return 0, err
+	}
+
+	// Extract duration information using regular expression
+	durationRegex := regexp.MustCompile(`Duration: (\d{2}):(\d{2}):(\d{2})\.\d+`)
+	matches := durationRegex.FindStringSubmatch(string(output))
+	if len(matches) != 4 {
+		return 0, fmt.Errorf("duration not found in ffmpeg output")
+	}
+
+	// Convert hours, minutes, and seconds to seconds and combine
+	hours, _ := strconv.Atoi(matches[1])
+	minutes, _ := strconv.Atoi(matches[2])
+	seconds, _ := strconv.Atoi(matches[3])
+	totalSeconds := float64(hours*3600 + minutes*60 + seconds)
+
+	return totalSeconds, nil
 }
