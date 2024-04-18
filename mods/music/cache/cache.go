@@ -12,6 +12,7 @@ import (
 
 	"github.com/keshon/melodix-player/internal/db"
 	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/sources"
 )
 
 // WIP
@@ -30,7 +31,11 @@ type ICache interface {
 }
 
 // Cache struct for handling cache-related operations
-type Cache struct{}
+type Cache struct {
+	uploadsFolder string
+	cacheFolder   string
+	guildID       string
+}
 
 // NewCache initializes a new Cache struct
 func NewCache() *Cache {
@@ -38,8 +43,81 @@ func NewCache() *Cache {
 }
 
 func (c *Cache) Curl(url string) (string, error) {
-	// Your implementation here
-	return "", nil
+	yt := sources.NewYoutube()
+	song, err := yt.GetSongFromVideoURL(url)
+	if err != nil {
+		return "", err
+	}
+	// Generate unique filename
+	filename := fmt.Sprintf("%d", time.Now().Unix())
+
+	// Download the video
+	videoFilePath := filepath.Join(c.uploadsFolder, filename+".mp4")
+	err = c.downloadFile(videoFilePath, song.Filepath)
+	if err != nil {
+		return "", err
+	}
+
+	// Get the file size and format information
+	fileInfo, err := os.Stat(videoFilePath)
+	if err != nil {
+		return "", err
+	}
+	fileSize := c.humanReadableSize(fileInfo.Size())
+	fileFormat := filepath.Ext(videoFilePath)
+
+	// Check if cache folder for guild exists, create if not
+	cacheGuildFolder := filepath.Join(c.cacheFolder, c.guildID)
+	c.createPathIfNotExists(cacheGuildFolder)
+
+	// Extract audio from video
+	audioFilename := c.sanitizeName(song.Title) + ".mp3"
+	audioFilePath := filepath.Join(cacheGuildFolder, audioFilename)
+	err = c.extractAudio(videoFilePath, audioFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	// Remove the temporary video file
+	err = os.Remove(videoFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	// Check if cached file exists in database
+	existingTrack, err := db.GetTrackBySongID(song.SongID)
+	if err == nil {
+		existingTrack.Filepath = audioFilePath
+		existingTrack.Source = player.SourceLocalFile.String()
+		err := db.UpdateTrack(existingTrack)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		newTrack := &db.Track{
+			SongID:   song.SongID,
+			Title:    song.Title,
+			URL:      song.URL,
+			Source:   player.SourceLocalFile.String(),
+			Filepath: audioFilePath,
+		}
+		err = db.CreateTrack(newTrack)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// Get the audio file size and format
+	audioFileInfo, err := os.Stat(audioFilePath)
+	if err != nil {
+		return "", err
+	}
+
+	audioFileSize := c.humanReadableSize(audioFileInfo.Size())
+
+	message := fmt.Sprintf("File Size: %s\nFile Format: %s\nAudio File Size: %s", fileSize, fileFormat, audioFileSize)
+
+	return message, nil
 }
 
 // SyncFiles syncs cached files to the database
@@ -113,10 +191,6 @@ func (c *Cache) stripExtension(filename string) string {
 	}
 	nameWithoutExtension := strings.TrimSuffix(basename, extension)
 	return nameWithoutExtension
-}
-
-func (c *Cache) generateTempFilename() string {
-	return fmt.Sprintf("%d", time.Now().Unix())
 }
 
 func (c *Cache) humanReadableSize(size int64) string {
