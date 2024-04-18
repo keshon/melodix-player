@@ -77,7 +77,7 @@ func (c *Cache) downloadFile(filepath, url string) error {
 	return err
 }
 
-func extractAudio(videoFilePath, audioFilePath string) error {
+func (c *Cache) extractAudio(videoFilePath, audioFilePath string) error {
 	cmd := exec.Command("ffmpeg", "-i", videoFilePath, "-vn", "-acodec", "libmp3lame", "-b:a", "256k", audioFilePath)
 	err := cmd.Run()
 	if err != nil {
@@ -119,7 +119,7 @@ func (c *Cache) generateTempFilename() string {
 	return fmt.Sprintf("%d", time.Now().Unix())
 }
 
-func humanReadableSize(size int64) string {
+func (c *Cache) humanReadableSize(size int64) string {
 	const (
 		b = 1 << (10 * iota)
 		kb
