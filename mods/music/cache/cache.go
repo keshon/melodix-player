@@ -38,8 +38,12 @@ type Cache struct {
 }
 
 // NewCache initializes a new Cache struct
-func NewCache() *Cache {
-	return &Cache{}
+func NewCache(uploadsFolder, cacheFolder, guildID string) *Cache {
+	return &Cache{
+		uploadsFolder: uploadsFolder,
+		cacheFolder:   cacheFolder,
+		guildID:       guildID,
+	}
 }
 
 func (c *Cache) Curl(url string) (string, error) {
@@ -55,13 +59,13 @@ func (c *Cache) Curl(url string) (string, error) {
 	videoFilePath := filepath.Join(c.uploadsFolder, filename+".mp4")
 	err = c.downloadFile(videoFilePath, song.Filepath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error downloading video %v", err)
 	}
 
 	// Get the file size and format information
 	fileInfo, err := os.Stat(videoFilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting file information %v", err)
 	}
 	fileSize := c.humanReadableSize(fileInfo.Size())
 	fileFormat := filepath.Ext(videoFilePath)
@@ -75,13 +79,13 @@ func (c *Cache) Curl(url string) (string, error) {
 	audioFilePath := filepath.Join(cacheGuildFolder, audioFilename)
 	err = c.extractAudio(videoFilePath, audioFilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error extracting audio %v", err)
 	}
 
 	// Remove the temporary video file
 	err = os.Remove(videoFilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error removing temporary video file %v", err)
 	}
 
 	// Check if cached file exists in database
@@ -91,7 +95,7 @@ func (c *Cache) Curl(url string) (string, error) {
 		existingTrack.Source = player.SourceLocalFile.String()
 		err := db.UpdateTrack(existingTrack)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("error updating track in database %v", err)
 		}
 	} else {
 		newTrack := &db.Track{
@@ -103,14 +107,14 @@ func (c *Cache) Curl(url string) (string, error) {
 		}
 		err = db.CreateTrack(newTrack)
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("error creating track in database %v", err)
 		}
 	}
 
 	// Get the audio file size and format
 	audioFileInfo, err := os.Stat(audioFilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting audio file information %v", err)
 	}
 
 	audioFileSize := c.humanReadableSize(audioFileInfo.Size())
@@ -120,46 +124,68 @@ func (c *Cache) Curl(url string) (string, error) {
 	return message, nil
 }
 
-// SyncFiles syncs cached files to the database
-func (c *Cache) syncFilesToDB(guildID string) error {
-	// Your implementation here
-
-	return nil
-}
-
 // ListFiles lists cached files
-func (c *Cache) listFiles(guildID, folder string) (string, error) {
-	// Your implementation here
+func (c *Cache) listFiles() (string, error) {
+	// Get the guild ID
+	guildID := c.guildID
+	cacheFolder := c.cacheFolder
 
-	return "", nil
+	// Check if the cache folder for the guild exists
+	cacheGuildFolder := filepath.Join(cacheFolder, guildID)
+	_, err := os.Stat(cacheGuildFolder)
+	if os.IsNotExist(err) {
+		return "", fmt.Errorf("cache folder for guild %s does not exist", guildID)
+	}
+
+	// Get a list of files in the cache folder
+	files, err := os.ReadDir(cacheGuildFolder)
+	if err != nil {
+		return "", fmt.Errorf("error reading cache folder for guild %s: %v", guildID, err)
+	}
+
+	// Initialize a buffer to store the file list
+	var fileList strings.Builder
+	fileList.WriteString("Cached files:\n")
+
+	// Iterate over the files and append their names and IDs to the buffer
+	for _, file := range files {
+		// Append file name and ID to the buffer
+		fileList.WriteString(fmt.Sprintf("`%s`\n", file.Name()))
+	}
+
+	return fileList.String(), nil
 }
 
 func (c *Cache) downloadFile(filepath, url string) error {
 	out, err := os.Create(filepath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create file %v", err)
 	}
 	defer out.Close()
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to download file %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
+		return fmt.Errorf("bad status %s", resp.Status)
 	}
 
 	_, err = io.Copy(out, resp.Body)
-	return err
+	if err != nil {
+		return fmt.Errorf("error copying file %v", err)
+	}
+
+	return nil
 }
 
 func (c *Cache) extractAudio(videoFilePath, audioFilePath string) error {
 	cmd := exec.Command("ffmpeg", "-i", videoFilePath, "-vn", "-acodec", "libmp3lame", "-b:a", "256k", audioFilePath)
 	err := cmd.Run()
 	if err != nil {
-		return err
+		return fmt.Errorf("error extracting audio %v", err)
 	}
 
 	fmt.Printf("Audio extracted and saved to: %s\n", audioFilePath)
@@ -169,7 +195,7 @@ func (c *Cache) extractAudio(videoFilePath, audioFilePath string) error {
 func (c *Cache) createPathIfNotExists(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		err := os.MkdirAll(path, 0755)
-		return err
+		return fmt.Errorf("error creating path %v", err)
 	}
 	return nil
 }
@@ -220,7 +246,7 @@ func (c *Cache) humanReadableSize(size int64) string {
 	return fmt.Sprintf("%.2f PB", float64(size)/pb)
 }
 
-func (c *Cache) SyncFilesToDatabase(guildID string, files []os.FileInfo, cacheGuildFolder string) error {
+func (c *Cache) SyncFilesToDB(guildID string, files []os.FileInfo, cacheGuildFolder string) error {
 	// Iterate over the files and append their names and IDs to the buffer
 	for _, file := range files {
 		filenameNoExt := c.stripExtension(file.Name())

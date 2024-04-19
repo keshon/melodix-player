@@ -3,6 +3,7 @@ package discord
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -112,4 +113,79 @@ func (d *Discord) handleUploadListCommand(s *discordgo.Session, m *discordgo.Mes
 	} else {
 		s.ChannelMessageSend(m.ChannelID, "Invalid parameter. Usage: /uploaded extract")
 	}
+}
+
+func stripExtension(filename string) string {
+	// Use filepath.Base to get the base name of the file
+	basename := filepath.Base(filename)
+
+	// Handle hidden files (names starting with a dot)
+	if strings.HasPrefix(basename, ".") {
+		return basename
+	}
+
+	// Use filepath.Ext to get the extension of the file
+	extension := filepath.Ext(basename)
+
+	// Handle case where there's no extension
+	if extension == "" {
+		return basename
+	}
+
+	// Remove the extension from the basename
+	nameWithoutExtension := strings.TrimSuffix(basename, extension)
+
+	return nameWithoutExtension
+}
+
+func replaceSpacesWithDelimeter(filename string) string {
+	// Replace spaces with dots using strings.ReplaceAll
+	newFilename := strings.ReplaceAll(filename, " ", "_")
+	return newFilename
+}
+
+func humanReadableSize(size int64) string {
+	const (
+		b = 1 << (10 * iota)
+		kb
+		mb
+		gb
+		tb
+		pb
+	)
+	if size < kb {
+		return fmt.Sprintf("%d B", size)
+	}
+	if size < mb {
+		return fmt.Sprintf("%.2f KB", float64(size)/kb)
+	}
+	if size < gb {
+		return fmt.Sprintf("%.2f MB", float64(size)/mb)
+	}
+	if size < tb {
+		return fmt.Sprintf("%.2f GB", float64(size)/gb)
+	}
+	if size < pb {
+		return fmt.Sprintf("%.2f TB", float64(size)/tb)
+	}
+	return fmt.Sprintf("%.2f PB", float64(size)/pb)
+}
+
+func ffmpegExtractAudioFromVideo(videoFilePath, audioFilePath string) error {
+	cmd := exec.Command("ffmpeg", "-i", videoFilePath, "-vn", "-acodec", "libmp3lame", "-b:a", "256k", audioFilePath)
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Audio extracted and saved to: %s\n", audioFilePath)
+	return nil
+}
+
+func CreatePathIfNotExists(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		err := os.MkdirAll(path, 0755)
+		return err
+	}
+	return nil
 }
