@@ -20,6 +20,7 @@ type ICache interface {
 	SyncCachedDir() error
 	ListCachedFiles() (string, error)
 	ListUploadedFiles() (string, error)
+	ExtractAudioFromVideo(file string) (string, error)
 	syncFilesToDB(guildID string, files []os.FileInfo, cacheGuildFolder string) error
 	downloadFile(filepath, url string) error
 	extractAudio(path, filename string) error
@@ -226,6 +227,80 @@ func (c *Cache) ListUploadedFiles() (string, error) {
 	}
 
 	return fileList.String(), nil
+}
+
+func (c *Cache) ExtractAudioFromVideo(filename string) (string, error) {
+	uploadsFolder := c.uploadsFolder
+	cacheFolder := c.cacheFolder
+	guildID := c.guildID
+	audioMessage := "no data"
+
+	files, err := os.ReadDir(uploadsFolder)
+	if err != nil {
+		return "", fmt.Errorf("error reading uploaded folder: %v", err)
+	}
+
+	// Iterate each file
+	for _, file := range files {
+
+		// Check if file is a video file
+		if filepath.Ext(file.Name()) == ".mp4" || filepath.Ext(file.Name()) == ".mkv" || filepath.Ext(file.Name()) == ".webm" || filepath.Ext(file.Name()) == ".flv" {
+
+			// Check if cache folder for guild exists, create if not
+			cacheGuildFolder := filepath.Join(cacheFolder, guildID)
+			c.createPathIfNotExists(cacheGuildFolder)
+
+			// Extract audio from video
+			videoFilePath := filepath.Join(uploadsFolder, file.Name())
+			filenameNoExt := c.stripExtension(file.Name())
+			audioFilename := c.sanitizeName(filenameNoExt) + ".mp3"
+			audioFilePath := filepath.Join(cacheGuildFolder, audioFilename)
+			err = c.extractAudio(videoFilePath, audioFilePath)
+			if err != nil {
+				continue
+			}
+
+			// Remove the temporary video file
+			err = os.Remove(videoFilePath)
+			if err != nil {
+				return "", fmt.Errorf("error removing temporary video file: %v", err)
+			}
+
+			// Check if cached file exists in database
+			song, err := db.GetTrackByFilepath(audioFilename)
+			if err == nil {
+				song.Filepath = audioFilePath
+				err := db.UpdateTrack(song)
+				if err != nil {
+					continue
+				}
+			} else {
+				newTrack := &db.Track{
+					Title:    audioFilename,
+					Source:   player.SourceLocalFile.String(),
+					Filepath: audioFilePath,
+				}
+				err = db.CreateTrack(newTrack)
+				if err != nil {
+					continue
+				}
+			}
+
+			// Get the audio file size and format
+			audioFileInfo, err := os.Stat(audioFilePath)
+			if err != nil {
+				return "", fmt.Errorf("error getting audio file information: %v", err)
+			}
+
+			audioFileSize := c.humanReadableSize(audioFileInfo.Size())
+
+			// Send message with audio extraction information
+			audioMessage = fmt.Sprintf("\nFile Size: %s\nFile Format: %s", audioFileSize, filepath.Ext(audioFilePath))
+
+		}
+	}
+
+	return audioMessage, nil
 }
 
 func (c *Cache) downloadFile(filepath, url string) error {
