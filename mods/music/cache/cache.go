@@ -15,19 +15,17 @@ import (
 	"github.com/keshon/melodix-player/mods/music/sources"
 )
 
-// WIP
-
 type ICache interface {
 	Curl(url string) (string, error)
-	syncFilesToDB(guildID string) error
-	listFiles(guildID, folder string) (string, error)
-	downloadFile(filepath, url string) (string, error)
-	extractAudio(path, filename string) (string, error)
-	sanitizeName(filename string)
+	SyncCachedDir() error
+	ListCachedFiles() (string, error)
+	ListUploadedFiles() (string, error)
+	syncFilesToDB(guildID string, files []os.FileInfo, cacheGuildFolder string) error
+	downloadFile(filepath, url string) error
+	extractAudio(path, filename string) error
+	sanitizeName(filename string) string
 	stripExtension(filename string) string
-	generateTempFilename() string
 	humanReadableSize(size int64) string
-	syncFilesToDatabase(guildID string, files []os.FileInfo, cacheGuildFolder string) error
 }
 
 // Cache struct for handling cache-related operations
@@ -38,7 +36,7 @@ type Cache struct {
 }
 
 // NewCache initializes a new Cache struct
-func NewCache(uploadsFolder, cacheFolder, guildID string) *Cache {
+func NewCache(uploadsFolder, cacheFolder, guildID string) ICache {
 	return &Cache{
 		uploadsFolder: uploadsFolder,
 		cacheFolder:   cacheFolder,
@@ -47,6 +45,8 @@ func NewCache(uploadsFolder, cacheFolder, guildID string) *Cache {
 }
 
 func (c *Cache) Curl(url string) (string, error) {
+	uploadsFolder := c.uploadsFolder
+
 	yt := sources.NewYoutube()
 	song, err := yt.GetSongFromVideoURL(url)
 	if err != nil {
@@ -56,7 +56,7 @@ func (c *Cache) Curl(url string) (string, error) {
 	filename := fmt.Sprintf("%d", time.Now().Unix())
 
 	// Download the video
-	videoFilePath := filepath.Join(c.uploadsFolder, filename+".mp4")
+	videoFilePath := filepath.Join(uploadsFolder, filename+".mp4")
 	err = c.downloadFile(videoFilePath, song.Filepath)
 	if err != nil {
 		return "", fmt.Errorf("error downloading video %v", err)
@@ -124,8 +124,61 @@ func (c *Cache) Curl(url string) (string, error) {
 	return message, nil
 }
 
-// ListFiles lists cached files
-func (c *Cache) listFiles() (string, error) {
+func (c *Cache) SyncCachedDir() error {
+	guildID := c.guildID
+	cacheFolder := c.cacheFolder
+
+	// Check if the cache folder for the guild exists
+	cacheGuildFolder := filepath.Join(cacheFolder, guildID)
+	_, err := os.Stat(cacheGuildFolder)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("cache folder for guild %s does not exist", guildID)
+	}
+
+	// Get a list of files in the cache folder
+	files, err := os.ReadDir(cacheGuildFolder)
+	if err != nil {
+		return fmt.Errorf("error reading cache folder for guild %s: %v", guildID, err)
+	}
+
+	// Iterate over the files and append their names and IDs to the buffer
+	for _, file := range files {
+		filenameNoExt := c.stripExtension(file.Name())
+		audioFilename := c.sanitizeName(filenameNoExt) + filepath.Ext(file.Name())
+
+		// Rename the file to formatted name
+		oldPath := filepath.Join(cacheGuildFolder, file.Name())
+		newPath := filepath.Join(cacheGuildFolder, audioFilename)
+
+		// Rename the file to formatted name
+		err := os.Rename(oldPath, newPath)
+		if err != nil {
+			// Handle error if renaming fails
+			fmt.Printf("Error renaming file %s to %s: %v\n", oldPath, newPath, err)
+		}
+
+		filepath := filepath.Join(cacheGuildFolder, file.Name())
+		_, err = db.GetTrackByFilepath(newPath)
+		if err != nil {
+			db.CreateTrack(&db.Track{
+				Title:    file.Name(),
+				Filepath: filepath,
+				Source:   player.SourceLocalFile.String(),
+			})
+		} else {
+			db.UpdateTrack(&db.Track{
+				Filepath: filepath,
+				Source:   player.SourceLocalFile.String(),
+			})
+		}
+
+	}
+
+	return nil
+}
+
+// ListCachedFiles lists cached files
+func (c *Cache) ListCachedFiles() (string, error) {
 	// Get the guild ID
 	guildID := c.guildID
 	cacheFolder := c.cacheFolder
@@ -145,12 +198,31 @@ func (c *Cache) listFiles() (string, error) {
 
 	// Initialize a buffer to store the file list
 	var fileList strings.Builder
-	fileList.WriteString("Cached files:\n")
 
 	// Iterate over the files and append their names and IDs to the buffer
 	for _, file := range files {
 		// Append file name and ID to the buffer
 		fileList.WriteString(fmt.Sprintf("`%s`\n", file.Name()))
+	}
+
+	return fileList.String(), nil
+}
+
+func (c *Cache) ListUploadedFiles() (string, error) {
+	// Scan uploaded folder for video files
+	files, err := os.ReadDir(c.uploadsFolder)
+	if err != nil {
+		return "", fmt.Errorf("error reading uploaded folder: %v", err)
+	}
+
+	// Send to Discord chat list of found files
+	var fileList strings.Builder
+
+	for _, file := range files {
+		// Check if file is a video file
+		if filepath.Ext(file.Name()) == ".mp4" || filepath.Ext(file.Name()) == ".mkv" || filepath.Ext(file.Name()) == ".webm" {
+			fileList.WriteString(fmt.Sprintf("- %s\n", file.Name()))
+		}
 	}
 
 	return fileList.String(), nil
@@ -246,7 +318,7 @@ func (c *Cache) humanReadableSize(size int64) string {
 	return fmt.Sprintf("%.2f PB", float64(size)/pb)
 }
 
-func (c *Cache) SyncFilesToDB(guildID string, files []os.FileInfo, cacheGuildFolder string) error {
+func (c *Cache) syncFilesToDB(guildID string, files []os.FileInfo, cacheGuildFolder string) error {
 	// Iterate over the files and append their names and IDs to the buffer
 	for _, file := range files {
 		filenameNoExt := c.stripExtension(file.Name())

@@ -45,7 +45,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	historyByDuration := fmt.Sprintf("`%vhistory duration` — sort by duration \n", prefix)
 	historyByPlaycount := fmt.Sprintf("`%vhistory count` — sort by play count \n\n", prefix)
 
-	cached := fmt.Sprintf("`%vcached` — show chached tracks\n", prefix)
+	cached := fmt.Sprintf("`%vcached` — show cached tracks\n", prefix)
 	cachedSync := fmt.Sprintf("`%vcached sync` — sync manually added files to cache\n", prefix)
 	curl := fmt.Sprintf("`%vcurl [url]` — cache track (youtube url only)\n", prefix)
 	uploaded := fmt.Sprintf("`%vuploaded` — show uploaded videos\n", prefix)

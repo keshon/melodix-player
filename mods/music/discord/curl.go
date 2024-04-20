@@ -13,6 +13,9 @@ const (
 
 func (d *Discord) handleCacheUrlCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {
 
+	uploadsFolder := "./upload"
+	cacheFolder := "./cache"
+
 	c := cache.NewCache(uploadsFolder, cacheFolder, m.GuildID)
 
 	if param == "" {

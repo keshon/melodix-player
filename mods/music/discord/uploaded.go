@@ -10,34 +10,32 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/db"
+	"github.com/keshon/melodix-player/mods/music/cache"
 	"github.com/keshon/melodix-player/mods/music/player"
 )
 
 func (d *Discord) handleUploadListCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {
 
+	c := cache.NewCache("./upload", "./cache", m.GuildID)
+
 	if param == "" {
-		// Scan uploaded folder for video files
-		files, err := os.ReadDir(uploadsFolder)
+
+		fileList, err := c.ListUploadedFiles()
+
 		if err != nil {
-			slog.Error("Error reading uploaded folder:", err)
+			s.ChannelMessageSend(m.ChannelID, err.Error())
+			return
+		} else {
+			s.ChannelMessageSend(m.ChannelID, "Uploaded files:\n"+fileList)
 		}
-
-		// Send to Discord chat list of found files
-		var fileList strings.Builder
-		fileList.WriteString("Uploaded files:\n")
-		for _, file := range files {
-			// Check if file is a video file
-			if filepath.Ext(file.Name()) == ".mp4" || filepath.Ext(file.Name()) == ".mkv" || filepath.Ext(file.Name()) == ".webm" {
-				fileList.WriteString(fmt.Sprintf("- %s\n", file.Name()))
-			}
-		}
-
-		s.ChannelMessageSend(m.ChannelID, fileList.String())
 
 		return
 	}
 
 	if param == "extract" {
+
+		// err:=c.ExtractAudioFromVideo(param) //!TODO Stopped here
+
 		// Scan uploaded folder for video files
 		files, err := os.ReadDir(uploadsFolder)
 		if err != nil {
