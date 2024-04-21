@@ -14,7 +14,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/db"
-	"github.com/keshon/melodix-player/internal/version"
 	"github.com/keshon/melodix-player/mods/music/history"
 	"github.com/keshon/melodix-player/mods/music/player"
 	"github.com/keshon/melodix-player/mods/music/sources"
@@ -22,8 +21,10 @@ import (
 )
 
 // handlePlayCommand handles the play command for Discord.
-func (d *Discord) handlePlayCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string, enqueueOnly bool) {
-	d.changeAvatar(s)
+func (d *Discord) handlePlayCommand(param string, enqueueOnly bool) {
+	s := d.Session
+	m := d.Message
+	d.changeAvatar()
 
 	if param == "" {
 		return
@@ -252,7 +253,7 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 		return err
 	}
 
-	vs, found := findUserVoiceState(m.Message.Author.ID, guild.VoiceStates)
+	vs, found := d.findUserVoiceState(m.Message.Author.ID, guild.VoiceStates)
 	if !found {
 		return errors.New("user not found in voice channel")
 	}
@@ -312,8 +313,7 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int, skipFirst bool) {
 
 	embedMsg := embed.NewEmbed().
-		SetColor(0x9f00d4).
-		SetFooter(version.AppFullName)
+		SetColor(0x9f00d4)
 
 	playerStatus := fmt.Sprintf("%v %v", d.Player.GetCurrentStatus().StringEmoji(), d.Player.GetCurrentStatus().String())
 	content := playerStatus + "\n"

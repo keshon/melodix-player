@@ -1,29 +1,16 @@
 package discord
 
-import (
-	embed "github.com/Clinet/discordgo-embed"
-	"github.com/bwmarrin/discordgo"
-	"github.com/gookit/slog"
-)
-
 // handleShowQueueCommand handles the show queue command for Discord.
-func (d *Discord) handleShowQueueCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	d.changeAvatar(s)
+func (d *Discord) handleShowQueueCommand() {
+	s := d.Session
+	m := d.Message
+	d.changeAvatar()
 
 	playlist := d.Player.GetSongQueue()
 
 	// Wait message
-	embedStr := "Please wait..."
-	embedMsg := embed.NewEmbed().
-		SetColor(0x9f00d4).
-		SetDescription(embedStr).
-		SetColor(0x9f00d4).MessageEmbed
+	pleaseWaitMsg := d.sendMessageEmbed("Please wait...")
 
-	pleaseWaitMessage, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
-	if err != nil {
-		slog.Error("Error sending 'please wait' message", err)
-	}
-
-	showStatusMessage(d, s, m.Message.ChannelID, pleaseWaitMessage.ID, playlist, 0, false)
+	showStatusMessage(d, s, m.Message.ChannelID, pleaseWaitMsg.ID, playlist, 0, false)
 
 }

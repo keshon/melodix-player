@@ -3,13 +3,10 @@ package discord
 import (
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/mods/music/player"
-
-	embed "github.com/Clinet/discordgo-embed"
-	"github.com/bwmarrin/discordgo"
 )
 
-func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	d.changeAvatar(s)
+func (d *Discord) handlePauseCommand() {
+	d.changeAvatar()
 
 	if d.Player.GetCurrentStatus() != player.StatusPlaying {
 		slog.Info("Ignoring pause command because player is not playing", d.Player.GetCurrentStatus().String())
@@ -24,13 +21,7 @@ func (d *Discord) handlePauseCommand(s *discordgo.Session, m *discordgo.MessageC
 
 	slog.Info(d.Player.GetCurrentStatus().String())
 
-	embedStr := d.Player.GetCurrentStatus().StringEmoji() + " " + d.Player.GetCurrentStatus().String()
-	embedMsg := embed.NewEmbed().
-		SetDescription(embedStr).
-		SetColor(0x9f00d4).MessageEmbed
-	_, err = s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)
-	if err != nil {
-		slog.Error("Error sending pause message", err)
-	}
-
+	statusAsEmoji := d.Player.GetCurrentStatus().StringEmoji()
+	statusAsText := d.Player.GetCurrentStatus().String()
+	d.sendMessageEmbed(statusAsEmoji + " " + statusAsText)
 }

@@ -1,38 +1,54 @@
 package discord
 
 import (
-	"github.com/bwmarrin/discordgo"
+	"fmt"
+
+	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/mods/music/cache"
 )
 
-func (d *Discord) handleUploadListCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {
+func (d *Discord) handleUploadListCommand(param string) {
+	guildID := d.GuildID
 
-	c := cache.NewCache("./upload", "./cache", m.GuildID)
+	c := cache.NewCache("./upload", "./cache", guildID)
 
 	if param == "" {
 
-		fileList, err := c.ListUploadedFiles()
+		list, err := c.ListUploadedFiles()
+		listStr := ""
+		for key, file := range list {
+			listStr += fmt.Sprintf("` %d ` %s\n", key+1, file)
+		}
 
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, err.Error())
+			d.sendMessageEmbed(err.Error())
 			return
 		} else {
-			s.ChannelMessageSend(m.ChannelID, "Uploaded files:\n"+fileList)
+			d.sendMessageEmbed("📼 Uploaded files\n\nUse `" + d.prefix + "uploaded extract` to extract audio from all uploaded files to cache\n\n" + listStr)
 		}
 
 		return
 	}
 
 	if param == "extract" {
-
-		resp, err := c.ExtractAudioFromVideo(param)
+		msg := d.sendMessageEmbed("⏳ Starting to extract audio...")
+		stats, err := c.ExtractAudioFromVideo()
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, err.Error())
+			d.editMessageEmbed(err.Error(), msg.ID)
 		} else {
-			s.ChannelMessageSend(m.ChannelID, resp)
+			if stats == nil {
+				d.editMessageEmbed("❗️ Nothing to extract", msg.ID)
+				return
+			}
+			statsStr := "💽 Extracted audio added to cache\n\nUse `" + d.prefix + "cached` command to see available files\n\n"
+			slog.Info(stats)
+			for key, stat := range stats {
+				statsStr += fmt.Sprintf("` %v ` %s\n", key+1, stat)
+			}
+			d.editMessageEmbed(statsStr, msg.ID)
 		}
 
 	} else {
-		s.ChannelMessageSend(m.ChannelID, "Invalid parameter. Usage: /uploaded extract")
+		d.sendMessageEmbed("Invalid parameter. Usage: /uploaded extract")
 	}
 }

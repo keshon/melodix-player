@@ -1,8 +1,10 @@
 package cache
 
 import (
+	"crypto/md5"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -13,14 +15,15 @@ import (
 	"github.com/keshon/melodix-player/internal/db"
 	"github.com/keshon/melodix-player/mods/music/player"
 	"github.com/keshon/melodix-player/mods/music/sources"
+	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
 type ICache interface {
 	Curl(url string) (string, error)
-	SyncCachedDir() error
-	ListCachedFiles() (string, error)
-	ListUploadedFiles() (string, error)
-	ExtractAudioFromVideo(file string) (string, error)
+	SyncCachedDir() (int, int, int, error)
+	ListCachedFiles() ([]string, error)
+	ListUploadedFiles() ([]string, error)
+	ExtractAudioFromVideo() ([]string, error)
 	syncFilesToDB(guildID string, files []os.FileInfo, cacheGuildFolder string) error
 	downloadFile(filepath, url string) error
 	extractAudio(path, filename string) error
@@ -125,21 +128,23 @@ func (c *Cache) Curl(url string) (string, error) {
 	return message, nil
 }
 
-func (c *Cache) SyncCachedDir() error {
+func (c *Cache) SyncCachedDir() (int, int, int, error) {
 	guildID := c.guildID
 	cacheFolder := c.cacheFolder
+
+	var added, updated, removed int
 
 	// Check if the cache folder for the guild exists
 	cacheGuildFolder := filepath.Join(cacheFolder, guildID)
 	_, err := os.Stat(cacheGuildFolder)
 	if os.IsNotExist(err) {
-		return fmt.Errorf("cache folder for guild %s does not exist", guildID)
+		return 0, 0, 0, fmt.Errorf("cache folder for guild %s does not exist", guildID)
 	}
 
 	// Get a list of files in the cache folder
 	files, err := os.ReadDir(cacheGuildFolder)
 	if err != nil {
-		return fmt.Errorf("error reading cache folder for guild %s: %v", guildID, err)
+		return 0, 0, 0, fmt.Errorf("error reading cache folder for guild %s: %v", guildID, err)
 	}
 
 	// Iterate over the files and append their names and IDs to the buffer
@@ -159,27 +164,91 @@ func (c *Cache) SyncCachedDir() error {
 		}
 
 		filepath := filepath.Join(cacheGuildFolder, file.Name())
-		_, err = db.GetTrackByFilepath(newPath)
+		track, err := db.GetTrackByFilepath(newPath)
 		if err != nil {
-			db.CreateTrack(&db.Track{
+			songID := md5.Sum([]byte(filepath))
+			songIDStr := fmt.Sprintf("%x", songID)
+			err = db.CreateTrack(&db.Track{
+				SongID:   songIDStr,
 				Title:    file.Name(),
 				Filepath: filepath,
 				Source:   player.SourceLocalFile.String(),
 			})
+			if err != nil {
+				return 0, 0, 0, fmt.Errorf("error creating track in database %v", err)
+			}
+			added++
 		} else {
-			db.UpdateTrack(&db.Track{
-				Filepath: filepath,
-				Source:   player.SourceLocalFile.String(),
-			})
+			if track.Filepath != filepath {
+				track.Filepath = filepath
+				track.Source = player.SourceLocalFile.String()
+				err = db.UpdateTrack(track)
+				if err != nil {
+					return 0, 0, 0, fmt.Errorf("error updating track in database %v", err)
+				}
+				updated++
+			}
 		}
 
 	}
 
-	return nil
+	// Iterate over database tracks and remove filepaths that no longer exist
+	tracks, err := db.GetAllTracks()
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("error getting all tracks %v", err)
+	}
+	for _, track := range tracks {
+		if track.Source != player.SourceLocalFile.String() {
+			continue
+		}
+
+		_, err := os.Stat(track.Filepath)
+		if os.IsNotExist(err) {
+			slog.Info(fmt.Sprintf("%v", track))
+			if track.URL == "" {
+				err = db.DeleteHistory(track.SongID)
+				if err != nil {
+					return 0, 0, 0, fmt.Errorf("error deleting history %v", err)
+				}
+				db.DeleteTrack(&track)
+				removed++
+				continue
+			} else {
+				if utils.IsYouTubeURL(track.URL) {
+					track.Filepath = ""
+					track.Source = player.SourceYouTube.String()
+					err = db.UpdateTrack(&track)
+					if err != nil {
+						return 0, 0, 0, fmt.Errorf("error updating track in database %v", err)
+					}
+					updated++
+				}
+			}
+		}
+	}
+
+	// Iterate over database tracks and fix missing song IDs
+	tracks, err = db.GetAllTracks()
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("error getting all tracks %v", err)
+	}
+	for _, track := range tracks {
+		if track.SongID == "" {
+			songID := md5.Sum([]byte(track.Title))
+			songIDStr := fmt.Sprintf("%x", songID)
+			track.SongID = songIDStr
+			err = db.UpdateTrack(&track)
+			if err != nil {
+				return 0, 0, 0, fmt.Errorf("error updating track in database %v", err)
+			}
+		}
+	}
+
+	return added, updated, removed, nil
 }
 
 // ListCachedFiles lists cached files
-func (c *Cache) ListCachedFiles() (string, error) {
+func (c *Cache) ListCachedFiles() ([]string, error) {
 	// Get the guild ID
 	guildID := c.guildID
 	cacheFolder := c.cacheFolder
@@ -188,56 +257,56 @@ func (c *Cache) ListCachedFiles() (string, error) {
 	cacheGuildFolder := filepath.Join(cacheFolder, guildID)
 	_, err := os.Stat(cacheGuildFolder)
 	if os.IsNotExist(err) {
-		return "", fmt.Errorf("cache folder for guild %s does not exist", guildID)
+		return []string{}, fmt.Errorf("cache folder for guild %s does not exist", guildID)
 	}
 
 	// Get a list of files in the cache folder
 	files, err := os.ReadDir(cacheGuildFolder)
 	if err != nil {
-		return "", fmt.Errorf("error reading cache folder for guild %s: %v", guildID, err)
+		return []string{}, fmt.Errorf("error reading cache folder for guild %s: %v", guildID, err)
 	}
 
 	// Initialize a buffer to store the file list
-	var fileList strings.Builder
+	var filelist []string
 
 	// Iterate over the files and append their names and IDs to the buffer
 	for _, file := range files {
 		// Append file name and ID to the buffer
-		fileList.WriteString(fmt.Sprintf("`%s`\n", file.Name()))
+		filelist = append(filelist, file.Name())
 	}
 
-	return fileList.String(), nil
+	return filelist, nil
 }
 
-func (c *Cache) ListUploadedFiles() (string, error) {
+func (c *Cache) ListUploadedFiles() ([]string, error) {
 	// Scan uploaded folder for video files
 	files, err := os.ReadDir(c.uploadsFolder)
 	if err != nil {
-		return "", fmt.Errorf("error reading uploaded folder: %v", err)
+		return []string{}, fmt.Errorf("error reading uploaded folder: %v", err)
 	}
 
 	// Send to Discord chat list of found files
-	var fileList strings.Builder
+	var filelist []string
 
 	for _, file := range files {
 		// Check if file is a video file
 		if filepath.Ext(file.Name()) == ".mp4" || filepath.Ext(file.Name()) == ".mkv" || filepath.Ext(file.Name()) == ".webm" {
-			fileList.WriteString(fmt.Sprintf("- %s\n", file.Name()))
+			filelist = append(filelist, file.Name())
 		}
 	}
 
-	return fileList.String(), nil
+	return filelist, nil
 }
 
-func (c *Cache) ExtractAudioFromVideo(filename string) (string, error) {
+func (c *Cache) ExtractAudioFromVideo() ([]string, error) {
 	uploadsFolder := c.uploadsFolder
 	cacheFolder := c.cacheFolder
 	guildID := c.guildID
-	audioMessage := "no data"
+	var filesStats []string
 
 	files, err := os.ReadDir(uploadsFolder)
 	if err != nil {
-		return "", fmt.Errorf("error reading uploaded folder: %v", err)
+		return []string{}, fmt.Errorf("error reading uploaded folder: %v", err)
 	}
 
 	// Iterate each file
@@ -263,7 +332,7 @@ func (c *Cache) ExtractAudioFromVideo(filename string) (string, error) {
 			// Remove the temporary video file
 			err = os.Remove(videoFilePath)
 			if err != nil {
-				return "", fmt.Errorf("error removing temporary video file: %v", err)
+				return []string{}, fmt.Errorf("error removing temporary video file: %v", err)
 			}
 
 			// Check if cached file exists in database
@@ -289,18 +358,19 @@ func (c *Cache) ExtractAudioFromVideo(filename string) (string, error) {
 			// Get the audio file size and format
 			audioFileInfo, err := os.Stat(audioFilePath)
 			if err != nil {
-				return "", fmt.Errorf("error getting audio file information: %v", err)
+				return []string{}, fmt.Errorf("error getting audio file information: %v", err)
 			}
 
-			audioFileSize := c.humanReadableSize(audioFileInfo.Size())
+			fileSize := c.humanReadableSize(audioFileInfo.Size())
 
 			// Send message with audio extraction information
-			audioMessage = fmt.Sprintf("\nFile Size: %s\nFile Format: %s", audioFileSize, filepath.Ext(audioFilePath))
+			fileSizeAndFormat := fmt.Sprintf("%s ` %s `", audioFileInfo.Name(), fileSize)
+			filesStats = append(filesStats, fileSizeAndFormat)
 
 		}
 	}
 
-	return audioMessage, nil
+	return filesStats, nil
 }
 
 func (c *Cache) downloadFile(filepath, url string) error {
@@ -349,8 +419,14 @@ func (c *Cache) createPathIfNotExists(path string) error {
 
 func (c *Cache) sanitizeName(filename string) string {
 	// Replace spaces with dots using strings.ReplaceAll
-	newFilename := strings.ReplaceAll(filename, " ", "_")
-	return newFilename
+	filename = strings.ReplaceAll(filename, ":", "-")
+	filename = strings.ReplaceAll(filename, " ", "-")
+	filename = strings.ReplaceAll(filename, "_", "-")
+	filename = strings.ReplaceAll(filename, "--", "-")
+	filename = strings.ReplaceAll(filename, "---", "-")
+	filename = strings.ReplaceAll(filename, ",-", "-")
+	filename = strings.ReplaceAll(filename, ".-", "-")
+	return filename
 }
 
 func (c *Cache) stripExtension(filename string) string {

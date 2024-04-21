@@ -16,12 +16,14 @@ import (
 // handleAboutCommand is a function to handle the about command in Discord.
 //
 // It takes a Discord session and a Discord message as parameters and does not return anything.
-func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+func (d *Discord) handleAboutCommand() {
+	s := d.Session
+	m := d.Message
 	d.changeAvatar(s)
 
 	title := "ℹ️ About"
 	content := fmt.Sprintf("**%v** — %v", version.AppFullName, version.AppDescription)
-	content = fmt.Sprintf("%v\n\nProject repo: https://github.com/keshon/melodix-player\n", content)
+	content = fmt.Sprintf("%v\n\nProject repository: https://github.com/keshon/melodix-player\n", content)
 
 	buildDate := "unknown"
 	if version.BuildDate != "" {
@@ -40,7 +42,7 @@ func (d *Discord) handleAboutCommand(s *discordgo.Session, m *discordgo.MessageC
 	}
 
 	embedMsg := embed.NewEmbed().
-		SetDescription(fmt.Sprintf("**%v**\n\n%v\n\n", title, content)).
+		SetDescription(fmt.Sprintf("%v\n\n%v\n\n", title, content)).
 		AddField("```"+buildDate+"```", "Build date").
 		AddField("```"+goVer+"```", "Go version").
 		AddField("```Innokentiy Sokolov```", "[Linkedin](https://www.linkedin.com/in/keshon), [GitHub](https://github.com/keshon), [Homepage](https://keshon.ru)").

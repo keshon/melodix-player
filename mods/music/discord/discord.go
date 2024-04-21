@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
@@ -16,6 +17,7 @@ import (
 type Discord struct {
 	Player               player.IPlayer
 	Session              *discordgo.Session
+	Message              *discordgo.MessageCreate
 	GuildID              string
 	IsInstanceActive     bool
 	prefix               string
@@ -31,6 +33,7 @@ func NewDiscord(session *discordgo.Session) *Discord {
 
 	return &Discord{
 		Session:           session,
+		Message:           nil,
 		IsInstanceActive:  true,
 		prefix:            config.DiscordCommandPrefix,
 		rateLimitDuration: time.Minute * 10,
@@ -40,8 +43,8 @@ func NewDiscord(session *discordgo.Session) *Discord {
 func (d *Discord) Start(guildID string) {
 	slog.Infof(`Discord instance of mods/music started for guild id %v`, guildID)
 
-	d.Session.AddHandler(d.Commands)
 	d.GuildID = guildID
+	d.Session.AddHandler(d.Commands)
 	d.Player = player.NewPlayer(guildID, d.Session)
 }
 
@@ -58,7 +61,9 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	command, params, err := splitCommandAndParameter(m.Message.Content, d.prefix)
+	d.Message = m
+
+	command, param, err := d.splitCommandFromParameter(m.Message.Content, d.prefix)
 	if err != nil {
 		return
 	}
@@ -82,35 +87,35 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	slog.Infof("Received command \"%v\" (canonical \"%v\"), parameter \"%v\"", command, canonical, params)
+	slog.Infof("Received command \"%v\" (canonical \"%v\"), parameter \"%v\"", command, canonical, param)
 
 	switch canonical {
 	case "pause":
-		d.handlePauseCommand(s, m)
+		d.handlePauseCommand()
 	case "resume":
-		d.handleResumeCommand(s, m)
+		d.handleResumeCommand()
 	case "play":
-		d.handlePlayCommand(s, m, params, false)
+		d.handlePlayCommand(param, false)
 	case "skip":
-		d.handleSkipCommand(s, m)
+		d.handleSkipCommand()
 	case "list":
-		d.handleShowQueueCommand(s, m)
+		d.handleShowQueueCommand()
 	case "add":
-		d.handlePlayCommand(s, m, params, true)
+		d.handlePlayCommand(param, true)
 	case "stop":
-		d.handleStopCommand(s, m)
+		d.handleStopCommand()
 	case "history":
-		d.handleHistoryCommand(s, m, params)
+		d.handleHistoryCommand(param)
 	case "curl":
-		d.handleCacheUrlCommand(s, m, params)
+		d.handleCacheUrlCommand(param)
 	case "cached":
-		d.handleCacheListCommand(s, m, params)
+		d.handleCacheListCommand(param)
 	case "uploaded":
-		d.handleUploadListCommand(s, m, params)
+		d.handleUploadListCommand(param)
 	}
 }
 
-func splitCommandAndParameter(content, commandPrefix string) (string, string, error) {
+func (d *Discord) splitCommandFromParameter(content, commandPrefix string) (string, string, error) {
 	if !strings.HasPrefix(content, commandPrefix) {
 		return "", "", fmt.Errorf("command prefix not found")
 	}
@@ -142,7 +147,9 @@ func getCanonicalCommand(alias string, commandAliases [][]string) string {
 	return ""
 }
 
-func (d *Discord) changeAvatar(s *discordgo.Session) {
+func (d *Discord) changeAvatar() {
+	s := d.Session
+
 	if time.Since(d.lastChangeAvatarTime) < d.rateLimitDuration {
 		//slog.Info("Rate-limited. Skipping changeAvatar.")
 		return
@@ -169,7 +176,7 @@ func (d *Discord) changeAvatar(s *discordgo.Session) {
 	d.lastChangeAvatarTime = time.Now()
 }
 
-func findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (*discordgo.VoiceState, bool) {
+func (d *Discord) findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (*discordgo.VoiceState, bool) {
 	for _, vs := range voiceStates {
 		if vs.UserID == userID {
 			return vs, true
@@ -178,7 +185,9 @@ func findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (*di
 	return nil, false
 }
 
-func findVoiceChannelWithUser(d *Discord, s *discordgo.Session, m *discordgo.MessageCreate) (string, error) {
+func (d *Discord) findVoiceChannelWithUser() (string, error) {
+	s := d.Session
+	m := d.Message
 	channel, err := s.State.Channel(m.Message.ChannelID)
 	if err != nil {
 		return "", err
@@ -189,9 +198,41 @@ func findVoiceChannelWithUser(d *Discord, s *discordgo.Session, m *discordgo.Mes
 		return "", err
 	}
 
-	vs, found := findUserVoiceState(m.Message.Author.ID, guild.VoiceStates)
+	vs, found := d.findUserVoiceState(m.Message.Author.ID, guild.VoiceStates)
 	if !found {
 		return "", errors.New("user not found in voice channel")
 	}
 	return vs.ChannelID, nil
+}
+
+func (d *Discord) sendMessageEmbed(embedStr string) *discordgo.Message {
+	s := d.Session
+	m := d.Message
+
+	embedBody := embed.NewEmbed().
+		SetDescription(embedStr).
+		SetColor(0x9f00d4).MessageEmbed
+
+	msg, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedBody)
+	if err != nil {
+		slog.Error("Error sending pause message", err)
+	}
+
+	return msg
+}
+
+func (d *Discord) editMessageEmbed(embedStr string, messageID string) *discordgo.Message {
+	s := d.Session
+	m := d.Message
+
+	embedBody := embed.NewEmbed().
+		SetDescription(embedStr).
+		SetColor(0x9f00d4).MessageEmbed
+
+	msg, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, messageID, embedBody)
+	if err != nil {
+		slog.Error("Error sending 'stopped playback' message", err)
+	}
+
+	return msg
 }

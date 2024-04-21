@@ -1,37 +1,42 @@
 package discord
 
 import (
-	"github.com/bwmarrin/discordgo"
+	"fmt"
+
 	"github.com/keshon/melodix-player/mods/music/cache"
 )
 
-func (d *Discord) handleCacheListCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {
-
+func (d *Discord) handleCacheListCommand(param string) {
+	guildID := d.GuildID
 	uploadsFolder := "./upload"
 	cacheFolder := "./cache"
 
-	c := cache.NewCache(uploadsFolder, cacheFolder, m.GuildID)
+	c := cache.NewCache(uploadsFolder, cacheFolder, guildID)
 
-	if param == "sync" {
-		err := c.SyncCachedDir()
+	if param == "" {
+		list, err := c.ListCachedFiles()
+		listStr := ""
+		for _, file := range list {
+			listStr += fmt.Sprintf("```%s```", file)
+		}
+
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, err.Error())
+			d.sendMessageEmbed(err.Error())
 			return
 		} else {
-			s.ChannelMessageSend(m.ChannelID, "Cached files are synced.")
+			d.sendMessageEmbed("🗳 Cached files\n\n" + listStr)
 		}
 	}
 
-	if param == "" {
-
-		fileList, err := c.ListCachedFiles()
+	if param == "sync" {
+		msg := d.sendMessageEmbed("⏳ Starting to sync cached files with DB...")
+		added, updated, removed, err := c.SyncCachedDir()
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, err.Error())
+			d.editMessageEmbed(err.Error(), msg.ID)
 			return
 		} else {
-			s.ChannelMessageSend(m.ChannelID, "Cached files:\n"+fileList)
+			d.editMessageEmbed("🗃 All cached files are synced successfully\n\nUse `"+d.prefix+"cached` command to see available files\n\n**Added:** "+fmt.Sprintf("%d", added)+"\n**Updated:** "+fmt.Sprintf("%d", updated)+"\n**Removed:** "+fmt.Sprintf("%d", removed), msg.ID)
 		}
-
 	}
 
 }

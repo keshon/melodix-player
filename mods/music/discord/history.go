@@ -5,15 +5,16 @@ import (
 	"strings"
 
 	embed "github.com/Clinet/discordgo-embed"
-	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/mods/music/history"
 	"github.com/keshon/melodix-player/mods/music/player"
 	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
-func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {
-	d.changeAvatar(s)
+func (d *Discord) handleHistoryCommand(param string) {
+	s := d.Session
+	m := d.Message
+	d.changeAvatar()
 
 	sortBy, title := "last_played", " — most recent"
 	switch param {
@@ -34,6 +35,8 @@ func (d *Discord) handleHistoryCommand(s *discordgo.Session, m *discordgo.Messag
 	if len(description) > 4096 {
 		description = utils.TrimString(description, 4096)
 	}
+
+	description = fmt.Sprintf("%s\n\nUse `%vhistory [count|duration]` to sort by play count or total duration\n\n_ _", description, d.prefix)
 
 	embedMsg := embed.NewEmbed().
 		SetDescription(description).

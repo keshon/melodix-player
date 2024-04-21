@@ -91,3 +91,7 @@ func UpdateTrackStatsForGuild(trackID uint, guildID string, playCount uint, dura
 			"last_played": time.Now(),
 		}).Error
 }
+
+func DeleteHistory(trackSongID string) error {
+	return DB.Where("track_id = ?", trackSongID).Delete(&History{}).Error
+}

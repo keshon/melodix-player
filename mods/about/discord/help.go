@@ -6,7 +6,6 @@ import (
 	"time"
 
 	embed "github.com/Clinet/discordgo-embed"
-	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
 	"github.com/keshon/melodix-player/internal/version"
@@ -16,7 +15,9 @@ import (
 // handleHelpCommand handles the help command for the Discord bot.
 //
 // Takes in a session and a message create, and does not return any value.
-func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
+func (d *Discord) handleHelpCommand() {
+	s := d.Session
+	m := d.Message
 	d.changeAvatar(s)
 
 	cfg, err := config.NewConfig()
@@ -33,7 +34,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	avatarURL := utils.InferProtocolByPort(host, 443) + host + "/avatar/random?" + fmt.Sprint(time.Now().UnixNano())
 	prefix := d.CommandPrefix
 
-	play := fmt.Sprintf("`%vplay [title/url/id/stream]` — play selected track/radio\n", prefix)
+	play := fmt.Sprintf("`%vplay [title|url|id|stream]` — play selected track/radio\n", prefix)
 	skip := fmt.Sprintf("`%vskip` — play next track\n", prefix)
 	pause := fmt.Sprintf("`%vpause`, `%vresume` — pause/resume playback\n", prefix, prefix)
 	stop := fmt.Sprintf("`%vstop` — stop playback and leave voice channel\n", prefix)
@@ -46,7 +47,7 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	historyByPlaycount := fmt.Sprintf("`%vhistory count` — sort by play count \n\n", prefix)
 
 	cached := fmt.Sprintf("`%vcached` — show cached tracks\n", prefix)
-	cachedSync := fmt.Sprintf("`%vcached sync` — sync manually added files to cache\n", prefix)
+	cachedSync := fmt.Sprintf("`%vcached sync` — sync manually added/removed files to cache\n", prefix)
 	curl := fmt.Sprintf("`%vcurl [url]` — cache track (youtube url only)\n", prefix)
 	uploaded := fmt.Sprintf("`%vuploaded` — show uploaded videos\n", prefix)
 	uploadedExtract := fmt.Sprintf("`%vuploaded extract` — cache audio from manually uploaded videos\n", prefix)
@@ -56,9 +57,10 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 	register := fmt.Sprintf("`%vregister` — enable commands listening\n", prefix)
 	unregister := fmt.Sprintf("`%vunregister` — disable commands listening", prefix)
 
+	title := fmt.Sprintf("ℹ️ %v — Commands Usage\n\n", version.AppName)
+
 	embedMsg := embed.NewEmbed().
-		SetTitle(fmt.Sprintf("ℹ️ %v — Command Usage", version.AppName)).
-		SetDescription("Some commands are aliased for shortness.\n\n*[title]* - track name\n*[url]* - YouTube URL\n*[id]* - track id from *History*\n*[stream]* - valid stream URL (radio).").
+		SetDescription(title+"[title] - track name\n[url] - YouTube URL\n[id] - track id from *History*\n[stream] - valid stream URL (radio).\n\n").
 		AddField("", "**Playback**\n"+play+skip+pause+stop).
 		AddField("", "").
 		AddField("", "**Queue**\n"+queue+list).
@@ -70,9 +72,10 @@ func (d *Discord) handleHelpCommand(s *discordgo.Session, m *discordgo.MessageCr
 		AddField("", "**Information**\n"+help+about).
 		AddField("", "").
 		AddField("", "**Managing Bot**\n"+register+unregister).
+		AddField("", "\n\n").
 		SetThumbnail(avatarURL).
 		SetColor(0x9f00d4).
-		SetFooter(version.AppFullName).
+		SetFooter(version.AppFullName + " (build date " + version.BuildDate + ")").
 		MessageEmbed
 
 	_, err = s.ChannelMessageSendEmbed(m.Message.ChannelID, embedMsg)

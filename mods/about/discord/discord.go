@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
@@ -13,6 +14,7 @@ import (
 
 type Discord struct {
 	Session              *discordgo.Session
+	Message              *discordgo.MessageCreate
 	GuildID              string
 	IsInstanceActive     bool
 	CommandPrefix        string
@@ -73,6 +75,8 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	d.Message = m
+
 	command, _, err := parseCommand(m.Message.Content, d.CommandPrefix)
 	if err != nil {
 		return
@@ -83,9 +87,9 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"about", "v"},
 	}) {
 	case "help":
-		d.handleHelpCommand(s, m)
+		d.handleHelpCommand()
 	case "about":
-		d.handleAboutCommand(s, m)
+		d.handleAboutCommand()
 	}
 }
 
@@ -164,4 +168,36 @@ func (d *Discord) changeAvatar(s *discordgo.Session) {
 	}
 
 	d.LastChangeAvatarTime = time.Now()
+}
+
+func (d *Discord) sendMessageEmbed(embedStr string) *discordgo.Message {
+	s := d.Session
+	m := d.Message
+
+	embedBody := embed.NewEmbed().
+		SetDescription(embedStr).
+		SetColor(0x9f00d4).MessageEmbed
+
+	msg, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedBody)
+	if err != nil {
+		slog.Error("Error sending pause message", err)
+	}
+
+	return msg
+}
+
+func (d *Discord) editMessageEmbed(embedStr string, messageID string) *discordgo.Message {
+	s := d.Session
+	m := d.Message
+
+	embedBody := embed.NewEmbed().
+		SetDescription(embedStr).
+		SetColor(0x9f00d4).MessageEmbed
+
+	msg, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, messageID, embedBody)
+	if err != nil {
+		slog.Error("Error sending 'stopped playback' message", err)
+	}
+
+	return msg
 }

@@ -1,33 +1,28 @@
 package discord
 
 import (
-	"github.com/bwmarrin/discordgo"
 	"github.com/keshon/melodix-player/mods/music/cache"
 )
 
-const (
-	uploadsFolder     = "./upload"
-	cacheFolder       = "./cache"
-	maxFilenameLength = 255
-)
-
-func (d *Discord) handleCacheUrlCommand(s *discordgo.Session, m *discordgo.MessageCreate, param string) {
-
+func (d *Discord) handleCacheUrlCommand(param string) {
+	guildID := d.GuildID
 	uploadsFolder := "./upload"
 	cacheFolder := "./cache"
 
-	c := cache.NewCache(uploadsFolder, cacheFolder, m.GuildID)
+	c := cache.NewCache(uploadsFolder, cacheFolder, guildID)
 
 	if param == "" {
-		s.ChannelMessageSend(m.ChannelID, "No URL specified")
+		d.sendMessageEmbed("Error: No URL specified")
 		return
 	}
+
+	waitMsg := d.sendMessageEmbed("Please wait...")
 
 	resp, err := c.Curl(param)
 	if err != nil {
-		s.ChannelMessageSend(m.ChannelID, err.Error())
+		d.sendMessageEmbed(err.Error())
 		return
 	}
 
-	s.ChannelMessageSend(m.ChannelID, resp)
+	d.editMessageEmbed(resp, waitMsg.ID)
 }
