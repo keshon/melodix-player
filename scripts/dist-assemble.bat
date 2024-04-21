@@ -33,6 +33,8 @@ copy LICENSE dist\%TARGET_PLATFORM%
 copy .env.example dist\%TARGET_PLATFORM%\.env
 xcopy /E /I /Y assets dist\%TARGET_PLATFORM%\assets
 xcopy /E /I /Y docs dist\%TARGET_PLATFORM%\docs
+mkdir dist\%TARGET_PLATFORM%\cache
+mkdir dist\%TARGET_PLATFORM%\upload
 
 rem Use UPX packer if available, otherwise download and use it
 if not exist %UPX_PATH% (
