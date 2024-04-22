@@ -27,17 +27,30 @@ Binaries (Windows only) are available on the [Release page](https://github.com/k
 
 Melodix Player supports various commands with their respective aliases to control music playback. Some commands require additional parameters:
 
-**Commands & Aliases**:
+### Playback
 - `play` (`p`, `>`) — Parameters: YouTube video URL, history ID, track title, or valid stream link
 - `skip` (`next`, `ff`, `>>`)
 - `pause` (`!`)
 - `resume` (`r`,`!>`)
 - `stop` (`x`)
+
+### Queue
 - `add` (`a`, `+`) — Parameters: YouTube video URL or history ID, track title, or valid stream link
 - `list` (`queue`, `l`, `q`)
+
+### History
 - `history` (`time`, `t`) — Parameters: `duration` or `count`
+
+### Caching
+- `curl` — Parameters: YouTube video URL
+- `cached` — Parameters: `sync`
+- `uploaded` — Parameters: `extract`
+
+### Information
 - `help` (`h`, `?`)
 - `about` (`v`)
+
+### Administration
 - `register`
 - `unregister`
 

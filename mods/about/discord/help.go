@@ -47,10 +47,10 @@ func (d *Discord) handleHelpCommand() {
 	historyByPlaycount := fmt.Sprintf("`%vhistory count` — sort by play count \n\n", prefix)
 
 	cached := fmt.Sprintf("`%vcached` — show cached tracks\n", prefix)
-	cachedSync := fmt.Sprintf("`%vcached sync` — sync manually added/removed files to cache\n", prefix)
+	cachedSync := fmt.Sprintf("`%vcached sync` — sync added/removed files to with database\n", prefix)
 	curl := fmt.Sprintf("`%vcurl [url]` — cache track (youtube url only)\n", prefix)
 	uploaded := fmt.Sprintf("`%vuploaded` — show uploaded videos\n", prefix)
-	uploadedExtract := fmt.Sprintf("`%vuploaded extract` — cache audio from manually uploaded videos\n", prefix)
+	uploadedExtract := fmt.Sprintf("`%vuploaded extract` — extract audio from uploaded videos to cache\n", prefix)
 
 	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
 	about := fmt.Sprintf("`%vabout`, `%vv` — show version\n", prefix, prefix)
@@ -71,7 +71,7 @@ func (d *Discord) handleHelpCommand() {
 		AddField("", "").
 		AddField("", "**Information**\n"+help+about).
 		AddField("", "").
-		AddField("", "**Managing Bot**\n"+register+unregister).
+		AddField("", "**Administration**\n"+register+unregister).
 		AddField("", "\n\n").
 		SetThumbnail(avatarURL).
 		SetColor(0x9f00d4).

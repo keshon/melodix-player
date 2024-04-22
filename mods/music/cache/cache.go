@@ -57,10 +57,10 @@ func (c *Cache) Curl(url string) (string, error) {
 		return "", err
 	}
 	// Generate unique filename
-	filename := fmt.Sprintf("%d", time.Now().Unix())
+	fileName := fmt.Sprintf("%d", time.Now().Unix())
 
 	// Download the video
-	videoFilePath := filepath.Join(uploadsFolder, filename+".mp4")
+	videoFilePath := filepath.Join(uploadsFolder, fileName+".mp4")
 	err = c.downloadFile(videoFilePath, song.Filepath)
 	if err != nil {
 		return "", fmt.Errorf("error downloading video %v", err)
