@@ -14,6 +14,8 @@ import (
 type Config struct {
 	DiscordCommandPrefix       string
 	DiscordBotToken            string
+	DiscordAdminUserID         string
+	DiscordAdminChannelID      string
 	RestEnabled                bool
 	RestGinRelease             bool
 	RestHostname               string
@@ -51,6 +53,8 @@ func NewConfig() (*Config, error) {
 	config := &Config{
 		DiscordCommandPrefix:       os.Getenv("DISCORD_COMMAND_PREFIX"),
 		DiscordBotToken:            os.Getenv("DISCORD_BOT_TOKEN"),
+		DiscordAdminUserID:         os.Getenv("DISCORD_ADMIN_USER_ID"),
+		DiscordAdminChannelID:      os.Getenv("DISCORD_ADMIN_CHANNEL_ID"),
 		RestEnabled:                getenvAsBool("REST_ENABLED"),
 		RestGinRelease:             getenvAsBool("REST_GIN_RELEASE"),
 		RestHostname:               os.Getenv("REST_HOSTNAME"),
@@ -83,6 +87,8 @@ func (c *Config) String() string {
 	configMap := map[string]interface{}{
 		"DiscordCommandPrefix":       c.DiscordCommandPrefix,
 		"DiscordBotToken":            c.DiscordBotToken,
+		"DiscordAdminUserID":         c.DiscordAdminUserID,
+		"DiscordAdminChannelID":      c.DiscordAdminChannelID,
 		"RestEnabled":                c.RestEnabled,
 		"RestGinRelease":             c.RestGinRelease,
 		"RestHostname":               c.RestHostname,

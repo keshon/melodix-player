@@ -3,8 +3,8 @@ package botsdef
 import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
-	about "github.com/keshon/melodix-player/mods/about/discord"
-	music "github.com/keshon/melodix-player/mods/music/discord"
+	aboutModule "github.com/keshon/melodix-player/mods/about/discord"
+	musicModule "github.com/keshon/melodix-player/mods/music/discord"
 )
 
 type Discord interface {
@@ -12,7 +12,7 @@ type Discord interface {
 	Stop()
 }
 
-var Modules = []string{"about", "music"}
+var Modules = []string{"aboutModule", "musicModule"}
 
 // CreateBotInstance creates a new bot instance based on the module name.
 //
@@ -22,10 +22,10 @@ var Modules = []string{"about", "music"}
 // Returns a Discord instance.
 func CreateBotInstance(session *discordgo.Session, module string) Discord {
 	switch module {
-	case "about":
-		return about.NewDiscord(session)
-	case "music":
-		return music.NewDiscord(session)
+	case "aboutModule":
+		return aboutModule.NewDiscord(session)
+	case "musicModule":
+		return musicModule.NewDiscord(session)
 
 	// ..add more cases for other modules if needed
 

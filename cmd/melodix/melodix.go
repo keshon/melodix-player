@@ -13,6 +13,7 @@ import (
 
 	"github.com/keshon/melodix-player/internal/botsdef"
 	"github.com/keshon/melodix-player/internal/config"
+	"github.com/keshon/melodix-player/internal/cron"
 	"github.com/keshon/melodix-player/internal/db"
 	"github.com/keshon/melodix-player/internal/manager"
 	"github.com/keshon/melodix-player/internal/rest"
@@ -27,11 +28,12 @@ func main() {
 	initLogger()
 	config := loadConfig()
 	initDatabase()
+	startCron()
 	discordSession := createDiscordSession(config.DiscordBotToken)
 	bots := startBotHandlers(discordSession)
 	handleDiscordSession(discordSession)
 	startRestServer(config, bots)
-	slog.Infof("%v is now running. Press Ctrl+C to exit", version.AppName)
+	slog.Infof("%v is now running. Press Ctrl+C to exit", version.AppFullName)
 	waitForExitSignal()
 }
 
@@ -49,11 +51,21 @@ func initLogger() {
 			slog.Error("Error: Text formatter is not a *slog.TextFormatter")
 		}
 	})
-	if fileHandler, err := handler.NewFileHandler("./logs/all-levels.log", handler.WithLogLevels(slog.AllLevels)); err != nil {
+
+	fileHandler, err := handler.NewFileHandler("./logs/all-levels.log", func(hconf *handler.Config) {
+		*hconf = handler.Config{
+			MaxSize:   1024 * 1024 * 1,
+			Compress:  true,
+			BackupNum: 1,
+			Levels:    slog.AllLevels,
+		}
+	})
+
+	if err != nil {
 		slog.Error("Error creating file handler:", err)
-	} else {
-		slog.PushHandler(fileHandler)
 	}
+
+	slog.PushHandler(fileHandler)
 }
 
 // loadConfig loads the configuration and returns a pointer to config.Config.
@@ -80,6 +92,15 @@ func initDatabase() {
 		slog.Fatal("Error initializing the database", err)
 		os.Exit(1)
 	}
+}
+
+// startCron starts the cron scheduler.
+//
+// No parameters.
+// No return type.
+func startCron() {
+	cron := cron.NewCron()
+	cron.Start()
 }
 
 // createDiscordSession creates a new Discord session using the provided token.

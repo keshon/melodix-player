@@ -33,7 +33,7 @@ func GetAllHistorySortedBy(sortBy string) ([]History, error) {
 	case "last_played":
 		query = DB.Order("last_played DESC")
 	default:
-		return nil, fmt.Errorf("unsupported sort criteria: %s", sortBy)
+		query = DB
 	}
 
 	if err := query.Find(&history).Error; err != nil {
@@ -94,4 +94,13 @@ func UpdateTrackStatsForGuild(trackID uint, guildID string, playCount uint, dura
 
 func DeleteHistory(trackSongID string) error {
 	return DB.Where("track_id = ?", trackSongID).Delete(&History{}).Error
+}
+
+func DoesTrackExistForHistory(trackID uint) (bool, error) {
+	var count int64
+	err := DB.Model(&Track{}).Where("id = ?", trackID).Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

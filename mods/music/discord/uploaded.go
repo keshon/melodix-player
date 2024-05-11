@@ -4,10 +4,21 @@ import (
 	"fmt"
 
 	"github.com/gookit/slog"
+	"github.com/keshon/melodix-player/internal/config"
 	"github.com/keshon/melodix-player/mods/music/cache"
 )
 
 func (d *Discord) handleUploadListCommand(param string) {
+	config, err := config.NewConfig()
+	if err != nil {
+		slog.Error("error loading config: %w", err)
+	}
+
+	if config.DiscordAdminUserID != d.Message.Author.ID {
+		d.sendMessageEmbed("Only admins can use this command")
+		return
+	}
+
 	guildID := d.GuildID
 
 	c := cache.NewCache("./upload", "./cache", guildID)

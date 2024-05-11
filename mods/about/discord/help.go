@@ -54,6 +54,8 @@ func (d *Discord) handleHelpCommand() {
 
 	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
 	about := fmt.Sprintf("`%vabout`, `%vv` — show version\n", prefix, prefix)
+	whoami := fmt.Sprintf("`%vwhoami` — log user's info\n", prefix)
+
 	register := fmt.Sprintf("`%vregister` — enable commands listening\n", prefix)
 	unregister := fmt.Sprintf("`%vunregister` — disable commands listening", prefix)
 
@@ -67,9 +69,9 @@ func (d *Discord) handleHelpCommand() {
 		AddField("", "").
 		AddField("", "**History**\n"+history+historyByDuration+historyByPlaycount).
 		AddField("", "").
-		AddField("", "**Caching**\n"+cached+cachedSync+curl+uploaded+uploadedExtract).
+		AddField("", "**Caching**\nThis commands are for administrator only.\n"+cached+cachedSync+curl+uploaded+uploadedExtract).
 		AddField("", "").
-		AddField("", "**Information**\n"+help+about).
+		AddField("", "**Information**\n"+help+about+whoami).
 		AddField("", "").
 		AddField("", "**Administration**\n"+register+unregister).
 		AddField("", "\n\n").

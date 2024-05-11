@@ -14,6 +14,8 @@ import (
 
 type GuildManager struct {
 	Session       *discordgo.Session
+	Message       *discordgo.MessageCreate
+	GuildID       string
 	Bots          map[string]map[string]botsdef.Discord
 	commandPrefix string
 }
@@ -32,6 +34,8 @@ func NewGuildManager(session *discordgo.Session, bots map[string]map[string]bots
 
 	return &GuildManager{
 		Session:       session,
+		GuildID:       "",
+		Message:       nil,
 		Bots:          bots,
 		commandPrefix: config.DiscordCommandPrefix,
 	}
@@ -49,11 +53,17 @@ func (gm *GuildManager) Start() {
 //   - s: a pointer to the Discord session
 //   - m: a pointer to the Discord message received
 func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
+
+	gm.Session = s
+	gm.Message = m
+	gm.GuildID = m.GuildID
+
 	command, _, err := parseCommand(m.Message.Content, gm.commandPrefix)
 	if err != nil {
 		slog.Error(err)
 		return
 	}
+
 	aliases := [][]string{
 		{"pause", "!"},
 		{"resume", "r", "!>"},
@@ -65,6 +75,8 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		{"history", "time", "t"},
 		{"help", "h", "?"},
 		{"about", "v"},
+		{"cached"},
+		{"uploaded"},
 	}
 
 	var commandsList []string
@@ -96,9 +108,11 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 
 	switch command {
 	case "register":
-		gm.handleRegisterCommand(s, m)
+		gm.handleRegisterCommand()
 	case "unregister":
-		gm.handleUnregisterCommand(s, m)
+		gm.handleUnregisterCommand()
+	case "whoami":
+		gm.handleWhoamiCommand()
 	}
 }
 
@@ -107,9 +121,9 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 // Parameters:
 // - s: The discord session.
 // - m: The message create event.
-func (gm *GuildManager) handleRegisterCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	channelID := m.Message.ChannelID
-	guildID := m.GuildID
+func (gm *GuildManager) handleRegisterCommand() {
+	channelID := gm.Message.ChannelID
+	guildID := gm.GuildID
 
 	exists, err := db.DoesGuildExist(guildID)
 	if err != nil {
@@ -130,7 +144,7 @@ func (gm *GuildManager) handleRegisterCommand(s *discordgo.Session, m *discordgo
 		return
 	}
 
-	gm.setupBotInstance(s, guildID)
+	gm.setupBotInstance(guildID)
 	gm.Session.ChannelMessageSend(channelID, "Guild registered successfully")
 }
 
@@ -140,9 +154,9 @@ func (gm *GuildManager) handleRegisterCommand(s *discordgo.Session, m *discordgo
 // - s: the discordgo Session
 // - m: the discordgo MessageCreate
 // Return type: none
-func (gm *GuildManager) handleUnregisterCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
-	channelID := m.Message.ChannelID
-	guildID := m.GuildID
+func (gm *GuildManager) handleUnregisterCommand() {
+	channelID := gm.Message.ChannelID
+	guildID := gm.GuildID
 
 	exists, err := db.DoesGuildExist(guildID)
 	if err != nil {
@@ -166,13 +180,26 @@ func (gm *GuildManager) handleUnregisterCommand(s *discordgo.Session, m *discord
 	gm.Session.ChannelMessageSend(channelID, "Guild unregistered successfully")
 }
 
+// handleWhoamiCommand handles the whoami command for the GuildManager.
+//
+// Parameters:
+// - s: the discordgo Session
+// - m: the discordgo MessageCreate
+// Return type: none
+func (gm *GuildManager) handleWhoamiCommand() {
+	stats := fmt.Sprintf("\nGuild ID:\t%s\nChat ID:\t%s\nUser Name:\t%s\nUser ID:\t%s", gm.GuildID, gm.Message.ChannelID, gm.Message.Author.Username, gm.Message.Author.ID)
+	slog.Warn("Who Am I details:", stats)
+	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "User info for **"+gm.Message.Author.Username+"** was sent to terminal")
+}
+
 // setupBotInstance sets up a bot instance for the given guild.
 //
 // Parameters:
 // - session: pointer to discordgo.Session
 // - guildID: string
-func (gm *GuildManager) setupBotInstance(session *discordgo.Session, guildID string) {
+func (gm *GuildManager) setupBotInstance(guildID string) {
 	id := guildID
+	session := gm.Session
 
 	if _, ok := gm.Bots[id]; !ok {
 		gm.Bots[id] = make(map[string]botsdef.Discord)

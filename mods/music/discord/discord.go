@@ -41,7 +41,7 @@ func NewDiscord(session *discordgo.Session) *Discord {
 }
 
 func (d *Discord) Start(guildID string) {
-	slog.Infof(`Discord instance of mods/music started for guild id %v`, guildID)
+	slog.Infof(`Discord instance of 'music' module started for guild id %v`, guildID)
 
 	d.GuildID = guildID
 	d.Session.AddHandler(d.Commands)
