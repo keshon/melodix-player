@@ -111,6 +111,7 @@ func (d *Discord) handlePlayCommand(param string, enqueueOnly bool) {
 
 func getSongsFromSources(originType string, songsOrigins []string, guildID string) ([]*player.Song, error) {
 	var songsList []*player.Song
+	var allErrors []error // Slice to store all encountered errors
 
 	youtube := sources.NewYoutube()
 	stream := sources.NewStream()
@@ -132,7 +133,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			songPath := filepath.Join("cache", guildID, songOrigin)
 
 			if _, err := os.Stat(songPath); os.IsNotExist(err) {
-				slog.Error("No such file or directory: %v", err)
+				allErrors = append(allErrors, fmt.Errorf("no such file or directory: %v", err))
 				continue
 			}
 
@@ -160,36 +161,35 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 
 			id, err := strconv.Atoi(songOrigin)
 			if err != nil {
-				slog.Error("Cannot convert string id to int id")
+				allErrors = append(allErrors, fmt.Errorf("cannot convert string id to int id: %v", err))
 				continue
 			}
 			h := history.NewHistory()
 			track, err := h.GetTrackFromHistory(guildID, uint(id))
-			slog.Error(track)
 			if err != nil {
-				slog.Error("Error getting track from history with ID %v", id)
+				slog.Error("Error getting track from history: %v", err)
+				allErrors = append(allErrors, fmt.Errorf("error getting track from history with ID %v: %v", id, err))
 				continue
 			}
 
 			var song []*player.Song
 
-			if track.Source == "YouTube" {
+			switch track.Source {
+			case "YouTube":
 				slog.Info("Track is from YouTube")
 				song, err = youtube.GetAllSongsFromURL(track.URL)
 				if err != nil {
-					slog.Error("error fetching new songs from URL: %v", err)
-					continue
+					slog.Error("Error fetching song from youtube URL: %v", err)
+					allErrors = append(allErrors, fmt.Errorf("%v", err))
 				}
-			}
-			if track.Source == "Stream" {
+			case "Stream":
 				slog.Info("Track is from Stream")
 				song, err = stream.FetchStreamsByURLs([]string{track.URL})
 				if err != nil {
-					slog.Error("error fetching new songs from URL: %v", err)
-					continue
+					slog.Error("Error fetching stream from URL: %v", err)
+					allErrors = append(allErrors, fmt.Errorf("%v", err))
 				}
-			}
-			if track.Source == "LocalFile" {
+			case "LocalFile":
 				slog.Info("Track is from LocalFile")
 				song = []*player.Song{{
 					SongID:   track.SongID,
@@ -200,30 +200,32 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 				}}
 			}
 
+			if allErrors != nil {
+				allErrors = append(allErrors, fmt.Errorf("%v", err))
+				continue
+			}
+
 			songs = append(songs, song...)
 		case "youtube_title":
 			slog.Info("Youtube title: ", songOrigin)
-
 			songs, err = youtube.FetchSongsByTitle(songOrigin)
 			if err != nil {
-				slog.Warnf("Error fetching songs by title: %v", err)
-				continue
+				slog.Error("Error fetching song by title from youtube URL: %v", err)
+				allErrors = append(allErrors, fmt.Errorf("%v", err))
 			}
 		case "youtube_url":
 			slog.Info("Youtube URL: ", songOrigin)
-
 			songs, err = youtube.FetchSongsByURLs([]string{songOrigin})
 			if err != nil {
-				slog.Warnf("Error fetching songs by URL: %v", err)
-				continue
+				slog.Error("Error fetching song by URL from youtube URL: %v", err)
+				allErrors = append(allErrors, fmt.Errorf("%v", err))
 			}
 		case "stream_url":
 			slog.Info("Stream URL: ", songOrigin)
-
 			songs, err = stream.FetchStreamsByURLs([]string{songOrigin})
 			if err != nil {
-				slog.Warnf("Error fetching stream by URL: %v", err)
-				continue
+				slog.Error("Error fetching stream from URL: %v", err)
+				allErrors = append(allErrors, fmt.Errorf("%v", err))
 			}
 		}
 
@@ -231,7 +233,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 	}
 
 	if len(songsList) == 0 {
-		return nil, errors.New("no songs were fetched to playlist")
+		return nil, fmt.Errorf("%v", allErrors)
 	}
 
 	slog.Info("Up-to-date songs list now is:")
