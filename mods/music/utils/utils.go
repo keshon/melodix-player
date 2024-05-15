@@ -261,7 +261,7 @@ func findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (fou
 }
 
 func IsYouTubeURL(url string) bool {
-	pattern := regexp.MustCompile(`^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.*$`)
+	pattern := regexp.MustCompile(`^(https?://)?(www\.)?(.*\.)?(youtube\.com|youtu\.be)/.*$`)
 	return pattern.MatchString(strings.ToLower(url))
 }
 
