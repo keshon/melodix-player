@@ -4,7 +4,6 @@ import (
 	"github.com/gookit/slog"
 )
 
-// handleStopCommand handles the stop command for Discord.
 func (d *Discord) handleStopCommand() {
 	err := d.Player.Stop()
 	if err != nil {

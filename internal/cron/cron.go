@@ -3,6 +3,7 @@ package cron
 import (
 	"crypto/md5"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -10,51 +11,55 @@ import (
 
 	"github.com/keshon/melodix-player/internal/db"
 	"github.com/keshon/melodix-player/mods/music/player"
-	cron "github.com/robfig/cron/v3"
+	"github.com/robfig/cron/v3"
 )
 
-type ICron interface {
+type ICronTasks interface {
 	Start()
-	dbInvalidTracks() error
-	dbMissingTracks() error
 }
 
-type Cron struct {
+type CronTasks struct {
 }
 
-func NewCron() ICron {
-	return &Cron{}
+func NewCron() ICronTasks {
+	return &CronTasks{}
 }
 
-func (c *Cron) Start() {
+func (ct *CronTasks) Start() {
 
 	slog.Info("Cron scheduler started")
 
 	go func() {
-		c.runAllTasks()
+		ct.runAllTasks()
 
-		cr := cron.New()
-		cr.AddFunc("0 30 * * * *", func() {
-			c.runAllTasks()
+		c := cron.New(cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
+		c.AddFunc("@every 15m", func() {
+			ct.runAllTasks()
 		})
 
+		c.Run()
 	}()
 
 }
 
-func (c *Cron) runAllTasks() {
-	err := c.dbInvalidTracks()
+func (ct *CronTasks) runAllTasks() {
+	err := ct.dbInvalidTracks()
 	if err != nil {
 		slog.Error("Error processing invalid tracks: %v", err)
 	}
 
-	err = c.dbMissingTracks()
+	err = ct.dbMissingTracks()
 	if err != nil {
 		slog.Error("Error processing missing tracks: %v", err)
 	}
+
+	err = ct.checkAndTrimLogFile("./logs/all-levels.log")
+	if err != nil {
+		slog.Error("Error checking and trimming log file: %v", err)
+	}
 }
 
-func (c *Cron) dbInvalidTracks() error {
+func (ct *CronTasks) dbInvalidTracks() error {
 	tracks, err := db.GetAllTracks()
 	if err != nil {
 		return err
@@ -104,7 +109,7 @@ func (c *Cron) dbInvalidTracks() error {
 	return nil
 }
 
-func (c *Cron) dbMissingTracks() error {
+func (ct *CronTasks) dbMissingTracks() error {
 	allHistoryRecords, err := db.GetAllHistorySortedBy("")
 	if err != nil {
 		return err
@@ -154,4 +159,43 @@ func DoesTrackExistForHistory(trackID uint) (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
+}
+
+func (c *CronTasks) checkAndTrimLogFile(filePath string) error {
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return err
+	}
+
+	if fileInfo.Size() > 1024*1024 { // 1MB in bytes
+		fileBytes, err := os.ReadFile(filePath)
+		if err != nil {
+			return err
+		}
+
+		// Convert file contents to string
+		fileContent := string(fileBytes)
+
+		// Split file content by lines
+		lines := strings.Split(fileContent, "\n")
+
+		// Calculate the number of lines to remove (30% of total lines)
+		linesToRemove := len(lines) * 30 / 100
+
+		// Remove lines from the beginning
+		trimmedLines := lines[linesToRemove:]
+
+		// Join the remaining lines
+		trimmedContent := strings.Join(trimmedLines, "\n")
+
+		// Write back trimmed content to the file
+		err = os.WriteFile(filePath, []byte(trimmedContent), 0644)
+		if err != nil {
+			return err
+		}
+
+		slog.Info("Trimmed log file successfully")
+	}
+
+	return nil
 }

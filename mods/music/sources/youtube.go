@@ -17,18 +17,25 @@ import (
 	kkdai_youtube "github.com/kkdai/youtube/v2"
 )
 
+type IYoutube interface {
+	FetchOneByURL(url string) (*player.Song, error)
+	FetchManyByURL(url string) ([]*player.Song, error)
+	FetchManyByManyURLs(urls []string) ([]*player.Song, error)
+	FetchManyByManyIDs(guildID string, ids []int) ([]*player.Song, error)
+	FetchManyByTitle(title string) ([]*player.Song, error)
+}
+
 type Youtube struct {
 	youtubeClient *kkdai_youtube.Client
 }
 
-func NewYoutube() *Youtube {
+func NewYoutube() IYoutube {
 	return &Youtube{
 		youtubeClient: &kkdai_youtube.Client{},
 	}
 }
 
-// GetSongFromVideoURL creates a new Song instance using the provided YouTube URL.
-func (y *Youtube) GetSongFromVideoURL(url string) (*player.Song, error) {
+func (y *Youtube) parseSongInfo(url string) (*player.Song, error) {
 	song, err := y.youtubeClient.GetVideo(url)
 	if err != nil {
 		return nil, err
@@ -50,8 +57,7 @@ func (y *Youtube) GetSongFromVideoURL(url string) (*player.Song, error) {
 	}, nil
 }
 
-// getAllSongsFromURL creates an array of Song instances from a YouTube playlist.
-func (y *Youtube) GetAllSongsFromURL(url string) ([]*player.Song, error) {
+func (y *Youtube) parseSongOrPlaylistInfo(url string) ([]*player.Song, error) {
 	var songs []*player.Song
 
 	if strings.Contains(url, "list=") {
@@ -62,10 +68,8 @@ func (y *Youtube) GetAllSongsFromURL(url string) ([]*player.Song, error) {
 			return nil, err
 		}
 
-		// Use a WaitGroup to wait for all goroutines to finish
 		var wg sync.WaitGroup
 
-		// Create a map to store the index of each video ID in the playlist
 		videoIndex := make(map[string]int)
 		for i, video := range playlistVideos.Videos {
 			videoIndex[video.ID] = i
@@ -77,33 +81,27 @@ func (y *Youtube) GetAllSongsFromURL(url string) ([]*player.Song, error) {
 				defer wg.Done()
 
 				videoURL := fmt.Sprintf("https://www.youtube.com/watch?v=%s", videoID)
-				song, err := y.GetSongFromVideoURL(videoURL)
+				song, err := y.parseSongInfo(videoURL)
 				if err != nil {
-					// Handle the error, e.g., log it
 					fmt.Printf("Error fetching song for video ID %s: %v\n", videoID, err)
 					return
 				}
 
-				// Append the song to the songs slice
 				songs = append(songs, song)
 			}(video.ID)
 		}
 
-		// Wait for all goroutines to finish
 		wg.Wait()
 
-		// Sort the songs based on the order of playlistVideos.Videos
 		sort.SliceStable(songs, func(i, j int) bool {
-			// Get the index of each song's video ID in the playlist
 			indexI := videoIndex[songs[i].SongID]
 			indexJ := videoIndex[songs[j].SongID]
 
-			// Compare the indices to determine the order
 			return indexI < indexJ
 		})
 	} else {
 		// It's a single song
-		song, err := y.GetSongFromVideoURL(url)
+		song, err := y.parseSongInfo(url)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +111,6 @@ func (y *Youtube) GetAllSongsFromURL(url string) ([]*player.Song, error) {
 	return songs, nil
 }
 
-// extractPlaylistID extracts the playlist ID from the given URL.
 func (y *Youtube) extractPlaylistID(url string) string {
 	if strings.Contains(url, "list=") {
 		splitURL := strings.Split(url, "list=")
@@ -124,7 +121,82 @@ func (y *Youtube) extractPlaylistID(url string) string {
 	return ""
 }
 
-// getVideoURLFromTitle retrieves the YouTube video URL from the given title.
+// -- URL --
+func (y *Youtube) FetchOneByURL(url string) (*player.Song, error) {
+	song, err := y.parseSongInfo(url)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
+	}
+	return song, nil
+}
+
+func (y *Youtube) FetchManyByURL(url string) ([]*player.Song, error) {
+	var songs []*player.Song
+
+	song, err := y.parseSongOrPlaylistInfo(url)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
+	}
+
+	songs = append(songs, song...)
+
+	return songs, nil
+}
+
+func (y *Youtube) FetchManyByManyURLs(urls []string) ([]*player.Song, error) {
+	var songs []*player.Song
+
+	for _, url := range urls {
+		song, err := y.parseSongOrPlaylistInfo(url)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
+		}
+
+		songs = append(songs, song...)
+	}
+
+	return songs, nil
+}
+
+// -- ID --
+func (y *Youtube) FetchManyByManyIDs(guildID string, ids []int) ([]*player.Song, error) {
+	h := history.NewHistory()
+	var songs []*player.Song
+
+	for _, id := range ids {
+		track, err := h.GetTrackFromHistory(guildID, uint(id))
+		if err != nil {
+			return nil, fmt.Errorf("error getting track from history with ID %v", id)
+		}
+
+		song, err := y.parseSongOrPlaylistInfo(track.URL)
+		if err != nil {
+			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
+		}
+
+		songs = append(songs, song...)
+	}
+
+	return songs, nil
+}
+
+// -- Title --
+func (y *Youtube) FetchManyByTitle(title string) ([]*player.Song, error) {
+	var songs []*player.Song
+
+	url, err := y.getVideoURLFromTitle(title)
+	if err != nil {
+		return nil, fmt.Errorf("error getting YouTube video URL by title: %v", err)
+	}
+
+	songs, err = y.parseSongOrPlaylistInfo(url)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
+	}
+
+	return songs, nil
+}
+
 func (y *Youtube) getVideoURLFromTitle(title string) (string, error) {
 	searchURL := fmt.Sprintf("https://www.youtube.com/results?search_query=%v", strings.ReplaceAll(title, " ", "+"))
 
@@ -160,92 +232,4 @@ func (y *Youtube) getVideoURLFromTitle(title string) (string, error) {
 	}
 
 	return "", fmt.Errorf("no video found for the given title")
-}
-
-// FetchSongsByIDs fetches songs by their IDs from the history.
-func (y *Youtube) FetchSongsByIDs(guildID string, ids []int) ([]*player.Song, error) {
-	h := history.NewHistory()
-	var songs []*player.Song
-
-	for _, id := range ids {
-		track, err := h.GetTrackFromHistory(guildID, uint(id))
-		if err != nil {
-			return nil, fmt.Errorf("error getting track from history with ID %v", id)
-		}
-
-		song, err := y.GetAllSongsFromURL(track.URL)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
-		}
-
-		songs = append(songs, song...)
-	}
-
-	return songs, nil
-}
-
-// FetchSongsByTitles fetches songs by their titles from youtube.
-func (y *Youtube) FetchSongsByTitles(titles []string) ([]*player.Song, error) {
-	var songs []*player.Song
-
-	for _, title := range titles {
-		url, err := y.getVideoURLFromTitle(title)
-		if err != nil {
-			return nil, fmt.Errorf("error getting YouTube video URL by title: %v", err)
-		}
-
-		songs, err = y.GetAllSongsFromURL(url)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
-		}
-	}
-
-	return songs, nil
-}
-
-// FetchSongsByTitle fetches song by its title from youtube. Or songs if the initial song was part of playlist
-func (y *Youtube) FetchSongsByTitle(title string) ([]*player.Song, error) {
-	var songs []*player.Song
-
-	url, err := y.getVideoURLFromTitle(title)
-	if err != nil {
-		return nil, fmt.Errorf("error getting YouTube video URL by title: %v", err)
-	}
-
-	songs, err = y.GetAllSongsFromURL(url)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
-	}
-
-	return songs, nil
-}
-
-// FetchSongsByURLs fetches songs by their URLs.
-func (y *Youtube) FetchSongsByURLs(urls []string) ([]*player.Song, error) {
-	var songs []*player.Song
-
-	for _, url := range urls {
-		song, err := y.GetAllSongsFromURL(url)
-		if err != nil {
-			return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
-		}
-
-		songs = append(songs, song...)
-	}
-
-	return songs, nil
-}
-
-// FetchSongByURLs fetches song by its URL. Or songs if the initial song was part of playlist
-func (y *Youtube) FetchSongByURLs(url string) ([]*player.Song, error) {
-	var songs []*player.Song
-
-	song, err := y.GetAllSongsFromURL(url)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
-	}
-
-	songs = append(songs, song...)
-
-	return songs, nil
 }

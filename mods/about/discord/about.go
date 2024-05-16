@@ -13,9 +13,6 @@ import (
 	"github.com/keshon/melodix-player/internal/version"
 )
 
-// handleAboutCommand is a function to handle the about command in Discord.
-//
-// It takes a Discord session and a Discord message as parameters and does not return anything.
 func (d *Discord) handleAboutCommand() {
 	s := d.Session
 	m := d.Message

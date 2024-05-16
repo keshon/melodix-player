@@ -20,7 +20,6 @@ import (
 	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
-// handlePlayCommand handles the play command for Discord.
 func (d *Discord) handlePlayCommand(param string, enqueueOnly bool) {
 	s := d.Session
 	m := d.Message
@@ -177,14 +176,14 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			switch track.Source {
 			case "YouTube":
 				slog.Info("Track is from YouTube")
-				song, err = youtube.GetAllSongsFromURL(track.URL)
+				song, err = youtube.FetchManyByURL(track.URL)
 				if err != nil {
 					slog.Error("Error fetching song from youtube URL: %v", err)
 					allErrors = append(allErrors, fmt.Errorf("%v", err))
 				}
 			case "Stream":
 				slog.Info("Track is from Stream")
-				song, err = stream.FetchStreamsByURLs([]string{track.URL})
+				song, err = stream.FetchManyByManyURLs([]string{track.URL})
 				if err != nil {
 					slog.Error("Error fetching stream from URL: %v", err)
 					allErrors = append(allErrors, fmt.Errorf("%v", err))
@@ -208,21 +207,21 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 			songs = append(songs, song...)
 		case "youtube_title":
 			slog.Info("Youtube title: ", songOrigin)
-			songs, err = youtube.FetchSongsByTitle(songOrigin)
+			songs, err = youtube.FetchManyByTitle(songOrigin)
 			if err != nil {
 				slog.Error("Error fetching song by title from youtube URL: %v", err)
 				allErrors = append(allErrors, fmt.Errorf("%v", err))
 			}
 		case "youtube_url":
 			slog.Info("Youtube URL: ", songOrigin)
-			songs, err = youtube.FetchSongsByURLs([]string{songOrigin})
+			songs, err = youtube.FetchManyByManyURLs([]string{songOrigin})
 			if err != nil {
 				slog.Error("Error fetching song by URL from youtube URL: %v", err)
 				allErrors = append(allErrors, fmt.Errorf("%v", err))
 			}
 		case "stream_url":
 			slog.Info("Stream URL: ", songOrigin)
-			songs, err = stream.FetchStreamsByURLs([]string{songOrigin})
+			songs, err = stream.FetchManyByManyURLs([]string{songOrigin})
 			if err != nil {
 				slog.Error("Error fetching stream from URL: %v", err)
 				allErrors = append(allErrors, fmt.Errorf("%v", err))
@@ -313,7 +312,6 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 }
 
 func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int, skipFirst bool) {
-
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4)
 
@@ -389,10 +387,6 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 	s.ChannelMessageEditEmbed(channelID, prevMessageID, embedMsg.MessageEmbed)
 }
 
-// parseOriginParameter parses the origin parameter and returns the appropriate type and value.
-//
-// param string - the parameter to be parsed
-// (string, []string) - the type and value to be returned
 func splitParamsToOriginsAndType(param string) (string, []string) {
 	param = strings.TrimSpace(param)
 
@@ -421,7 +415,7 @@ func splitParamsToOriginsAndType(param string) (string, []string) {
 			urlsSlice := strings.Fields(param)
 			streamUrls := []string{}
 			for _, url := range urlsSlice {
-				if utils.IsValidHttpUrl(url) {
+				if utils.IsValidHttpURL(url) {
 					streamUrls = append(streamUrls, url)
 					originType = "stream_url"
 				}

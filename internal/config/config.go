@@ -37,10 +37,6 @@ type Config struct {
 	DcaUserAgent               string
 }
 
-// NewConfig creates a new Config object and returns it along with any error encountered.
-//
-// No parameters.
-// Returns *Config and error.
 func NewConfig() (*Config, error) {
 	if err := godotenv.Load(); err != nil && !os.IsNotExist(err) {
 		return nil, err
@@ -79,10 +75,7 @@ func NewConfig() (*Config, error) {
 	return config, nil
 }
 
-// String returns the JSON representation of the Config struct.
-//
-// No parameters.
-// Returns a string.
+// Returns the JSON representation of the Config struct.
 func (c *Config) String() string {
 	configMap := map[string]interface{}{
 		"DiscordCommandPrefix":       c.DiscordCommandPrefix,
@@ -118,10 +111,8 @@ func (c *Config) String() string {
 	return string(jsonString)
 }
 
-// validateMandatoryConfig checks for the presence of mandatory configuration keys in the environment variables and returns an error if any are missing.
-//
-// No parameters.
-// Returns an error.
+// validateMandatoryConfig checks for the presence of mandatory configuration keys
+// in the environment variables and returns an error if any are missing.
 func validateMandatoryConfig() error {
 	mandatoryKeys := []string{
 		"DISCORD_COMMAND_PREFIX", "DISCORD_BOT_TOKEN", "REST_ENABLED", "DCA_FRAME_DURATION", "DCA_BITRATE", "DCA_PACKET_LOSS",
@@ -140,9 +131,6 @@ func validateMandatoryConfig() error {
 	return nil
 }
 
-// getenvAsBool returns the boolean value of the environment variable specified by the key.
-//
-// It takes a string key as a parameter and returns a boolean value.
 func getenvAsBool(key string) bool {
 	val := os.Getenv(key)
 
@@ -154,9 +142,6 @@ func getenvAsBool(key string) bool {
 	return boolValue
 }
 
-// getenvAsInt returns the integer value of the environment variable with the given key.
-//
-// It takes a string key as parameter and returns an integer value.
 func getenvAsInt(key string) int {
 	val := os.Getenv(key)
 
@@ -169,9 +154,6 @@ func getenvAsInt(key string) int {
 	return intValue
 }
 
-// getenvBoolAsInt returns the integer representation of the boolean value retrieved from the environment variable specified by the key.
-//
-// It takes a string key as a parameter and returns an integer value.
 func getenvBoolAsInt(key string) int {
 	val := os.Getenv(key)
 

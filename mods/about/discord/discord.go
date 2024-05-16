@@ -22,12 +22,6 @@ type Discord struct {
 	RateLimitDuration    time.Duration
 }
 
-// NewDiscord initializes a new Discord object with the given session and guild ID.
-//
-// Parameters:
-// - session: a pointer to a discordgo.Session
-// - guildID: a string representing the guild ID
-// Returns a pointer to a Discord object.
 func NewDiscord(session *discordgo.Session) *Discord {
 	config := loadConfig()
 
@@ -39,10 +33,6 @@ func NewDiscord(session *discordgo.Session) *Discord {
 	}
 }
 
-// loadConfig loads the configuration and returns a pointer to config.Config.
-//
-// No parameters.
-// Returns a pointer to config.Config.
 func loadConfig() *config.Config {
 	cfg, err := config.NewConfig()
 	if err != nil {
@@ -51,9 +41,6 @@ func loadConfig() *config.Config {
 	return cfg
 }
 
-// Start starts the Discord instance for the specified guild ID.
-//
-// guildID string
 func (d *Discord) Start(guildID string) {
 	slog.Info("Discord instance of 'about' module started for guild ID", guildID)
 	d.Session.AddHandler(d.Commands)
@@ -64,12 +51,6 @@ func (d *Discord) Stop() {
 	d.IsInstanceActive = false
 }
 
-// Commands handles the incoming Discord commands.
-//
-// Parameters:
-//
-//	s: the Discord session
-//	m: the incoming Discord message
 func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.GuildID != d.GuildID || !d.IsInstanceActive {
 		return
@@ -93,13 +74,6 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-// parseCommand parses the input based on the provided pattern
-//
-// input: the input string to be parsed
-// pattern: the pattern to match at the beginning of the input
-// string: the parsed command
-// string: the parsed parameter
-// error: an error if the pattern is not found or no command is found
 func parseCommand(input, pattern string) (string, string, error) {
 	input = strings.ToLower(input)
 	pattern = strings.ToLower(pattern)
@@ -124,12 +98,6 @@ func parseCommand(input, pattern string) (string, string, error) {
 	return command, parameter, nil
 }
 
-// getCanonicalCommand finds the canonical command for the given alias.
-//
-// Parameters:
-// - alias: a string representing the alias to be searched for.
-// - commandAliases: a 2D slice containing the list of command aliases.
-// Return type: string
 func getCanonicalCommand(alias string, commandAliases [][]string) string {
 	for _, aliases := range commandAliases {
 		for _, command := range aliases {
@@ -141,9 +109,6 @@ func getCanonicalCommand(alias string, commandAliases [][]string) string {
 	return ""
 }
 
-// changeAvatar changes the avatar of the Discord user.
-//
-// It takes a session as a parameter and does not return anything.
 func (d *Discord) changeAvatar(s *discordgo.Session) {
 	if time.Since(d.LastChangeAvatarTime) < d.RateLimitDuration {
 		return

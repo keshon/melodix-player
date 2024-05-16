@@ -4,7 +4,6 @@ import (
 	"github.com/gookit/slog"
 )
 
-// handleSkipCommand handles the skip command for Discord.
 func (d *Discord) handleSkipCommand() {
 	d.changeAvatar()
 

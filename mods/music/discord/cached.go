@@ -50,5 +50,4 @@ func (d *Discord) handleCacheListCommand(param string) {
 			d.editMessageEmbed("🗃 All cached files are synced successfully\n\nUse `"+d.prefix+"cached` command to see available files\n\n**Added:** "+fmt.Sprintf("%d", added)+"\n**Updated:** "+fmt.Sprintf("%d", updated)+"\n**Removed:** "+fmt.Sprintf("%d", removed), msg.ID)
 		}
 	}
-
 }

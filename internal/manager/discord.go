@@ -12,6 +12,10 @@ import (
 	"github.com/keshon/melodix-player/internal/db"
 )
 
+type IGuildManager interface {
+	Start()
+}
+
 type GuildManager struct {
 	Session       *discordgo.Session
 	Message       *discordgo.MessageCreate
@@ -20,13 +24,7 @@ type GuildManager struct {
 	commandPrefix string
 }
 
-// NewGuildManager creates a new GuildManager with the given discord session and bot instances.
-//
-// Parameters:
-// - session: *discordgo.Session
-// - botInstances: map[string]*discord.BotInstance
-// Return type: *GuildManager
-func NewGuildManager(session *discordgo.Session, bots map[string]map[string]botsdef.Discord) *GuildManager {
+func NewGuildManager(session *discordgo.Session, bots map[string]map[string]botsdef.Discord) IGuildManager {
 	config, err := config.NewConfig()
 	if err != nil {
 		slog.Fatalf("Error loading config:", err)
@@ -41,24 +39,18 @@ func NewGuildManager(session *discordgo.Session, bots map[string]map[string]bots
 	}
 }
 
-// Start starts the GuildManager.
 func (gm *GuildManager) Start() {
 	slog.Info("Discord instance of guild manager started")
 	gm.Session.AddHandler(gm.Commands)
 }
 
-// Commands handles the commands received in a Discord session message.
-//
-// Parameters:
-//   - s: a pointer to the Discord session
-//   - m: a pointer to the Discord message received
 func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	gm.Session = s
 	gm.Message = m
 	gm.GuildID = m.GuildID
 
-	command, _, err := parseCommand(m.Message.Content, gm.commandPrefix)
+	command, _, err := gm.splitCommandFromParameter(m.Message.Content, gm.commandPrefix)
 	if err != nil {
 		slog.Error(err)
 		return
@@ -116,11 +108,6 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 	}
 }
 
-// handleRegisterCommand handles the registration command for the GuildManager.
-//
-// Parameters:
-// - s: The discord session.
-// - m: The message create event.
 func (gm *GuildManager) handleRegisterCommand() {
 	channelID := gm.Message.ChannelID
 	guildID := gm.GuildID
@@ -148,12 +135,6 @@ func (gm *GuildManager) handleRegisterCommand() {
 	gm.Session.ChannelMessageSend(channelID, "Guild registered successfully")
 }
 
-// handleUnregisterCommand handles the unregister command for the GuildManager.
-//
-// Parameters:
-// - s: the discordgo Session
-// - m: the discordgo MessageCreate
-// Return type: none
 func (gm *GuildManager) handleUnregisterCommand() {
 	channelID := gm.Message.ChannelID
 	guildID := gm.GuildID
@@ -180,23 +161,12 @@ func (gm *GuildManager) handleUnregisterCommand() {
 	gm.Session.ChannelMessageSend(channelID, "Guild unregistered successfully")
 }
 
-// handleWhoamiCommand handles the whoami command for the GuildManager.
-//
-// Parameters:
-// - s: the discordgo Session
-// - m: the discordgo MessageCreate
-// Return type: none
 func (gm *GuildManager) handleWhoamiCommand() {
 	stats := fmt.Sprintf("\nGuild ID:\t%s\nChat ID:\t%s\nUser Name:\t%s\nUser ID:\t%s", gm.GuildID, gm.Message.ChannelID, gm.Message.Author.Username, gm.Message.Author.ID)
 	slog.Warn("Who Am I details:", stats)
 	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "User info for **"+gm.Message.Author.Username+"** was sent to terminal")
 }
 
-// setupBotInstance sets up a bot instance for the given guild.
-//
-// Parameters:
-// - session: pointer to discordgo.Session
-// - guildID: string
 func (gm *GuildManager) setupBotInstance(guildID string) {
 	id := guildID
 	session := gm.Session
@@ -214,11 +184,6 @@ func (gm *GuildManager) setupBotInstance(guildID string) {
 	}
 }
 
-// removeBotInstance removes a bot instance from the GuildManager's Bots map for the given guildID.
-//
-// Parameters:
-// - guildID string: the ID of the guild from which the bot instance will be removed.
-// No return type.
 func (gm *GuildManager) removeBotInstance(guildID string) {
 	bots, ok := gm.Bots[guildID]
 	if !ok {
@@ -236,33 +201,23 @@ func (gm *GuildManager) removeBotInstance(guildID string) {
 	delete(gm.Bots, guildID)
 }
 
-// parseCommand parses the input based on the provided pattern
-//
-// input: the input string to be parsed
-// pattern: the pattern to match at the beginning of the input
-// string: the parsed command
-// string: the parsed parameter
-// error: an error if the pattern is not found or no command is found
-func parseCommand(input, pattern string) (string, string, error) {
-	input = strings.ToLower(input)
-	pattern = strings.ToLower(pattern)
-
-	if !strings.HasPrefix(input, pattern) {
-		return "", "", nil // fmt.Errorf("pattern not found")
+func (gm *GuildManager) splitCommandFromParameter(content, commandPrefix string) (string, string, error) {
+	if !strings.HasPrefix(content, commandPrefix) {
+		return "", "", fmt.Errorf("command prefix not found")
 	}
 
-	input = input[len(pattern):]
+	commandAndParams := content[len(commandPrefix):]
 
-	words := strings.Fields(input)
+	words := strings.Fields(commandAndParams)
 	if len(words) == 0 {
 		return "", "", fmt.Errorf("no command found")
 	}
 
-	command := words[0]
-	parameter := ""
+	command := strings.ToLower(words[0])
+	param := ""
 	if len(words) > 1 {
-		parameter = strings.Join(words[1:], " ")
-		parameter = strings.TrimSpace(parameter)
+		param = strings.Join(words[1:], " ")
+		param = strings.TrimSpace(param)
 	}
-	return command, parameter, nil
+	return command, param, nil
 }

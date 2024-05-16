@@ -7,7 +7,6 @@ import (
 	"github.com/keshon/melodix-player/mods/music/player"
 )
 
-// handleResumeCommand handles the resume command for Discord.
 func (d *Discord) handleResumeCommand() {
 	d.changeAvatar()
 

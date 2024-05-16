@@ -52,7 +52,7 @@ func (c *Cache) Curl(url string) (string, error) {
 	uploadsFolder := c.uploadsFolder
 
 	yt := sources.NewYoutube()
-	song, err := yt.GetSongFromVideoURL(url)
+	song, err := yt.FetchOneByURL(url)
 	if err != nil {
 		return "", err
 	}

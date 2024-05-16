@@ -38,12 +38,10 @@ type IHistory interface {
 	GetTrackFromHistory(guildID string, trackID uint) (db.Track, error)
 }
 
-// NewHistory creates a new History instance.
 func NewHistory() IHistory {
 	return &History{}
 }
 
-// AddTrackToHistory adds a song to the application's play history.
 func (h *History) AddTrackToHistory(guildID string, song *Song) error {
 	var track *db.Track
 

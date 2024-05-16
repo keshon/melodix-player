@@ -12,13 +12,17 @@ import (
 	"github.com/keshon/melodix-player/mods/music/player"
 )
 
+type IStream interface {
+	FetchManyByManyURLs(urls []string) ([]*player.Song, error)
+}
+
 type Stream struct{}
 
-func NewStream() *Stream {
+func NewStream() IStream {
 	return &Stream{}
 }
 
-func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
+func (s *Stream) FetchManyByManyURLs(urls []string) ([]*player.Song, error) {
 	var songs []*player.Song
 
 	for _, elem := range urls {
@@ -51,7 +55,7 @@ func (s *Stream) FetchStreamsByURLs(urls []string) ([]*player.Song, error) {
 			}
 			songs = append(songs, song)
 		} else {
-			return nil, fmt.Errorf("Not a valid stream due to invalid content-type: %v", contentType)
+			return nil, fmt.Errorf("not a valid stream due to invalid content-type: %v", contentType)
 		}
 	}
 

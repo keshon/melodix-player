@@ -20,10 +20,6 @@ import (
 	"github.com/keshon/melodix-player/internal/version"
 )
 
-// main is the entry point of the program.
-//
-// There are no parameters.
-// There is no return type.
 func main() {
 	initLogger()
 	config := loadConfig()
@@ -37,10 +33,6 @@ func main() {
 	waitForExitSignal()
 }
 
-// initLogger initializes the logger with color theme and file handler.
-//
-// No parameters.
-// No return type.
 func initLogger() {
 	slog.Configure(func(logger *slog.SugaredLogger) {
 		if textFormatter, ok := logger.Formatter.(*slog.TextFormatter); ok {
@@ -52,26 +44,23 @@ func initLogger() {
 		}
 	})
 
-	fileHandler, err := handler.NewFileHandler("./logs/all-levels.log", func(hconf *handler.Config) {
-		*hconf = handler.Config{
-			MaxSize:   1024 * 1024 * 1,
-			Compress:  true,
-			BackupNum: 1,
-			Levels:    slog.AllLevels,
-		}
-	})
+	// fileHandler, err := handler.NewRotateFile("./logs/all-levels.log", rotatefile.Every15Min, func(hconf *handler.Config) {
+	// 	*hconf = handler.Config{
+	// 		MaxSize:   1024 * 1024 * 1,
+	// 		Compress:  true,
+	// 		BackupNum: 1,
+	// 		Levels:    slog.AllLevels,
+	// 	}
+	// })
 
+	fileHandler, err := handler.NewFileHandler("./logs/all-levels.log", handler.WithLogLevels(slog.AllLevels))
 	if err != nil {
 		slog.Error("Error creating file handler:", err)
+	} else {
+		slog.PushHandler(fileHandler)
 	}
-
-	slog.PushHandler(fileHandler)
 }
 
-// loadConfig loads the configuration and returns a pointer to config.Config.
-//
-// No parameters.
-// Returns *config.Config.
 func loadConfig() *config.Config {
 	cfg, err := config.NewConfig()
 	if err != nil {
@@ -82,10 +71,6 @@ func loadConfig() *config.Config {
 	return cfg
 }
 
-// initDatabase initializes the database.
-//
-// No parameters.
-// No return type.
 func initDatabase() {
 	_, err := db.InitDB("./database.db")
 	if err != nil {
@@ -94,18 +79,11 @@ func initDatabase() {
 	}
 }
 
-// startCron starts the cron scheduler.
-//
-// No parameters.
-// No return type.
 func startCron() {
 	cron := cron.NewCron()
 	cron.Start()
 }
 
-// createDiscordSession creates a new Discord session using the provided token.
-//
-// It takes a string token as a parameter and returns a *discordgo.Session.
 func createDiscordSession(token string) *discordgo.Session {
 	session, err := discordgo.New("Bot " + token)
 	if err != nil {
@@ -113,13 +91,9 @@ func createDiscordSession(token string) *discordgo.Session {
 	}
 
 	session.ShouldReconnectOnError = true // Not sure if this is needed
-
 	return session
 }
 
-// startBotHandlers initializes and starts Discord bot handlers for each guild.
-//
-// It takes a *discordgo.Session as a parameter and returns a map[string]map[string]botsdef.Discord.
 func startBotHandlers(session *discordgo.Session) map[string]map[string]botsdef.Discord {
 	bots := make(map[string]map[string]botsdef.Discord)
 
@@ -146,10 +120,6 @@ func startBotHandlers(session *discordgo.Session) map[string]map[string]botsdef.
 	return bots
 }
 
-// handleDiscordSession is a Go function that opens a Discord session and handles any errors.
-//
-// It takes a parameter discordSession of type *discordgo.Session.
-// It does not return any value.
 func handleDiscordSession(discordSession *discordgo.Session) {
 	if err := discordSession.Open(); err != nil {
 		slog.Fatal("Error opening Discord session", err)
@@ -158,9 +128,6 @@ func handleDiscordSession(discordSession *discordgo.Session) {
 	defer discordSession.Close()
 }
 
-// startRestServer starts the REST server based on the given configuration and bot instances.
-//
-// It takes a config.Config pointer and a map of string to *discord.BotInstance as parameters.
 func startRestServer(config *config.Config, bots map[string]map[string]botsdef.Discord) {
 	if !config.RestEnabled {
 		return
@@ -184,10 +151,6 @@ func startRestServer(config *config.Config, bots map[string]map[string]botsdef.D
 	}()
 }
 
-// waitForExitSignal waits for an exit signal and handles it.
-//
-// No parameters.
-// No return types.
 func waitForExitSignal() {
 	exitSignalChannel := make(chan os.Signal, 1)
 	signal.Notify(exitSignalChannel, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)

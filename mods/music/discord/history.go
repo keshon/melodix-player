@@ -49,7 +49,7 @@ func (d *Discord) handleHistoryCommand(param string) {
 			break
 		}
 
-		duration := utils.FormatDuration(elem.History.Duration)
+		duration := utils.FormatDurationHHMMSS(elem.History.Duration)
 		var sourceLabels string
 		if elem.Track.Source == player.SourceLocalFile.String() && utils.IsYouTubeURL(elem.Track.URL) {
 			sourceLabels = "`youtube cached`"

@@ -14,12 +14,6 @@ type Discord interface {
 
 var Modules = []string{"aboutModule", "musicModule"}
 
-// CreateBotInstance creates a new bot instance based on the module name.
-//
-// Parameters:
-// - session: a Discord session
-// - module: the name of the module ("hi" or "hello")
-// Returns a Discord instance.
 func CreateBotInstance(session *discordgo.Session, module string) Discord {
 	switch module {
 	case "aboutModule":

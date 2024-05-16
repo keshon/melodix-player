@@ -12,9 +12,6 @@ import (
 	"github.com/keshon/melodix-player/mods/about/utils"
 )
 
-// handleHelpCommand handles the help command for the Discord bot.
-//
-// Takes in a session and a message create, and does not return any value.
 func (d *Discord) handleHelpCommand() {
 	s := d.Session
 	m := d.Message
