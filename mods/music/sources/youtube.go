@@ -65,7 +65,36 @@ func (y *Youtube) parseSongOrPlaylistInfo(url string) ([]*player.Song, error) {
 		playlistID := y.extractPlaylistID(url)
 		playlistVideos, err := y.youtubeClient.GetPlaylist(playlistID)
 		if err != nil {
-			return nil, err
+			if err.Error() == "extractPlaylistID failed: no playlist detected or invalid playlist ID" {
+				// we assume it's a 'Youtube Mix Playlist' that kkdai_youtube doesn't support
+				slog.Warn("Error fetching playlist, trying to fetchsongs via regex from url", url)
+
+				tracks, err := y.getVideoURLsFromYoutubeMixPlaylist(url)
+				if err != nil {
+					return nil, err
+				}
+
+				slog.Warn(tracks)
+
+				playlistVideos = &kkdai_youtube.Playlist{
+					ID:          "your_playlist_id",
+					Title:       "Your Playlist Title",
+					Description: "Your Playlist Description",
+					Author:      "Your Author",
+					Videos:      make([]*kkdai_youtube.PlaylistEntry, len(tracks)),
+				}
+
+				// Populate the Videos field
+				for i, track := range tracks {
+					playlistVideos.Videos[i] = &kkdai_youtube.PlaylistEntry{
+						ID:     track,
+						Title:  "",
+						Author: "",
+					}
+				}
+			} else {
+				return nil, err
+			}
 		}
 
 		var wg sync.WaitGroup
@@ -119,6 +148,21 @@ func (y *Youtube) extractPlaylistID(url string) string {
 		}
 	}
 	return ""
+}
+
+func extractVideoIDs(videoURLs []string) []string {
+	var videoIDs []string
+
+	re := regexp.MustCompile(`watch\?v=([^&]+)&list=`)
+
+	for _, url := range videoURLs {
+		match := re.FindStringSubmatch(url)
+		if len(match) >= 2 {
+			videoIDs = append(videoIDs, match[1])
+		}
+	}
+
+	return videoIDs
 }
 
 // -- URL --
@@ -216,7 +260,9 @@ func (y *Youtube) getVideoURLFromTitle(title string) (string, error) {
 	}
 
 	re := regexp.MustCompile(`"url":"/watch\?v=([a-zA-Z0-9_-]+)(?:\\u0026list=([a-zA-Z0-9_-]+))?[^"]*`)
+
 	matches := re.FindAllStringSubmatch(string(body), -1)
+
 	if len(matches) > 0 && len(matches[0]) > 1 {
 		videoID := matches[0][1]
 		listID := matches[0][2]
@@ -232,4 +278,41 @@ func (y *Youtube) getVideoURLFromTitle(title string) (string, error) {
 	}
 
 	return "", fmt.Errorf("no video found for the given title")
+}
+
+func (y *Youtube) getVideoURLsFromYoutubeMixPlaylist(url string) ([]string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP request failed with status code %v", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Error(body)
+
+	bodyString := strings.ReplaceAll(string(body), `\u0026`, "&")
+
+	re := regexp.MustCompile(`/watch\?v=([^&]+)&list=([^&]+)`)
+
+	matches := re.FindAllStringSubmatch(bodyString, -1)
+
+	var videoURLs []string
+	for _, match := range matches {
+		if len(match) >= 3 {
+			videoURL := fmt.Sprintf("https://www.youtube.com/watch?v=%s&list=%s", match[1], match[2])
+			videoURLs = append(videoURLs, videoURL)
+		}
+	}
+
+	videoURLs = extractVideoIDs(videoURLs)
+
+	return videoURLs, nil
 }
