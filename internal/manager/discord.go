@@ -21,6 +21,7 @@ type GuildManager struct {
 	Message       *discordgo.MessageCreate
 	GuildID       string
 	Bots          map[string]map[string]botsdef.Discord
+	customPrefix  string
 	commandPrefix string
 }
 
@@ -50,7 +51,19 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 	gm.Message = m
 	gm.GuildID = m.GuildID
 
-	command, _, err := gm.splitCommandFromParameter(m.Message.Content, gm.commandPrefix)
+	if m.Message.Content == "melodix-prefix" {
+		gm.handleGetCustomPrefixCommand()
+		return
+	} else if strings.HasPrefix(m.Message.Content, "set-melodix-prefix") {
+		param := strings.TrimSpace(strings.TrimPrefix(m.Message.Content, "set-melodix-prefix"))
+		gm.handleSetCustomPrefixCommand(param)
+		return
+	} else if m.Message.Content == "reset-melodix-prefix" {
+		gm.handleResetPrefixCommand()
+		return
+	}
+
+	command, _, err := gm.splitCommandFromParameter(m.Message.Content, gm.getEffectiveCommandPrefix())
 	if err != nil {
 		slog.Error(err)
 		return
@@ -93,7 +106,7 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		}
 
 		if !exists {
-			gm.Session.ChannelMessageSend(m.Message.ChannelID, "Guild must be registered first.\nUse `"+gm.commandPrefix+"register` command.")
+			gm.Session.ChannelMessageSend(m.Message.ChannelID, "Guild must be registered first.\nUse `"+gm.getEffectiveCommandPrefix()+"register` command.")
 			return
 		}
 	}
@@ -105,8 +118,6 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		gm.handleUnregisterCommand()
 	case "whoami":
 		gm.handleWhoamiCommand()
-	case "set-melodix-custom-prefix":
-		gm.handleCustomPrefixCommand()
 	}
 }
 
@@ -169,8 +180,37 @@ func (gm *GuildManager) handleWhoamiCommand() {
 	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "User info for **"+gm.Message.Author.Username+"** was sent to terminal")
 }
 
-func (gm *GuildManager) handleCustomPrefixCommand() {
-	// TODO
+func (gm *GuildManager) handleSetCustomPrefixCommand(param string) {
+	slog.Error(param)
+	err := db.SetGuildPrefix(gm.GuildID, param)
+	if err != nil {
+		slog.Errorf("Error setting custom prefix: %v", err)
+		gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Error setting custom prefix\n "+err.Error())
+	}
+	gm.customPrefix = param
+	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Current prefix now is '"+gm.getEffectiveCommandPrefix()+"'")
+
+	gm.removeBotInstance(gm.GuildID)
+	gm.setupBotInstance(gm.GuildID)
+	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Modules reloaded successfully")
+}
+
+func (gm *GuildManager) handleResetPrefixCommand() {
+	err := db.ResetGuildPrefix(gm.GuildID)
+	if err != nil {
+		slog.Errorf("Error reseting prefix", err)
+		gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Error reseting prefix\n "+err.Error())
+	}
+	gm.customPrefix = ""
+	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Current prefix now is '"+gm.getEffectiveCommandPrefix()+"'")
+
+	gm.removeBotInstance(gm.GuildID)
+	gm.setupBotInstance(gm.GuildID)
+	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Modules reloaded successfully")
+}
+
+func (gm *GuildManager) handleGetCustomPrefixCommand() {
+	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Current prefix now is '"+gm.getEffectiveCommandPrefix()+"'")
 }
 
 func (gm *GuildManager) setupBotInstance(guildID string) {
@@ -185,7 +225,7 @@ func (gm *GuildManager) setupBotInstance(guildID string) {
 		botInstance := botsdef.CreateBotInstance(session, module)
 		if botInstance != nil {
 			gm.Bots[id][module] = botInstance
-			botInstance.Start(id)
+			botInstance.Start(id, gm.getEffectiveCommandPrefix())
 		}
 	}
 }
@@ -226,4 +266,11 @@ func (gm *GuildManager) splitCommandFromParameter(content, commandPrefix string)
 		param = strings.TrimSpace(param)
 	}
 	return command, param, nil
+}
+
+func (gm *GuildManager) getEffectiveCommandPrefix() string {
+	if gm.customPrefix != "" {
+		return gm.customPrefix
+	}
+	return gm.commandPrefix
 }

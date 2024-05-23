@@ -105,11 +105,20 @@ func startBotHandlers(session *discordgo.Session) map[string]map[string]botsdef.
 	for _, id := range guildIDs {
 		bots[id] = make(map[string]botsdef.Discord)
 
+		prefix, err := db.GetGuildPrefix(id)
+		if err != nil {
+			log.Fatal("Error retrieving prefix for the guilds", err)
+		}
+
+		if len(prefix) == 0 {
+			prefix = loadConfig().DiscordCommandPrefix
+		}
+
 		for _, module := range botsdef.Modules {
 			botInstance := botsdef.CreateBotInstance(session, module)
 			if botInstance != nil {
 				bots[id][module] = botInstance
-				botInstance.Start(id)
+				botInstance.Start(id, prefix)
 			}
 		}
 	}

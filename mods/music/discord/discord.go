@@ -40,16 +40,22 @@ func NewDiscord(session *discordgo.Session) *Discord {
 	}
 }
 
-func (d *Discord) Start(guildID string) {
+func (d *Discord) Start(guildID string, commandPrefix string) {
 	slog.Infof(`Discord instance of 'music' module started for guild id %v`, guildID)
 
 	d.GuildID = guildID
 	d.Session.AddHandler(d.Commands)
 	d.Player = player.NewPlayer(guildID, d.Session)
+	d.prefix = commandPrefix
 }
 
 func (d *Discord) Stop() {
 	d.IsInstanceActive = false
+	err := d.Player.Stop()
+	if err != nil {
+		slog.Error("Error stopping player", err)
+		return
+	}
 }
 
 func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -235,4 +241,8 @@ func (d *Discord) editMessageEmbed(embedStr string, messageID string) *discordgo
 	}
 
 	return msg
+}
+
+func (d *Discord) SetCommandPrefix(prefix string) {
+	d.prefix = prefix
 }

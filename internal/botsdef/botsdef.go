@@ -8,7 +8,7 @@ import (
 )
 
 type Discord interface {
-	Start(guildID string)
+	Start(guildID string, commandPrefix string)
 	Stop()
 }
 

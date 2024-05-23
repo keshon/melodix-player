@@ -5,8 +5,9 @@ import (
 )
 
 type Guild struct {
-	ID   string `gorm:"primaryKey"`
-	Name string
+	ID     string `gorm:"primaryKey"`
+	Name   string
+	Prefix string
 }
 
 func CreateGuild(guild Guild) error {
@@ -48,4 +49,21 @@ func DoesGuildExist(guildID string) (bool, error) {
 
 func DeleteGuild(guildID string) error {
 	return DB.Where("id = ?", guildID).Delete(&Guild{}).Error
+}
+
+func SetGuildPrefix(guildID string, prefix string) error {
+	return DB.Model(&Guild{}).Where("id = ?", guildID).Update("prefix", prefix).Error
+}
+
+func ResetGuildPrefix(guildID string) error {
+	return DB.Model(&Guild{}).Where("id = ?", guildID).Update("prefix", "").Error
+}
+
+func GetGuildPrefix(guildID string) (string, error) {
+	var guild Guild
+	err := DB.Where("id = ?", guildID).First(&guild).Error
+	if err == gorm.ErrRecordNotFound {
+		return "", nil
+	}
+	return guild.Prefix, err
 }

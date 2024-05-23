@@ -41,10 +41,11 @@ func loadConfig() *config.Config {
 	return cfg
 }
 
-func (d *Discord) Start(guildID string) {
-	slog.Info("Discord instance of 'about' module started for guild ID", guildID)
+func (d *Discord) Start(guildID string, commandPrefix string) {
+	slog.Info("Discord instance of 'about' module started for guild id", guildID)
 	d.Session.AddHandler(d.Commands)
 	d.GuildID = guildID
+	d.CommandPrefix = commandPrefix
 }
 
 func (d *Discord) Stop() {
@@ -165,4 +166,8 @@ func (d *Discord) editMessageEmbed(embedStr string, messageID string) *discordgo
 	}
 
 	return msg
+}
+
+func (d *Discord) SetCommandPrefix(prefix string) {
+	d.CommandPrefix = prefix
 }
