@@ -74,22 +74,19 @@ func (y *Youtube) parseSongOrPlaylistInfo(url string) ([]*player.Song, error) {
 					return nil, err
 				}
 
-				slog.Warn(tracks)
+				// slog.Warn(tracks)
+
+				tracks = y.removeDuplicateStr(tracks)
 
 				playlistVideos = &kkdai_youtube.Playlist{
-					ID:          "your_playlist_id",
-					Title:       "Your Playlist Title",
-					Description: "Your Playlist Description",
-					Author:      "Your Author",
-					Videos:      make([]*kkdai_youtube.PlaylistEntry, len(tracks)),
+
+					Videos: make([]*kkdai_youtube.PlaylistEntry, len(tracks)),
 				}
 
 				// Populate the Videos field
 				for i, track := range tracks {
 					playlistVideos.Videos[i] = &kkdai_youtube.PlaylistEntry{
-						ID:     track,
-						Title:  "",
-						Author: "",
+						ID: track,
 					}
 				}
 			} else {
@@ -296,7 +293,7 @@ func (y *Youtube) getVideoURLsFromYoutubeMixPlaylist(url string) ([]string, erro
 		return nil, err
 	}
 
-	slog.Error(body)
+	//slog.Error(body)
 
 	bodyString := strings.ReplaceAll(string(body), `\u0026`, "&")
 
@@ -315,4 +312,16 @@ func (y *Youtube) getVideoURLsFromYoutubeMixPlaylist(url string) ([]string, erro
 	videoURLs = extractVideoIDs(videoURLs)
 
 	return videoURLs, nil
+}
+
+func (y *Youtube) removeDuplicateStr(strSlice []string) []string {
+	allKeys := make(map[string]bool)
+	list := []string{}
+	for _, item := range strSlice {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
 }

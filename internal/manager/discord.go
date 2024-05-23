@@ -105,6 +105,8 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		gm.handleUnregisterCommand()
 	case "whoami":
 		gm.handleWhoamiCommand()
+	case "set-melodix-custom-prefix":
+		gm.handleCustomPrefixCommand()
 	}
 }
 
@@ -165,6 +167,10 @@ func (gm *GuildManager) handleWhoamiCommand() {
 	stats := fmt.Sprintf("\nGuild ID:\t%s\nChat ID:\t%s\nUser Name:\t%s\nUser ID:\t%s", gm.GuildID, gm.Message.ChannelID, gm.Message.Author.Username, gm.Message.Author.ID)
 	slog.Warn("Who Am I details:", stats)
 	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "User info for **"+gm.Message.Author.Username+"** was sent to terminal")
+}
+
+func (gm *GuildManager) handleCustomPrefixCommand() {
+	// TODO
 }
 
 func (gm *GuildManager) setupBotInstance(guildID string) {
