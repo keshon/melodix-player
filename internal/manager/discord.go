@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 
@@ -46,19 +47,19 @@ func (gm *GuildManager) Start() {
 }
 
 func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
-
 	gm.Session = s
 	gm.Message = m
 	gm.GuildID = m.GuildID
 
-	if m.Message.Content == "melodix-prefix" {
+	switch {
+	case m.Message.Content == "melodix-prefix":
 		gm.handleGetCustomPrefixCommand()
 		return
-	} else if strings.HasPrefix(m.Message.Content, "set-melodix-prefix") {
-		param := strings.TrimSpace(strings.TrimPrefix(m.Message.Content, "set-melodix-prefix"))
+	case strings.HasPrefix(m.Message.Content, "melodix-prefix-update"):
+		param := gm.extractQuotedText(m.Message.Content, "melodix-prefix-update")
 		gm.handleSetCustomPrefixCommand(param)
 		return
-	} else if m.Message.Content == "reset-melodix-prefix" {
+	case m.Message.Content == "melodix-prefix-reset":
 		gm.handleResetPrefixCommand()
 		return
 	}
@@ -106,7 +107,7 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		}
 
 		if !exists {
-			gm.Session.ChannelMessageSend(m.Message.ChannelID, "Guild must be registered first.\nUse `"+gm.getEffectiveCommandPrefix()+"register` command.")
+			gm.sendMessageEmbed(fmt.Sprintf("Guild must be registered first.\nUse `%vregister` command.", gm.getEffectiveCommandPrefix()))
 			return
 		}
 	}
@@ -122,7 +123,6 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 }
 
 func (gm *GuildManager) handleRegisterCommand() {
-	channelID := gm.Message.ChannelID
 	guildID := gm.GuildID
 
 	exists, err := db.DoesGuildExist(guildID)
@@ -132,7 +132,7 @@ func (gm *GuildManager) handleRegisterCommand() {
 	}
 
 	if exists {
-		gm.Session.ChannelMessageSend(channelID, "Guild is already registered")
+		gm.sendMessageEmbed("Guild is already registered")
 		return
 	}
 
@@ -140,16 +140,15 @@ func (gm *GuildManager) handleRegisterCommand() {
 	err = db.CreateGuild(guild)
 	if err != nil {
 		slog.Errorf("Error registering guild: %v", err)
-		gm.Session.ChannelMessageSend(channelID, "Error registering guild")
+		gm.sendMessageEmbed(fmt.Sprintf("Error registering guild\n`%v`", err))
 		return
 	}
 
 	gm.setupBotInstance(guildID)
-	gm.Session.ChannelMessageSend(channelID, "Guild registered successfully")
+	gm.sendMessageEmbed(fmt.Sprintf("Guild registered successfully\nUse `%vhelp` to see all available commands", gm.getEffectiveCommandPrefix()))
 }
 
 func (gm *GuildManager) handleUnregisterCommand() {
-	channelID := gm.Message.ChannelID
 	guildID := gm.GuildID
 
 	exists, err := db.DoesGuildExist(guildID)
@@ -159,25 +158,25 @@ func (gm *GuildManager) handleUnregisterCommand() {
 	}
 
 	if !exists {
-		gm.Session.ChannelMessageSend(channelID, "Guild is not registered")
+		gm.sendMessageEmbed("Guild is not registered")
 		return
 	}
 
 	err = db.DeleteGuild(guildID)
 	if err != nil {
 		slog.Errorf("Error unregistering guild: %v", err)
-		gm.Session.ChannelMessageSend(channelID, "Error unregistering guild")
+		gm.sendMessageEmbed(fmt.Sprintf("Error registering guild\n`%v`", err))
 		return
 	}
 
 	gm.removeBotInstance(guildID)
-	gm.Session.ChannelMessageSend(channelID, "Guild unregistered successfully")
+	gm.sendMessageEmbed("Guild unregistered successfully")
 }
 
 func (gm *GuildManager) handleWhoamiCommand() {
 	stats := fmt.Sprintf("\nGuild ID:\t%s\nChat ID:\t%s\nUser Name:\t%s\nUser ID:\t%s", gm.GuildID, gm.Message.ChannelID, gm.Message.Author.Username, gm.Message.Author.ID)
 	slog.Warn("Who Am I details:", stats)
-	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "User info for **"+gm.Message.Author.Username+"** was sent to terminal")
+	gm.sendMessageEmbed(fmt.Sprintf("User info for **%v** was logged", gm.Message.Author.Username))
 }
 
 func (gm *GuildManager) handleSetCustomPrefixCommand(param string) {
@@ -185,32 +184,32 @@ func (gm *GuildManager) handleSetCustomPrefixCommand(param string) {
 	err := db.SetGuildPrefix(gm.GuildID, param)
 	if err != nil {
 		slog.Errorf("Error setting custom prefix: %v", err)
-		gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Error setting custom prefix\n "+err.Error())
+		gm.sendMessageEmbed(fmt.Sprintf("Error setting custom prefix\n`%v`", err.Error()))
 	}
 	gm.customPrefix = param
-	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Current prefix now is '"+gm.getEffectiveCommandPrefix()+"'")
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
 
 	gm.removeBotInstance(gm.GuildID)
 	gm.setupBotInstance(gm.GuildID)
-	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Modules reloaded successfully")
+	gm.sendMessageEmbed("Bot modules was reloaded successfully")
 }
 
 func (gm *GuildManager) handleResetPrefixCommand() {
 	err := db.ResetGuildPrefix(gm.GuildID)
 	if err != nil {
 		slog.Errorf("Error reseting prefix", err)
-		gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Error reseting prefix\n "+err.Error())
+		gm.sendMessageEmbed(fmt.Sprintf("Error reseting prefix\n`%v`", err.Error()))
 	}
 	gm.customPrefix = ""
-	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Current prefix now is '"+gm.getEffectiveCommandPrefix()+"'")
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
 
 	gm.removeBotInstance(gm.GuildID)
 	gm.setupBotInstance(gm.GuildID)
-	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Modules reloaded successfully")
+	gm.sendMessageEmbed("Bot modules was reloaded successfully")
 }
 
 func (gm *GuildManager) handleGetCustomPrefixCommand() {
-	gm.Session.ChannelMessageSend(gm.Message.ChannelID, "Current prefix now is '"+gm.getEffectiveCommandPrefix()+"'")
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
 }
 
 func (gm *GuildManager) setupBotInstance(guildID string) {
@@ -273,4 +272,31 @@ func (gm *GuildManager) getEffectiveCommandPrefix() string {
 		return gm.customPrefix
 	}
 	return gm.commandPrefix
+}
+
+func (gm *GuildManager) extractQuotedText(input, command string) string {
+	trimmedInput := strings.TrimPrefix(input, command)
+	trimmedInput = strings.TrimSpace(trimmedInput)
+
+	if len(trimmedInput) >= 2 && trimmedInput[0] == '"' && trimmedInput[len(trimmedInput)-1] == '"' {
+		return trimmedInput[1 : len(trimmedInput)-1]
+	}
+
+	return ""
+}
+
+func (gm *GuildManager) sendMessageEmbed(embedStr string) *discordgo.Message {
+	s := gm.Session
+	m := gm.Message
+
+	embedBody := embed.NewEmbed().
+		SetDescription(embedStr).
+		SetColor(0x9f00d4).MessageEmbed
+
+	msg, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedBody)
+	if err != nil {
+		slog.Error("Error sending pause message", err)
+	}
+
+	return msg
 }

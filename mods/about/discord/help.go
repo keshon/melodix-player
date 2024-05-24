@@ -54,7 +54,10 @@ func (d *Discord) handleHelpCommand() {
 	whoami := fmt.Sprintf("`%vwhoami` — log user's info\n", prefix)
 
 	register := fmt.Sprintf("`%vregister` — enable commands listening\n", prefix)
-	unregister := fmt.Sprintf("`%vunregister` — disable commands listening", prefix)
+	unregister := fmt.Sprintf("`%vunregister` — disable commands listening\n", prefix)
+	melodixPrefix := "`melodix-prefix` — print current command prefix\n"
+	melodixPrefixUpdate := "`melodix-prefix-update \"[new_prefix]\"` — set new prefix (in quotes)\n"
+	melodixPreifxReset := fmt.Sprintf("`melodix-prefix-reset` — reset prefix to global one: `%v`\n", cfg.DiscordCommandPrefix)
 
 	title := fmt.Sprintf("ℹ️ %v — Commands Usage\n\n", version.AppName)
 
@@ -66,11 +69,11 @@ func (d *Discord) handleHelpCommand() {
 		AddField("", "").
 		AddField("", "**History**\n"+history+historyByDuration+historyByPlaycount).
 		AddField("", "").
-		AddField("", "**Caching**\nThis commands are for administrator only.\n"+cached+cachedSync+curl+uploaded+uploadedExtract).
-		AddField("", "").
 		AddField("", "**Information**\n"+help+about+whoami).
 		AddField("", "").
-		AddField("", "**Administration**\n"+register+unregister).
+		AddField("", "**Administration**\n"+register+unregister+melodixPrefix+melodixPrefixUpdate+melodixPreifxReset).
+		AddField("", "").
+		AddField("", "**Caching & Sideloading**\nThis commands are for superadmin only.\n"+cached+cachedSync+curl+uploaded+uploadedExtract).
 		AddField("", "\n\n").
 		SetThumbnail(avatarURL).
 		SetColor(0x9f00d4).
