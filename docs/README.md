@@ -78,7 +78,7 @@ These commands are available only for superadmins (host server owners).
 - `!register` — Enable Melodix command listening (execute once for each new Discord server).
 - `!unregister` — Disable command listening.
 - `melodix-prefix` — Show the current prefix (`!` by default, see `.env` file).
-- `melodix-prefix-update [new_prefix]` — Set a custom prefix for a guild to avoid collisions with other bots.
+- `melodix-prefix-update "[new_prefix]"` — Set a custom prefix (in quotes) for a guild to avoid collisions with other bots.
 - `melodix-prefix-reset` — Revert to the default prefix set in `.env` file.
 
 ### 💡 Command Usage Examples
