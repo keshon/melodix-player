@@ -107,7 +107,7 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		}
 
 		if !exists {
-			gm.sendMessageEmbed(fmt.Sprintf("Guild must be registered first.\nUse `%vregister` command.", gm.getEffectiveCommandPrefix()))
+			gm.sendMessageEmbed(fmt.Sprintf("Guild must be registered first.\nType `%vregister` command.", gm.getEffectiveCommandPrefix()))
 			return
 		}
 	}
@@ -145,7 +145,7 @@ func (gm *GuildManager) handleRegisterCommand() {
 	}
 
 	gm.setupBotInstance(guildID)
-	gm.sendMessageEmbed(fmt.Sprintf("Guild registered successfully\nUse `%vhelp` to see all available commands", gm.getEffectiveCommandPrefix()))
+	gm.sendMessageEmbed(fmt.Sprintf("Guild registered successfully\nType `%vhelp` to see all available commands", gm.getEffectiveCommandPrefix()))
 }
 
 func (gm *GuildManager) handleUnregisterCommand() {
@@ -187,7 +187,8 @@ func (gm *GuildManager) handleSetCustomPrefixCommand(param string) {
 		gm.sendMessageEmbed(fmt.Sprintf("Error setting custom prefix\n`%v`", err.Error()))
 	}
 	gm.customPrefix = param
-	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
+	currentPrefix := gm.getEffectiveCommandPrefix()
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`\n\nType `%vhelp` to see available commands", currentPrefix, currentPrefix))
 
 	gm.removeBotInstance(gm.GuildID)
 	gm.setupBotInstance(gm.GuildID)
@@ -201,7 +202,8 @@ func (gm *GuildManager) handleResetPrefixCommand() {
 		gm.sendMessageEmbed(fmt.Sprintf("Error reseting prefix\n`%v`", err.Error()))
 	}
 	gm.customPrefix = ""
-	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
+	currentPrefix := gm.getEffectiveCommandPrefix()
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`\n\nType `%vhelp` to see available commands", currentPrefix, currentPrefix))
 
 	gm.removeBotInstance(gm.GuildID)
 	gm.setupBotInstance(gm.GuildID)
@@ -209,7 +211,9 @@ func (gm *GuildManager) handleResetPrefixCommand() {
 }
 
 func (gm *GuildManager) handleGetCustomPrefixCommand() {
-	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
+	currentPrefix := gm.getEffectiveCommandPrefix()
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`\n\nType `%vhelp` to see available commands", currentPrefix, currentPrefix))
+
 }
 
 func (gm *GuildManager) setupBotInstance(guildID string) {

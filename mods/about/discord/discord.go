@@ -59,7 +59,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	d.Message = m
 
-	command, _, err := parseCommand(m.Message.Content, d.CommandPrefix)
+	command, param, err := parseCommand(m.Message.Content, d.CommandPrefix)
 	if err != nil {
 		return
 	}
@@ -69,7 +69,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"about", "v"},
 	}) {
 	case "help":
-		d.handleHelpCommand()
+		d.handleHelpCommand(param)
 	case "about":
 		d.handleAboutCommand()
 	}
