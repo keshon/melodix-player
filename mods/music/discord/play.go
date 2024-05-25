@@ -336,7 +336,7 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 		embedMsg.SetThumbnail(currentSong.Thumbnail.URL)
 	} else {
 		if len(d.Player.GetSongQueue()) > 0 {
-			content += fmt.Sprintf("\nNo song is currently playing, but the queue is filled with songs. Use `%vplay` command to toggle the playback\n\n", d.prefix)
+			content += fmt.Sprintf("\nNo song is currently playing, but the queue is filled with songs. Use `%vresume` command to toggle the playback\n\n", d.prefix)
 		} else {
 			content += fmt.Sprintf("\nNo song is currently playing.\nUse the `%vplay [title/url/id/stream]` command to start. \nType `%vhelp` for more information.\n\n", d.prefix, d.prefix)
 		}
