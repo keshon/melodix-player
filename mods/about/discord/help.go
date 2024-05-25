@@ -65,15 +65,15 @@ func (d *Discord) handleHelpCommand(param string) {
 	historyByDuration := fmt.Sprintf("`%vhistory duration` — sort by duration \n", prefix)
 	historyByPlaycount := fmt.Sprintf("`%vhistory count` — sort by play count \n", prefix)
 
+	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
+	about := fmt.Sprintf("`%vabout`, `%vv` — show version\n", prefix, prefix)
+	whoami := fmt.Sprintf("`%vwhoami` — log user's info\n", prefix)
+
 	cached := fmt.Sprintf("`%vcached` — show cached tracks\n", prefix)
 	cachedSync := fmt.Sprintf("`%vcached sync` — sync added/removed files to with database\n", prefix)
 	curl := fmt.Sprintf("`%vcurl [url]` — cache track (youtube url only)\n", prefix)
 	uploaded := fmt.Sprintf("`%vuploaded` — show uploaded videos\n", prefix)
 	uploadedExtract := fmt.Sprintf("`%vuploaded extract` — extract audio from uploaded videos to cache\n", prefix)
-
-	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
-	about := fmt.Sprintf("`%vabout`, `%vv` — show version\n", prefix, prefix)
-	whoami := fmt.Sprintf("`%vwhoami` — log user's info\n", prefix)
 
 	register := fmt.Sprintf("`%vregister` — enable commands listening\n", prefix)
 	unregister := fmt.Sprintf("`%vunregister` — disable commands listening\n", prefix)
