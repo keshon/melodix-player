@@ -100,10 +100,11 @@ func parseCommand(input, pattern string) (string, string, error) {
 }
 
 func getCanonicalCommand(alias string, commandAliases [][]string) string {
+	alias = strings.ToLower(alias)
 	for _, aliases := range commandAliases {
 		for _, command := range aliases {
-			if command == alias {
-				return aliases[0]
+			if strings.ToLower(command) == alias {
+				return strings.ToLower(aliases[0])
 			}
 		}
 	}

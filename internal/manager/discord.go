@@ -51,8 +51,10 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 	gm.Message = m
 	gm.GuildID = m.GuildID
 
+	messageContentLower := strings.ToLower(m.Message.Content)
+
 	switch {
-	case m.Message.Content == "melodix-prefix":
+	case messageContentLower == "melodix-prefix":
 		gm.handleGetCustomPrefixCommand()
 		return
 	case strings.HasPrefix(m.Message.Content, "melodix-prefix-update"):
@@ -64,7 +66,7 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		return
 	}
 
-	command, _, err := gm.splitCommandFromParameter(m.Message.Content, gm.getEffectiveCommandPrefix())
+	command, _, err := gm.splitCommandFromParameter(messageContentLower, gm.getEffectiveCommandPrefix())
 	if err != nil {
 		slog.Error(err)
 		return
@@ -279,7 +281,7 @@ func (gm *GuildManager) getEffectiveCommandPrefix() string {
 }
 
 func (gm *GuildManager) extractQuotedText(input, command string) string {
-	trimmedInput := strings.TrimPrefix(input, command)
+	trimmedInput := strings.TrimPrefix(strings.ToLower(input), strings.ToLower(command))
 	trimmedInput = strings.TrimSpace(trimmedInput)
 
 	if len(trimmedInput) >= 2 && trimmedInput[0] == '"' && trimmedInput[len(trimmedInput)-1] == '"' {
