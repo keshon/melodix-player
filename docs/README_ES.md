@@ -2,123 +2,150 @@
 
 [![Español](https://img.shields.io/badge/Español-README-blue)](./README_ES.md) [![Français](https://img.shields.io/badge/Français-README-blue)](./README_FR.md) [![中文](https://img.shields.io/badge/中文-README-blue)](./README_CN.md) [![日本語](https://img.shields.io/badge/日本語-README-blue)](./README_JP.md)
 
-# Melodix Player
+# 🎵 Melodix Player — Bot de música para Discord auto-hospedado escrito en Go
 
-Melodix Player es un bot de música para Discord que hace lo mejor posible, incluso en presencia de errores de conexión.
-
-## Descripción General de Funciones
-
-El bot tiene como objetivo ser un reproductor de música fácil de usar pero potente. Sus principales objetivos incluyen:
-
-- Reproducción de pistas individuales o múltiples, así como listas de reproducción de YouTube, agregadas por título o URL.
-- Reproducción de transmisiones de radio agregadas mediante URL.
-- Acceso al historial de pistas reproducidas anteriormente con opciones de ordenación según recuentos de reproducción o duración.
-- Manejo de interrupciones de reproducción debido a fallas de red; Melodix intentará reanudar la reproducción.
-- API Rest expuesta para realizar varias tareas fuera de los comandos de Discord.
-- Operación en varios servidores de Discord.
+Melodix Player es mi proyecto personal que reproduce audio de YouTube y enlaces de transmisión de audio en los canales de voz de Discord.
 
 ![Ejemplo de Reproducción](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/demo.gif)
 
-## Descarga del Binario
+## 🌟 Resumen de Características
 
-Los binarios (solo para Windows) están disponibles en la [página de lanzamientos](https://github.com/keshon/melodix-player/releases). Se recomienda compilar los binarios desde el código fuente para obtener la última versión.
+### 🎧 Soporte de Reproducción
+- 🎶 Pista única añadida por nombre de canción o enlace de YouTube.
+- 🎶 Múltiples pistas añadidas mediante múltiples enlaces de YouTube (separados por espacios).
+- 🎶 Pistas de listas de reproducción públicas de usuarios.
+- 🎶 Pistas de listas de reproducción "MIX".
+- 📻 Enlaces de transmisión (por ejemplo, estaciones de radio).
 
-## Comandos de Discord
+### ⚙️ Características Adicionales
+- 🌐 Operación en múltiples servidores de Discord (gestión de gremios).
+- 📜 Acceso al historial de pistas reproducidas previamente con opciones de clasificación.
+- 💾 Descarga de pistas de YouTube como archivos mp3 para almacenamiento en caché.
+- 🎼 Carga lateral de archivos de audio mp3.
+- 🎬 Carga lateral de archivos de video con extracción de audio como archivos mp3.
+- 🔄 Soporte de reanudación automática de reproducción para interrupciones de conexión.
+- 🛠️ Soporte de API REST (limitado por el momento).
 
-Melodix Player admite varios comandos con sus respectivos alias para controlar la reproducción de música. Algunos comandos requieren parámetros adicionales:
+### ⚠️ Limitaciones Actuales
+- 🚫 El bot no puede reproducir transmisiones de YouTube.
+- ⏸️ El soporte de reanudación automática de reproducción crea pausas notables.
+- ⏩ A veces, la velocidad de reproducción es ligeramente más rápida de lo previsto.
+- 🐞 No está libre de errores.
 
-**Comandos y Alias**:
-- `play` (`p`, `>`) — Parámetros: URL de video de YouTube, ID de historial, título de la pista o enlace de transmisión válido.
-- `skip` (`next`, `ff`, `>>`)
-- `pause` (`!`)
-- `resume` (`r`,`!>`)
-- `stop` (`x`)
-- `add` (`a`, `+`) — Parámetros: URL de video de YouTube o ID de historial, título de la pista o enlace de transmisión válido.
-- `list` (`queue`, `l`, `q`)
-- `history` (`time`, `t`) — Parámetros: `duración` o `recuento`
-- `help` (`h`, `?`)
-- `about` (`v`)
-- `register`
-- `unregister`
+## 🚀 Prueba Melodix Player
 
-Los comandos deben tener un prefijo de `!` por defecto. Por ejemplo, `!play`, `!>>`, y así sucesivamente.
+Puedes probar Melodix de dos maneras:
+- 🖥️ Descarga [binarios compilados](https://github.com/keshon/melodix-player/releases) (disponibles solo para Windows). Asegúrate de tener FFMPEG instalado en tu sistema y añadido a la variable PATH global (o especifica la ruta a FFMPEG directamente en el archivo de configuración `.env`). Sigue la sección "Crear bot en el Portal de Desarrolladores de Discord" para configurar el bot en Discord.
 
-### Ejemplos
-Para usar el comando `play`, proporciona el título de un video de YouTube, URL o un ID de historial como parámetro, por ejemplo:
-`!play Never Gonna Give You Up` 
-o 
-`!p https://www.youtube.com/watch?v=dQw4w9WgXcQ` 
-o 
-`!> 5` (suponiendo que `5` es un ID que se puede ver en el historial: `!history`)
+- 🎙️ Únete al [Servidor Oficial de Discord](https://discord.gg/NVtdTka8ZT) y usa los canales de voz y `#bot-spam`.
 
-De manera similar, para agregar una canción a la cola, utiliza un enfoque similar:
-`!add Never Gonna Give You Up` 
-`!resume` (para comenzar a reproducir)
+## 📝 Comandos Disponibles en Discord
 
-## Agregar el Bot a un Servidor de Discord
+Melodix Player soporta varios comandos con respectivos alias (si aplica). Algunos comandos requieren parámetros adicionales.
 
-Para agregar Melodix a tu servidor de Discord:
+### ▶️ Comandos de Reproducción
+- `!play [título|url|stream|id]` (alias: `!p ..`, `!> ..`) — Parámetros: nombre de la canción, URL de YouTube, URL de transmisión de audio, ID del historial.
+- `!skip` (alias: `!next`, `!>>`) — Saltar a la siguiente pista en la cola.
+- `!pause` (alias: `!!`) — Pausar la reproducción.
+- `!resume` (alias: `!r`, `!!>`) — Reanudar la reproducción pausada o iniciar la reproducción si se añadió una pista mediante `!add ..`.
+- `!stop` (alias: `!x`) — Detener la reproducción, limpiar la cola y salir del canal de voz.
 
-1. Crea un bot en el [Portal de Desarrolladores de Discord](https://discord.com/developers/applications) y obtén el CLIENT_ID del bot.
-2. Utiliza el siguiente enlace: `discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID_HERE&scope=bot&permissions=36727824`
-   - Reemplaza `YOUR_CLIENT_ID_HERE` con el CLIENT_ID de tu bot obtenido en el paso 1.
-3. La página de autorización de Discord se abrirá en tu navegador, permitiéndote seleccionar un servidor.
-4. Elige el servidor donde deseas agregar Melodix y haz clic en "Autorizar".
-5. Concede a Melodix los permisos necesarios para que funcione correctamente.
+### 📋 Comandos de Cola
+- `!add [título|url|stream|id]` (alias: `!a`, `!+`) — Parámetros: nombre de la canción, URL de YouTube, URL de transmisión de audio, ID del historial (igual que para `!play ..`).
+- `!list` (alias: `!queue`, `!l`, `!q`) — Mostrar la cola de canciones actual.
 
-Una vez que el bot esté agregado, continúa con la construcción real del bot.
+### 📚 Comandos de Historial
+- `!history` (alias: `!time`, `!t`) — Mostrar el historial de pistas reproducidas recientemente. Cada pista en el historial tiene un ID único para reproducción/colocación en la cola.
+- `!history count` (alias: `!time count`, `!t count`) — Ordenar el historial por recuento de reproducciones.
+- `!history duration` (alias: `!time duration`, `!t duration`) — Ordenar el historial por duración de las pistas.
 
-## Construcción desde el Código Fuente
+### ℹ️ Comandos de Información
+- `!help` (alias: `!h`, `!?`) — Mostrar hoja de trucos de ayuda.
+- `!help play` — Información adicional sobre comandos de reproducción.
+- `!help queue` — Información adicional sobre comandos de cola.
+- `!about` (alias: `!v`) — Mostrar versión (fecha de compilación) y enlaces relacionados.
+- `whoami` — Enviar información del usuario al log. Necesario para configurar el superadmin en el archivo `.env`.
 
-Este proyecto está escrito en el lenguaje Go, lo que permite que se ejecute en un *servidor* o como un programa *local*.
+### 💾 Comandos de Caché y Carga Lateral
+Estos comandos solo están disponibles para superadmins (propietarios del servidor host).
+- `!curl [URL de YouTube]` — Descargar como archivo mp3 para uso posterior.
+- `!cached` — Mostrar archivos actualmente en caché (de la carpeta `cached`). Cada servidor opera sus propios archivos.
+- `!cached sync` — Sincronizar archivos mp3 añadidos manualmente a la carpeta `cached`.
+- `!uploaded` — Mostrar videoclips subidos en la carpeta `uploaded`.
+- `!uploaded extract` — Extraer archivos mp3 de videoclips y almacenarlos en la carpeta `cached`.
 
-**Uso Local**
-Se proporcionan varios scripts para construir Melodix Player desde el código fuente:
-- `bash-and-run.bat` (o `.sh` para Linux): Construye la versión de depuración y la ejecuta.
-- `build-release.bat` (o `.sh` para Linux): Construye la versión de lanzamiento.
-- `assemble-dist.bat`: Construye la versión de lanzamiento y la ensambla como un paquete de distribución (solo Windows, el empaquetador UPX se descargará durante el proceso).
+### 🔧 Comandos de Administración
+- `!register` — Habilitar la escucha de comandos de Melodix (ejecutar una vez por cada nuevo servidor de Discord).
+- `!unregister` — Deshabilitar la escucha de comandos.
+- `melodix-prefix` — Mostrar el prefijo actual (`!` por defecto, ver archivo `.env`).
+- `melodix-prefix-update "[nuevo_prefijo]"` — Establecer un prefijo personalizado para un gremio para evitar colisiones con otros bots.
+- `melodix-prefix-reset` — Volver al prefijo por defecto establecido en el archivo `.env`.
 
-Para el uso local, ejecuta estos scripts para tu sistema operativo y renombra `.env.example` a `.env`, almacenando tu Token de Bot de Discord en la variable `DISCORD_BOT_TOKEN`. Instala [FFMPEG](https://ffmpeg.org/) (solo se admite la versión más reciente). Si tu instalación de FFMPEG es portátil, especifica la ruta en la variable `DCA_FFMPEG_BINARY_PATH`.
+### 💡 Ejemplos de Uso de Comandos
+Para usar el comando `play`, proporciona un título de video de YouTube, URL o ID del historial:
+```
+!play Never Gonna Give You Up
+!p https://www.youtube.com/watch?v=dQw4w9WgXcQ
+!> 5  (asumiendo que 5 es un ID de `!history`)
+```
+Para añadir una canción a la cola, usa:
+```
+!add Never Gonna Give You Up
+!resume
+```
 
-## Acceso a la API y Rutas
+## 🔧 Cómo Configurar el Bot
 
-Melodix Player proporciona varias rutas para diferentes funcionalidades:
+### 🔗 Crear un Bot en el Portal de Desarrolladores de Discord
+Para añadir Melodix a un servidor de Discord, sigue estos pasos:
 
-### Rutas del Servidor
+1. Crea una aplicación en el [Portal de Desarrolladores de Discord](https://discord.com/developers/applications) y obtén el `APPLICATION_ID` (en la sección General).
+2. En la sección Bot, habilita `PRESENCE INTENT`, `SERVER MEMBERS INTENT`, y `MESSAGE CONTENT INTENT`.
+3. Usa el siguiente enlace para autorizar el bot: `discord.com/oauth2/authorize?client_id=YOUR_APPLICATION_ID&scope=bot&permissions=36727824`
+   - Reemplaza `YOUR_APPLICATION_ID` con el ID de la aplicación de tu bot del paso 1.
+4. Selecciona un servidor y haz clic en "Autorizar".
+5. Concede los permisos necesarios para que Melodix funcione correctamente (acceso a canales de texto y voz).
 
-- `GET /guild/ids`: Obtiene los IDs activos de los servidores.
-- `GET /guild/playing`: Obtiene información sobre la pista que se está reproduciendo actualmente en cada servidor activo.
+Después de añadir el bot, compílalo desde los fuentes o descarga [binarios compilados](https://github.com/keshon/melodix-player/releases). Las instrucciones de despliegue con Docker están disponibles en `docker/README.md`.
 
-### Rutas del Historial
+### 🛠️ Compilar Melodix desde los Fuentes
+Este proyecto está escrito en Go, así que asegúrate de que tu entorno esté listo. Usa los scripts proporcionados para compilar Melodix Player desde los fuentes:
+- `bash-and-run.bat` (o `.sh` para Linux): Compilar la versión de depuración y ejecutar.
+- `build-release.bat` (o `.sh` para Linux): Compilar la versión de lanzamiento.
+- `assemble-dist.bat`: Compilar la versión de lanzamiento y ensamblarla como paquete de distribución (solo Windows).
 
-- `GET /history`: Accede al historial general de pistas reproducidas.
-- `GET /history/:guild_id`: Obtiene el historial de pistas reproducidas para un servidor específico.
+Renombra `.env.example` a `.env` y guarda tu Token del Bot de Discord en la variable `DISCORD_BOT_TOKEN`. Instala [FFMPEG](https://ffmpeg.org/) (solo se soportan versiones recientes). Si usas un FFMPEG portátil, especifica la ruta en `DCA_FFMPEG_BINARY_PATH
+
+` en el archivo `.env`.
+
+### 🐳 Despliegue con Docker
+Para el despliegue con Docker, consulta `docker/README.md` para instrucciones específicas.
+
+## 🌐 API REST
+Melodix Player proporciona varias rutas de API, sujetas a cambios.
+
+### Rutas de Gremios
+- `GET /guild/ids`: Recuperar IDs de gremios activos.
+- `GET /guild/playing`: Obtener información sobre la pista actualmente reproducida en cada gremio activo.
+
+### Rutas de Historial
+- `GET /history`: Acceder al historial general de pistas reproducidas.
+- `GET /history/:guild_id`: Obtener el historial de pistas reproducidas para un gremio específico.
 
 ### Rutas de Avatar
+- `GET /avatar`: Listar imágenes disponibles en la carpeta de avatares.
+- `GET /avatar/random`: Obtener una imagen aleatoria de la carpeta de avatares.
 
-- `GET /avatar`: Lista las imágenes disponibles en la carpeta de avatares.
-- `GET /avatar/random`: Obtiene una imagen aleatoria de la carpeta de avatares.
+### Rutas de Log
+- `GET /log`: Mostrar el log actual.
+- `GET /log/clear`: Limpiar el log.
+- `GET /log/download`: Descargar el log como archivo.
 
-### Rutas de Registro
+## 🆘 Soporte
+Para cualquier pregunta, obtén soporte en el [Servidor Oficial de Discord](https://discord.gg/NVtdTka8ZT).
 
-- `GET /log`: Muestra el registro actual.
-- `GET /log/clear`: Borra el registro.
-- `GET /log/download`: Descarga el registro como un archivo.
-
-**Uso en Servidor**
-Para construir y desplegar el bot en un entorno Docker, consulta el archivo `docker/README.md` para obtener instrucciones específicas.
-
-Una vez que el archivo binario está construido, el archivo `.env` está lleno y el bot está agregado a tu servidor, Melodix está listo para funcionar.
-
-## ¿Dónde Obtener Soporte
-Si tienes alguna pregunta, puedes preguntarme en mi [servidor de Discord](https://discord.gg/NVtdTka8ZT) para obtener soporte. Ten en cuenta que no hay comunidad en absoluto, solo yo.
-
-## Reconocimientos
-
+## 🏆 Agradecimientos
 Me inspiré en [Muzikas](https://github.com/FabijanZulj/Muzikas), un bot de Discord fácil de usar creado por Fabijan Zulj.
 
-Como resultado del desarrollo de Melodix, nació un nuevo proyecto: [Discord Bot Boilerplate](https://github.com/keshon/discord-bot-boilerplate) — un marco para construir bots de Discord.
-
-## Licencia
-
-Melodix tiene licencia bajo la [Licencia MIT](https://opensource.org/licenses/MIT).
+## 📜 Licencia
+Melodix está licenciado bajo la [Licencia MIT](https://opensource.org/licenses/MIT).

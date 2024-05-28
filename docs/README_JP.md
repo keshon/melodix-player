@@ -1,127 +1,149 @@
-![# Header](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/banner-readme.png)
+![# ヘッダー](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/banner-readme.png)
 
 [![Español](https://img.shields.io/badge/Español-README-blue)](./README_ES.md) [![Français](https://img.shields.io/badge/Français-README-blue)](./README_FR.md) [![中文](https://img.shields.io/badge/中文-README-blue)](./README_CN.md) [![日本語](https://img.shields.io/badge/日本語-README-blue)](./README_JP.md)
 
-# Melodix Player
+# 🎵 Melodix Player — Goで書かれた自己ホスティング Discord 音楽ボット
 
-Melodix Playerは、接続エラーが発生しても最善を尽くすDiscord音楽ボットです。
+Melodix Playerは、YouTubeやオーディオストリーミングリンクからオーディオをDiscordのボイスチャンネルで再生する私の個人的なプロジェクトです。
 
-## 機能概要
+![プレイ例](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/demo.gif)
 
-このボットは、使いやすいが強力な音楽プレーヤーを目指しています。主な目標は次のとおりです。
+## 🌟 機能概要
 
-- YouTubeからの単一/複数のトラックまたはプレイリストの再生（タイトルまたはURLで追加）。
-- URL経由で追加されたラジオストリームの再生。
-- 再生回数や再生時間に対するソートオプション付きで、以前に再生されたトラックの履歴へのアクセス。
-- ネットワークの障害による再生の中断に対処 - Melodixは再生を再開しようとします。
-- Discordコマンド以外のさまざまなタスクを実行するための露出されたRest API。
-- 複数のDiscordサーバーでの動作。
+### 🎧 再生サポート
+- 🎶 曲名またはYouTubeリンクで単一のトラックを追加します。
+- 🎶 複数のトラックを複数のYouTubeリンク（スペース区切り）から追加します。
+- 🎶 公開ユーザープレイリストからのトラック。
+- 🎶 "MIX"プレイリストからのトラック。
+- 📻 ストリーミングリンク（例：ラジオ局）。
 
-![再生の例](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/demo.gif)
+### ⚙️ 追加機能
+- 🌐 複数のDiscordサーバーでの操作（ギルド管理）。
+- 📜 以前に再生されたトラックの履歴とソートオプションへのアクセス。
+- 💾 YouTubeからトラックをmp3ファイルとしてダウンロードしてキャッシュします。
+- 🎼 オーディオmp3ファイルのサイドローディング。
+- 🎬 ビデオファイルをオーディオ抽出としてmp3ファイルとしてサイドロードします。
+- 🔄 接続の中断時の再生自動再開サポート。
+- 🛠️ REST APIサポート（現在は限定的）。
 
-## バイナリのダウンロード
+### ⚠️ 現在の制限事項
+- 🚫 ボットはYouTubeストリームを再生できません。
+- ⏸️ 再生自動再開サポートにより、明らかな一時停止が発生します。
+- ⏩ 時々再生速度が意図よりわずかに速くなります。
+- 🐞 バグが完全にないわけではありません。
 
-バイナリ（Windowsのみ）は[リリースページ](https://github.com/keshon/melodix-player/releases)で利用可能です。最新バージョンはソースからビルドすることが推奨されています。
+## 🚀 Melodix Playerを試してみる
 
-## Discordコマンド
+Melodixを試す方法は2つあります：
+- 🖥️ [コンパイル済みバイナリ](https://github.com/keshon/melodix-player/releases)をダウンロードします（Windowsのみ利用可能）。システムにFFMPEGがインストールされ、グローバルPATH変数に追加されていることを確認してください（または`.env`構成ファイルで直接FFMPEGのパスを指定します）。Discordでボットを設定するには、「Discord Developer Portal」セクションに従ってボットを設定してください。
 
-Melodix Playerは、音楽の再生を制御するためのさまざまなコマンドとそれに対応するエイリアスをサポートしています。一部のコマンドには追加のパラメータが必要です。
+- 🎙️ [公式Discordサーバー](https://discord.gg/NVtdTka8ZT)に参加して、ボイスチャンネルと `#bot-spam` チャンネルを使用します。
 
-**コマンドとエイリアス**：
-- `play` (`p`, `>`) — パラメータ：YouTubeのビデオURL、履歴ID、トラックのタイトル、または有効なストリームリンク
-- `skip` (`next`, `ff`, `>>`)
-- `pause` (`!`)
-- `resume` (`r`,`!>`)
-- `stop` (`x`)
-- `add` (`a`, `+`) — パラメータ：YouTubeのビデオURLまたは履歴ID、トラックのタイトル、または有効なストリームリンク
-- `list` (`queue`, `l`, `q`)
-- `history` (`time`, `t`) — パラメータ： `duration` または `count`
-- `help` (`h`, `?`)
-- `about` (`v`)
-- `register`
-- `unregister`
+## 📝 利用可能なDiscordコマンド
 
-コマンドはデフォルトで `!` でプレフィックスを付ける必要があります。たとえば、`!play`、`!>>`などです。
+Melodix Playerは、それぞれのエイリアス（適用可能な場合）と共にさまざまなコマンドをサポートしています。一部のコマンドには追加のパラメータが必要です。
 
-### 例
-`play` コマンドを使用するには、YouTubeのビデオのタイトル、URL、または履歴IDをパラメータとして指定します。例：
-`!play Never Gonna Give You Up` 
-または 
-`!p https://www.youtube.com/watch?v=dQw4w9WgXcQ` 
-または 
-`!> 5`（`5`が履歴から見えるIDであると仮定： `!history`）
+### ▶️ 再生コマンド
+- `!play [title|url|stream|id]`（エイリアス：`!p ..`、`!> ..`）— パラメータ：曲名、YouTube URL、オーディオストリーミングURL、履歴ID。
+- `!skip`（エイリアス：`!next`、`!>>`）— キュー内の次のトラックにスキップします。
+- `!pause`（エイリアス：`!!`）— 再生を一時停止します。
+- `!resume`（エイリアス：`!r`、`!!>`）— 一時停止した再生を再開するか、`!add ..`を介してトラックが追加された場合は再生を開始します。
+- `!stop`（エイリアス：`!x`）— 再生を停止し、キューをクリアしてボイスチャンネルから退出します。
 
-曲をキューに追加するには、同様のアプローチを取ります：
-`!add Never Gonna Give You Up` 
-`!resume`（再生を開始する）
+### 📋 キューコマンド
+- `!add [title|url|stream|id]`（エイリアス：`!a`、`!+`）— パラメータ：曲名、YouTube URL、オーディオストリーミングURL、履歴ID（`!play ..`と同じ）。
+- `!list`（エイリアス：`!queue`、`!l`、`!q`）— 現在の曲のキューを表示します。
 
-## Discordサーバーにボットを追加する
+### 📚 履歴コマンド
+- `!history`（エイリアス：`!time`、`!t`）— 最近再生されたトラックの履歴を表示します。履歴の各トラックには再生/キュー待ちのための一意のIDがあります。
+- `!history count`（エイリアス：`!time count`、`!t count`）— 再生回数で履歴をソートします。
+- `!history duration`（エイリアス：`!time duration`、`!t duration`）— トラックの期間で履歴をソートします。
 
-MelodixをDiscordサーバーに追加するには：
+### ℹ️ 情報コマンド
+- `!help`（エイリアス：`!h`、`!?`）— ヘルプチートシートを表示します。
+- `!help play` — 再生コマンドに関する追加情報を表示します。
+- `!help queue` — キューコマンドに関する追加情報を表示します。
+- `!about`（エイリアス：`!v`）— バージョン（ビルド日付）と関連リンクを表示します。
+- `whoami` — ユーザー関連の情報をログに送信します。`.env`ファイルでスーパーアドミンを設定するために必要です。
 
-1. [Discord Developer Portal](https://discord.com/developers/applications)でボットを作成し、Botの`CLIENT_ID`を取得します。
-2. 次のリンクを使用します： `discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID_HERE&scope=bot&permissions=36727824`
-   - `YOUR_CLIENT_ID_HERE` をボットのクライアントIDに置き換えます（ステップ1で取得）。
-3. Discordの認証ページがブラウザで開き、サーバーを選択できます。
-4. Melodixを追加したいサーバーを選択し、「Authorize」をクリックします。
-5. Melodixに正常に機能するために必要な権限を付与します。
+### 💾 キャッシュとサイドローディングコマンド
+これらのコマンドは、スーパーアドミン（ホストサーバーの所有者）のみが利用できます。
+- `!curl [YouTube URL]` — 後で使用するためにmp3ファイルとしてダウンロードします。
+- `!cached` — 現在キャッシュされているファイルを表示します（`cached`ディレクトリから）。各サーバーは独自のファイルを操作します。
+- `!cached sync` — 手動で追加されたmp3ファイルを`cached`ディレクトリに同期します。
+- `!uploaded` — `uploaded`ディレクトリのアップロードされたビデオクリップを表示します。
+- `!uploaded extract` — ビデオクリップからmp3ファイルを抽出して`cached`ディレクトリに保存します。
 
-ボットが追加されたら、実際のボットの構築に進んでください。
+### 🔧 管理コマンド
+- `!register` — Melodixコマンドリスニングを有効にします（新しいDiscordサーバーごとに1回実行）。
+- `!unregister` — コマンドリスニングを無効にします。
+- `melodix-prefix` — 現在のプレフィックスを表示します（デフォルトは `!` 、`.env`ファイルを参照）。
+- `melodix-prefix-update "[new_prefix]"` — ギルドにカスタムプレフィックス（引用符内）を設定して、他のボットとの衝突を回避します。
+- `melodix-prefix-reset` — `.env`ファイルで設定されたデフォルトのプレフィックスに戻します。
 
-## ソースからビルドする
+### 💡 コマンドの使用例
+`play` コマンドを使用するには、YouTubeビデオのタイトル、URL、または履歴IDを指定します:
+```
+!play Never Gonna Give You Up
+!p https://www.youtube.com/watch?v=dQw4w9WgXcQ
+!> 5  (5 は `!history` からのIDを仮定)
+```
+曲をキューに追加するには、次のようにします:
+```
+!add Never Gonna Give You Up
+!resume
+```
 
-このプロジェクトはGo言語で書かれており、*サーバー*または*ローカル*プログラムとして実行できます。
+## 🔧 ボットのセットアップ方法
 
-**ローカルの使用**
-Melodix Playerをソースからビルドするためのいくつかのスクリプトが用意されています：
+### 🔗 Discord Developer Portalでボットを作成する
+MelodixをDiscordサーバーに追加するには、次の手順に従ってください：
+
+1. [Discord Developer Portal](https://discord.com/developers/applications)でアプリケーションを作成し、`APPLICATION_ID`（一般セクションにあります）を取得します。
+2. ボットセクションで、`PRESENCE INTENT`、`SERVER MEMBERS INTENT`、および`MESSAGE CONTENT INTENT`を有効にします。
+3. 次のリンクを使用してボットを承認します：`discord.com/oauth2/authorize?client_id=YOUR_APPLICATION_ID&scope=bot&permissions=36727824`
+   - `YOUR_APPLICATION_ID` をステップ1で取得したボットのアプリケーションIDに置き換えます。
+4. サーバーを選択して、「Authorize」をクリックします。
+5. Melodixが正常に動作するために必要な権限を付与します（テキストチャンネルとボイスチャンネルへのアクセス）。
+
+ボットを追加した後、ソースからビルドするか[コンパイル済みバイナリ](https://github.com/keshon/melodix-player/releases)をダウンロードします。Dockerデプロイメントの手順については、`docker/README.md` を参照してください。
+
+### 🛠️ ソースからMelodixをビルドする
+このプロジェクトはGoで書かれているため、環境が準備されていることを確認してください。提供されているスクリプトを使用して、ソースからMelodix Playerをビルドします：
 - `bash-and-run.bat`（またはLinux用の`.sh`）：デバッグバージョンをビルドして実行します。
 - `build-release.bat`（またはLinux用の`.sh`）：リリースバージョンをビルドします。
-- `assemble-dist.bat`：リリースバージョンをビルドし、配布パッケージとして組み立てます（Windowsのみ、プロセス中にUPXパッケージャがダウンロードされます）。
+- `assemble-dist.bat`：リリースバージョンをビルドし、配布パッケージとして組み立てます（Windowsのみ）。
 
-ローカルで使用する場合は、これらのスクリプトを操作するためのオペレーティングシステムごとに実行し、`.env.example` を `.env` にリネームし、`DISCORD_BOT_TOKEN` 変数にDiscordボットトークンを格納します。 [FFMPEG](https://ffmpeg.org/) をインストールします（最新バージョンのみサポートされます）。 FFMPEGのインストールがポータブルな場合は、`DCA_FFMPEG_BINARY_PATH` 変数にパスを指定します。
+`.env.example` を `.env` にリネームし、`DISCORD_BOT_TOKEN` 変数に Discord ボットトークンを保存します。[FFMPEG](https://ffmpeg.org/) をインストールします（最新バージョンのみサポートされています）。ポータブルFFMPEGを使用する場合は、`.env`ファイルで`DCA_FFMPEG_BINARY_PATH`にパスを指定します。
 
-**サーバーの使用**
-Docker環境でボットをビルドしてデプロイするには、`docker/README.md` を参照してください。
+### 🐳 Dockerデプロイメント
+Dockerデプロイメントについては、`docker/README.md`を参照してください。
 
-バイナリファイルがビルドされ、`.env` ファイルが記入され、ボットがサーバーに追加されたら、Melodixは操作の準備ができています。
-
-## APIアクセスとルート
-
-Melodix Playerはさまざまな機能に対するさまざまなルートを提供しています：
+## 🌐 REST API
+Melodix PlayerはいくつかのAPIルートを提供します（変更される可能性があります）。
 
 ### ギルドルート
-
 - `GET /guild/ids`：アクティブなギルドIDを取得します。
 - `GET /guild/playing`：各アクティブなギルドで現在再生中のトラックに関する情報を取得します。
 
 ### 履歴ルート
-
 - `GET /history`：再生されたトラックの全体の履歴にアクセスします。
 - `GET /history/:guild_id`：特定のギルドの再生されたトラックの履歴を取得します。
 
 ### アバタールルート
-
-- `GET /avatar`：アバターフォルダ内の利用可能な画像をリスト表示します。
-- `GET /avatar/random`：アバターフォルダからランダムな画像を取得します。
+- `GET /avatar`：アバタールフォルダー内の利用可能な画像をリストします。
+- `GET /avatar/random`：アバタールフォルダーからランダムな画像を取得します。
 
 ### ログルート
-
 - `GET /log`：現在のログを表示します。
-- `GET
-
- /log/clear`：ログをクリアします。
+- `GET /log/clear`：ログをクリアします。
 - `GET /log/download`：ログをファイルとしてダウンロードします。
 
-## サポートを受ける場所
+## 🆘 サポート
+質問がある場合は、[公式Discordサーバー](https://discord.gg/NVtdTka8ZT)でサポートを受けることができます。
 
-質問があれば、[Discordサーバー](https://discord.gg/NVtdTka8ZT)で質問してサポートを受けることができます。何のコミュニティもないことを心に留めておいてください。
+## 🏆 謝辞
+Fabijan Zulj氏の使いやすいDiscordボット「Muzikas」からインスピレーションを受けました。
 
-## 謝辞
-
-[Fabijan Zulj](https://github.com/FabijanZulj)によって作成された使いやすいDiscordボット[Muzikas](https://github.com/FabijanZulj/Muzikas)からインスピレーションを得ました。
-
-Melodixの開発の結果、新しいプロジェクトが誕生しました：[Discord Bot Boilerplate](https://github.com/keshon/discord-bot-boilerplate) — Discordボットを構築するためのフレームワーク。
-
-## ライセンス
-
-Melodixは[MITライセンス](https://opensource.org/licenses/MIT)のもとで提供されています。
+## 📜 ライセンス
+Melodixは[MITライセンス](https://opensource.org/licenses/MIT)の下でライセンスされています。

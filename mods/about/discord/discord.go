@@ -59,7 +59,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	d.Message = m
 
-	command, _, err := parseCommand(m.Message.Content, d.CommandPrefix)
+	command, param, err := parseCommand(m.Message.Content, d.CommandPrefix)
 	if err != nil {
 		return
 	}
@@ -69,7 +69,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"about", "v"},
 	}) {
 	case "help":
-		d.handleHelpCommand()
+		d.handleHelpCommand(param)
 	case "about":
 		d.handleAboutCommand()
 	}
@@ -100,10 +100,11 @@ func parseCommand(input, pattern string) (string, string, error) {
 }
 
 func getCanonicalCommand(alias string, commandAliases [][]string) string {
+	alias = strings.ToLower(alias)
 	for _, aliases := range commandAliases {
 		for _, command := range aliases {
-			if command == alias {
-				return aliases[0]
+			if strings.ToLower(command) == alias {
+				return strings.ToLower(aliases[0])
 			}
 		}
 	}

@@ -68,8 +68,9 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	d.Message = m
+	messageContentLower := strings.ToLower(m.Message.Content)
 
-	command, param, err := d.splitCommandFromParameter(m.Message.Content, d.prefix)
+	command, param, err := d.splitCommandFromParameter(messageContentLower, d.prefix)
 	if err != nil {
 		return
 	}
@@ -129,27 +130,35 @@ func (d *Discord) splitCommandFromParameter(content, commandPrefix string) (stri
 		return "", "", fmt.Errorf("command prefix not found")
 	}
 
-	commandAndParams := content[len(commandPrefix):]
+	content = strings.ToLower(content)
+	commandPrefix = strings.ToLower(commandPrefix)
 
-	words := strings.Fields(commandAndParams)
+	if !strings.HasPrefix(content, commandPrefix) {
+		return "", "", nil // fmt.Errorf("pattern not found")
+	}
+
+	content = content[len(commandPrefix):]
+
+	words := strings.Fields(content)
 	if len(words) == 0 {
 		return "", "", fmt.Errorf("no command found")
 	}
 
-	command := strings.ToLower(words[0])
-	param := ""
+	command := words[0]
+	parameter := ""
 	if len(words) > 1 {
-		param = strings.Join(words[1:], " ")
-		param = strings.TrimSpace(param)
+		parameter = strings.Join(words[1:], " ")
+		parameter = strings.TrimSpace(parameter)
 	}
-	return command, param, nil
+	return command, parameter, nil
 }
 
 func getCanonicalCommand(alias string, commandAliases [][]string) string {
+	alias = strings.ToLower(alias)
 	for _, aliases := range commandAliases {
-		for _, a := range aliases {
-			if a == alias {
-				return aliases[0]
+		for _, command := range aliases {
+			if strings.ToLower(command) == alias {
+				return strings.ToLower(aliases[0])
 			}
 		}
 	}

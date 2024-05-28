@@ -51,8 +51,10 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 	gm.Message = m
 	gm.GuildID = m.GuildID
 
+	messageContentLower := strings.ToLower(m.Message.Content)
+
 	switch {
-	case m.Message.Content == "melodix-prefix":
+	case messageContentLower == "melodix-prefix":
 		gm.handleGetCustomPrefixCommand()
 		return
 	case strings.HasPrefix(m.Message.Content, "melodix-prefix-update"):
@@ -64,7 +66,7 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		return
 	}
 
-	command, _, err := gm.splitCommandFromParameter(m.Message.Content, gm.getEffectiveCommandPrefix())
+	command, _, err := gm.splitCommandFromParameter(messageContentLower, gm.getEffectiveCommandPrefix())
 	if err != nil {
 		slog.Error(err)
 		return
@@ -107,7 +109,7 @@ func (gm *GuildManager) Commands(s *discordgo.Session, m *discordgo.MessageCreat
 		}
 
 		if !exists {
-			gm.sendMessageEmbed(fmt.Sprintf("Guild must be registered first.\nUse `%vregister` command.", gm.getEffectiveCommandPrefix()))
+			gm.sendMessageEmbed(fmt.Sprintf("Guild must be registered first.\nType `%vregister` command.", gm.getEffectiveCommandPrefix()))
 			return
 		}
 	}
@@ -145,7 +147,7 @@ func (gm *GuildManager) handleRegisterCommand() {
 	}
 
 	gm.setupBotInstance(guildID)
-	gm.sendMessageEmbed(fmt.Sprintf("Guild registered successfully\nUse `%vhelp` to see all available commands", gm.getEffectiveCommandPrefix()))
+	gm.sendMessageEmbed(fmt.Sprintf("Guild registered successfully\nType `%vhelp` to see all available commands", gm.getEffectiveCommandPrefix()))
 }
 
 func (gm *GuildManager) handleUnregisterCommand() {
@@ -187,7 +189,8 @@ func (gm *GuildManager) handleSetCustomPrefixCommand(param string) {
 		gm.sendMessageEmbed(fmt.Sprintf("Error setting custom prefix\n`%v`", err.Error()))
 	}
 	gm.customPrefix = param
-	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
+	currentPrefix := gm.getEffectiveCommandPrefix()
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`\n\nType `%vhelp` to see available commands", currentPrefix, currentPrefix))
 
 	gm.removeBotInstance(gm.GuildID)
 	gm.setupBotInstance(gm.GuildID)
@@ -201,7 +204,8 @@ func (gm *GuildManager) handleResetPrefixCommand() {
 		gm.sendMessageEmbed(fmt.Sprintf("Error reseting prefix\n`%v`", err.Error()))
 	}
 	gm.customPrefix = ""
-	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
+	currentPrefix := gm.getEffectiveCommandPrefix()
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`\n\nType `%vhelp` to see available commands", currentPrefix, currentPrefix))
 
 	gm.removeBotInstance(gm.GuildID)
 	gm.setupBotInstance(gm.GuildID)
@@ -209,7 +213,9 @@ func (gm *GuildManager) handleResetPrefixCommand() {
 }
 
 func (gm *GuildManager) handleGetCustomPrefixCommand() {
-	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`", gm.getEffectiveCommandPrefix()))
+	currentPrefix := gm.getEffectiveCommandPrefix()
+	gm.sendMessageEmbed(fmt.Sprintf("Current prefix now is `%v`\n\nType `%vhelp` to see available commands", currentPrefix, currentPrefix))
+
 }
 
 func (gm *GuildManager) setupBotInstance(guildID string) {
@@ -275,7 +281,7 @@ func (gm *GuildManager) getEffectiveCommandPrefix() string {
 }
 
 func (gm *GuildManager) extractQuotedText(input, command string) string {
-	trimmedInput := strings.TrimPrefix(input, command)
+	trimmedInput := strings.TrimPrefix(strings.ToLower(input), strings.ToLower(command))
 	trimmedInput = strings.TrimSpace(trimmedInput)
 
 	if len(trimmedInput) >= 2 && trimmedInput[0] == '"' && trimmedInput[len(trimmedInput)-1] == '"' {
