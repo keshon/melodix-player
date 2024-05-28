@@ -86,6 +86,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"curl", "cu"},
 		{"cached", "cl"},
 		{"uploaded", "ul"},
+		{"shazam", "s"},
 	}
 
 	canonical := getCanonicalCommand(command, aliases)
@@ -118,6 +119,8 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		d.handleCacheListCommand(param)
 	case "uploaded":
 		d.handleUploadListCommand(param)
+	case "shazam":
+		d.handleShazamCommand()
 	}
 }
 
