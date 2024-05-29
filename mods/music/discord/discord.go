@@ -68,9 +68,8 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	d.Message = m
-	messageContentLower := strings.ToLower(m.Message.Content)
 
-	command, param, err := d.splitCommandFromParameter(messageContentLower, d.prefix)
+	command, param, err := d.splitCommandFromParameter(m.Message.Content, d.prefix)
 	if err != nil {
 		return
 	}
@@ -87,7 +86,7 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		{"curl", "cu"},
 		{"cached", "cl"},
 		{"uploaded", "ul"},
-		{"shazam", "s"},
+		{"now", "n"},
 	}
 
 	canonical := getCanonicalCommand(command, aliases)
@@ -120,8 +119,8 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 		d.handleCacheListCommand(param)
 	case "uploaded":
 		d.handleUploadListCommand(param)
-	case "shazam":
-		d.handleShazamCommand()
+	case "now":
+		d.handleNowPlayngCommand()
 	}
 }
 
@@ -130,7 +129,6 @@ func (d *Discord) splitCommandFromParameter(content, commandPrefix string) (stri
 		return "", "", fmt.Errorf("command prefix not found")
 	}
 
-	content = strings.ToLower(content)
 	commandPrefix = strings.ToLower(commandPrefix)
 
 	if !strings.HasPrefix(content, commandPrefix) {
@@ -150,6 +148,8 @@ func (d *Discord) splitCommandFromParameter(content, commandPrefix string) (stri
 		parameter = strings.Join(words[1:], " ")
 		parameter = strings.TrimSpace(parameter)
 	}
+
+	command = strings.ToLower(command)
 	return command, parameter, nil
 }
 
