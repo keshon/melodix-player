@@ -67,7 +67,7 @@ func (d *Discord) handleHelpCommand(param string) {
 
 	help := fmt.Sprintf("`%vhelp`, `%vh` — show help\n", prefix, prefix)
 	about := fmt.Sprintf("`%vabout`, `%vv` — show version\n", prefix, prefix)
-	whoami := fmt.Sprintf("`%vwhoami` — log user's info\n", prefix)
+	now := fmt.Sprintf("`%vnow` — show currently playing track name\n", prefix)
 
 	cached := fmt.Sprintf("`%vcached` — show cached tracks\n", prefix)
 	cachedSync := fmt.Sprintf("`%vcached sync` — sync added/removed files to with database\n", prefix)
@@ -77,6 +77,7 @@ func (d *Discord) handleHelpCommand(param string) {
 
 	register := fmt.Sprintf("`%vregister` — enable commands listening\n", prefix)
 	unregister := fmt.Sprintf("`%vunregister` — disable commands listening\n", prefix)
+	whoami := fmt.Sprintf("`%vwhoami` — log user's info\n", prefix)
 	melodixPrefix := "`melodix-prefix` — print current command prefix\n"
 	melodixPrefixUpdate := "`melodix-prefix-update \"[new_prefix]\"` — set new prefix (in quotes)\n"
 	melodixPreifxReset := fmt.Sprintf("`melodix-prefix-reset` — reset prefix to global one: `%v`\n", cfg.DiscordCommandPrefix)
@@ -91,9 +92,9 @@ func (d *Discord) handleHelpCommand(param string) {
 		AddField("", "").
 		AddField("", "**History**\n"+history+historyByDuration+historyByPlaycount+"\n").
 		AddField("", "").
-		AddField("", "**Information**\n"+help+about+whoami+"\n").
+		AddField("", "**Information**\n"+now+help+about+"\n").
 		AddField("", "").
-		AddField("", "**Management**\n"+register+unregister+melodixPrefix+melodixPrefixUpdate+melodixPreifxReset+"\n").
+		AddField("", "**Management**\n"+register+unregister+whoami+melodixPrefix+melodixPrefixUpdate+melodixPreifxReset+"\n").
 		AddField("", "").
 		AddField("", "**Caching & Sideloading**\nThis commands are for superadmin only.\n"+cached+cachedSync+curl+uploaded+uploadedExtract+"\n").
 		AddField("", "\n\n").
