@@ -257,20 +257,29 @@ func (gm *GuildManager) splitCommandFromParameter(content, commandPrefix string)
 		return "", "", fmt.Errorf("command prefix not found")
 	}
 
-	commandAndParams := content[len(commandPrefix):]
+	prefixLowercase := strings.ToLower(commandPrefix)
+	contentLowercase := strings.ToLower(content)
 
-	words := strings.Fields(commandAndParams)
+	if !strings.HasPrefix(contentLowercase, prefixLowercase) {
+		return "", "", nil // fmt.Errorf("pattern not found")
+	}
+
+	content = content[len(commandPrefix):]
+
+	words := strings.Fields(content)
 	if len(words) == 0 {
 		return "", "", fmt.Errorf("no command found")
 	}
 
-	command := strings.ToLower(words[0])
-	param := ""
+	command := words[0]
+	parameter := ""
 	if len(words) > 1 {
-		param = strings.Join(words[1:], " ")
-		param = strings.TrimSpace(param)
+		parameter = strings.Join(words[1:], " ")
+		parameter = strings.TrimSpace(parameter)
 	}
-	return command, param, nil
+
+	command = strings.ToLower(command)
+	return command, parameter, nil
 }
 
 func (gm *GuildManager) getEffectiveCommandPrefix() string {

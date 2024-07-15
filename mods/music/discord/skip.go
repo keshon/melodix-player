@@ -5,8 +5,6 @@ import (
 )
 
 func (d *Discord) handleSkipCommand() {
-	d.changeAvatar()
-
 	skipMsg := d.sendMessageEmbed("⏩ " + "Skipping")
 
 	err := d.Player.Skip()

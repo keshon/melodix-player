@@ -14,7 +14,6 @@ import (
 func (d *Discord) handleHistoryCommand(param string) {
 	s := d.Session
 	m := d.Message
-	d.changeAvatar()
 
 	sortBy, title := "last_played", " — most recent"
 	switch param {

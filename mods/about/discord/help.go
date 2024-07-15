@@ -15,7 +15,6 @@ import (
 func (d *Discord) handleHelpCommand(param string) {
 	s := d.Session
 	m := d.Message
-	d.changeAvatar(s)
 
 	cfg, err := config.NewConfig()
 	if err != nil {

@@ -3,7 +3,6 @@ package discord
 func (d *Discord) handleShowQueueCommand() {
 	s := d.Session
 	m := d.Message
-	d.changeAvatar()
 
 	playlist := d.Player.GetSongQueue()
 	pleaseWaitMsg := d.sendMessageEmbed("Please wait...")

@@ -16,7 +16,6 @@ import (
 func (d *Discord) handleAboutCommand() {
 	s := d.Session
 	m := d.Message
-	d.changeAvatar(s)
 
 	title := "ℹ️ About"
 	content := fmt.Sprintf("**%v** — %v", version.AppFullName, version.AppDescription)

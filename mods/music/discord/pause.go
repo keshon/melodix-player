@@ -6,7 +6,6 @@ import (
 )
 
 func (d *Discord) handlePauseCommand() {
-	d.changeAvatar()
 
 	if d.Player.GetCurrentStatus() != player.StatusPlaying {
 		slog.Info("Ignoring pause command because player is not playing", d.Player.GetCurrentStatus().String())

@@ -4,25 +4,21 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
 	"github.com/keshon/melodix-player/mods/music/player"
-	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
 type Discord struct {
-	Player               player.IPlayer
-	Session              *discordgo.Session
-	Message              *discordgo.MessageCreate
-	GuildID              string
-	IsInstanceActive     bool
-	prefix               string
-	lastChangeAvatarTime time.Time
-	rateLimitDuration    time.Duration
+	Player           player.IPlayer
+	Session          *discordgo.Session
+	Message          *discordgo.MessageCreate
+	GuildID          string
+	IsInstanceActive bool
+	prefix           string
 }
 
 func NewDiscord(session *discordgo.Session) *Discord {
@@ -32,11 +28,10 @@ func NewDiscord(session *discordgo.Session) *Discord {
 	}
 
 	return &Discord{
-		Session:           session,
-		Message:           nil,
-		IsInstanceActive:  true,
-		prefix:            config.DiscordCommandPrefix,
-		rateLimitDuration: time.Minute * 10,
+		Session:          session,
+		Message:          nil,
+		IsInstanceActive: true,
+		prefix:           config.DiscordCommandPrefix,
 	}
 }
 
@@ -129,9 +124,10 @@ func (d *Discord) splitCommandFromParameter(content, commandPrefix string) (stri
 		return "", "", fmt.Errorf("command prefix not found")
 	}
 
-	commandPrefix = strings.ToLower(commandPrefix)
+	prefixLowercase := strings.ToLower(commandPrefix)
+	contentLowercase := strings.ToLower(content)
 
-	if !strings.HasPrefix(content, commandPrefix) {
+	if !strings.HasPrefix(contentLowercase, prefixLowercase) {
 		return "", "", nil // fmt.Errorf("pattern not found")
 	}
 
@@ -153,45 +149,16 @@ func (d *Discord) splitCommandFromParameter(content, commandPrefix string) (stri
 	return command, parameter, nil
 }
 
-func getCanonicalCommand(alias string, commandAliases [][]string) string {
-	alias = strings.ToLower(alias)
+func getCanonicalCommand(command string, commandAliases [][]string) string {
+	lowerCommand := strings.ToLower(command)
 	for _, aliases := range commandAliases {
-		for _, command := range aliases {
-			if strings.ToLower(command) == alias {
+		for _, alias := range aliases {
+			if strings.ToLower(alias) == lowerCommand {
 				return strings.ToLower(aliases[0])
 			}
 		}
 	}
 	return ""
-}
-
-func (d *Discord) changeAvatar() {
-	s := d.Session
-
-	if time.Since(d.lastChangeAvatarTime) < d.rateLimitDuration {
-		//slog.Info("Rate-limited. Skipping changeAvatar.")
-		return
-	}
-
-	imgPath, err := utils.GetWeightedRandomImagePath("./assets/avatars")
-	if err != nil {
-		slog.Errorf("Error getting avatar path: %v", err)
-		return
-	}
-
-	avatar, err := utils.ReadFileToBase64(imgPath)
-	if err != nil {
-		fmt.Printf("Error preparing avatar: %v\n", err)
-		return
-	}
-
-	_, err = s.UserUpdate("", avatar)
-	if err != nil {
-		slog.Errorf("Error setting the avatar: %v", err)
-		return
-	}
-
-	d.lastChangeAvatarTime = time.Now()
 }
 
 func (d *Discord) findUserVoiceState(userID string, voiceStates []*discordgo.VoiceState) (*discordgo.VoiceState, bool) {

@@ -26,10 +26,9 @@ func NewDiscord(session *discordgo.Session) *Discord {
 	config := loadConfig()
 
 	return &Discord{
-		Session:           session,
-		IsInstanceActive:  true,
-		CommandPrefix:     config.DiscordCommandPrefix,
-		RateLimitDuration: time.Minute * 10,
+		Session:          session,
+		IsInstanceActive: true,
+		CommandPrefix:    config.DiscordCommandPrefix,
 	}
 }
 
@@ -46,6 +45,7 @@ func (d *Discord) Start(guildID string, commandPrefix string) {
 	d.Session.AddHandler(d.Commands)
 	d.GuildID = guildID
 	d.CommandPrefix = commandPrefix
+	d.setupAvatar(d.Session)
 }
 
 func (d *Discord) Stop() {
@@ -99,11 +99,11 @@ func parseCommand(input, pattern string) (string, string, error) {
 	return command, parameter, nil
 }
 
-func getCanonicalCommand(alias string, commandAliases [][]string) string {
-	alias = strings.ToLower(alias)
+func getCanonicalCommand(command string, commandAliases [][]string) string {
+	lowerCommand := strings.ToLower(command)
 	for _, aliases := range commandAliases {
-		for _, command := range aliases {
-			if strings.ToLower(command) == alias {
+		for _, alias := range aliases {
+			if strings.ToLower(alias) == lowerCommand {
 				return strings.ToLower(aliases[0])
 			}
 		}
@@ -111,18 +111,12 @@ func getCanonicalCommand(alias string, commandAliases [][]string) string {
 	return ""
 }
 
-func (d *Discord) changeAvatar(s *discordgo.Session) {
+func (d *Discord) setupAvatar(s *discordgo.Session) {
 	if time.Since(d.LastChangeAvatarTime) < d.RateLimitDuration {
 		return
 	}
 
-	imgPath, err := utils.GetRandomImagePathFromPath("./assets/avatars")
-	if err != nil {
-		slog.Error("Error getting random image path:", err)
-		return
-	}
-
-	avatar, err := utils.ReadFileToBase64(imgPath)
+	avatar, err := utils.ReadFileToBase64("./assets/avatars/0.png")
 	if err != nil {
 		slog.Error("Error reading file to base64:", err)
 		return
@@ -133,8 +127,6 @@ func (d *Discord) changeAvatar(s *discordgo.Session) {
 		slog.Error("Error updating user avatar:", err)
 		return
 	}
-
-	d.LastChangeAvatarTime = time.Now()
 }
 
 func (d *Discord) sendMessageEmbed(embedStr string) *discordgo.Message {

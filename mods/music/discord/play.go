@@ -23,7 +23,6 @@ import (
 func (d *Discord) handlePlayCommand(param string, enqueueOnly bool) {
 	s := d.Session
 	m := d.Message
-	d.changeAvatar()
 
 	if param == "" {
 		return

@@ -8,8 +8,6 @@ import (
 )
 
 func (d *Discord) handleResumeCommand() {
-	d.changeAvatar()
-
 	if d.Player.GetCurrentStatus() != player.StatusPaused && d.Player.GetCurrentStatus() != player.StatusResting {
 		slog.Info("Ignoring resume command because player is not paused or resting", d.Player.GetCurrentStatus().String())
 	}
