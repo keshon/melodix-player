@@ -120,10 +120,6 @@ func (d *Discord) Commands(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func (d *Discord) splitCommandFromParameter(content, commandPrefix string) (string, string, error) {
-	if !strings.HasPrefix(content, commandPrefix) {
-		return "", "", fmt.Errorf("command prefix not found")
-	}
-
 	prefixLowercase := strings.ToLower(commandPrefix)
 	contentLowercase := strings.ToLower(content)
 
@@ -138,7 +134,7 @@ func (d *Discord) splitCommandFromParameter(content, commandPrefix string) (stri
 		return "", "", fmt.Errorf("no command found")
 	}
 
-	command := words[0]
+	command := strings.ToLower(words[0])
 	parameter := ""
 	if len(words) > 1 {
 		parameter = strings.Join(words[1:], " ")
