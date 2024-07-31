@@ -92,6 +92,9 @@ func (d *Discord) handlePlayCommand(param string, enqueueOnly bool) {
 	}
 
 	// Enqueue playlist to the player
+	if d.Player.GetCurrentSong() != nil {
+		enqueueOnly = true
+	}
 	err = playOrEnqueue(d, songs, s, m, enqueueOnly, pleaseWaitMessage.ID)
 	if err != nil {
 		slog.Error(err)
@@ -286,8 +289,16 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 	}
 
 	if enqueueOnly {
-		showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, false)
-		slog.Warn(d.Player.GetCurrentStatus().String())
+		playlist = d.Player.GetSongQueue()
+		go func() {
+			for {
+				if d.Player.GetCurrentStatus() == player.StatusPlaying || d.Player.GetCurrentStatus() == player.StatusPaused {
+					showStatusMessage(d, s, m.Message.ChannelID, prevMessageID, playlist, previousPlaylistExist, false)
+					break
+				}
+				time.Sleep(250 * time.Millisecond)
+			}
+		}()
 	} else {
 		go func() {
 			for {
@@ -299,13 +310,13 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 			}
 		}()
 
-		slog.Warn("Current status is", d.Player.GetCurrentStatus().String())
-
 		err := d.Player.Unpause(vs.ChannelID)
 		if err != nil {
 			return err
 		}
 	}
+
+	slog.Warn("Current status is", d.Player.GetCurrentStatus().String())
 
 	return nil
 }

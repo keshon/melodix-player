@@ -3,6 +3,8 @@ package sources
 import (
 	"fmt"
 	"io"
+	"net"
+	"time"
 
 	"net/http"
 	"regexp"
@@ -36,6 +38,21 @@ func NewYoutube() IYoutube {
 }
 
 func (y *Youtube) parseSongInfo(url string) (*player.Song, error) {
+	// Experimental
+	y.youtubeClient.HTTPClient = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout: 30 * time.Second,
+			}).DialContext,
+			MaxIdleConns:          10,
+			IdleConnTimeout:       30 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+		Timeout: 30 * time.Second,
+	}
+
 	song, err := y.youtubeClient.GetVideo(url)
 	if err != nil {
 		return nil, err
