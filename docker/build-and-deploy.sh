@@ -29,7 +29,7 @@ if [ "$(docker images -q "${ALIAS}-image" 2>/dev/null)" ]; then
     docker rmi "${ALIAS}-image"
 fi
 
-DOCKER_BUILDKIT=0 docker build -t "${ALIAS}-image" .
+DOCKER_BUILDKIT=1 docker build -t "${ALIAS}-image" .
 
 eval "$DOCKER_COMPOSE_COMMAND"
 
