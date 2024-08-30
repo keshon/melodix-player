@@ -254,7 +254,7 @@ func (gm *GuildManager) removeBotInstance(guildID string) {
 
 func (gm *GuildManager) splitCommandFromParameter(content, commandPrefix string) (string, string, error) {
 	if !strings.HasPrefix(content, commandPrefix) {
-		return "", "", fmt.Errorf("command prefix not found")
+		return "", "", nil
 	}
 
 	prefixLowercase := strings.ToLower(commandPrefix)

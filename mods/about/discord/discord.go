@@ -9,7 +9,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
-	"github.com/keshon/melodix-player/mods/about/utils"
 )
 
 type Discord struct {
@@ -45,7 +44,6 @@ func (d *Discord) Start(guildID string, commandPrefix string) {
 	d.Session.AddHandler(d.Commands)
 	d.GuildID = guildID
 	d.CommandPrefix = commandPrefix
-	d.setupAvatar(d.Session)
 }
 
 func (d *Discord) Stop() {
@@ -111,24 +109,6 @@ func getCanonicalCommand(command string, commandAliases [][]string) string {
 	return ""
 }
 
-func (d *Discord) setupAvatar(s *discordgo.Session) {
-	if time.Since(d.LastChangeAvatarTime) < d.RateLimitDuration {
-		return
-	}
-
-	avatar, err := utils.ReadFileToBase64("./assets/avatars/0.png")
-	if err != nil {
-		slog.Error("Error reading file to base64:", err)
-		return
-	}
-
-	_, err = s.UserUpdate("", avatar)
-	if err != nil {
-		slog.Error("Error updating user avatar:", err)
-		return
-	}
-}
-
 func (d *Discord) sendMessageEmbed(embedStr string) *discordgo.Message {
 	s := d.Session
 	m := d.Message
@@ -140,22 +120,6 @@ func (d *Discord) sendMessageEmbed(embedStr string) *discordgo.Message {
 	msg, err := s.ChannelMessageSendEmbed(m.Message.ChannelID, embedBody)
 	if err != nil {
 		slog.Error("Error sending pause message", err)
-	}
-
-	return msg
-}
-
-func (d *Discord) editMessageEmbed(embedStr string, messageID string) *discordgo.Message {
-	s := d.Session
-	m := d.Message
-
-	embedBody := embed.NewEmbed().
-		SetDescription(embedStr).
-		SetColor(0x9f00d4).MessageEmbed
-
-	msg, err := s.ChannelMessageEditEmbed(m.Message.ChannelID, messageID, embedBody)
-	if err != nil {
-		slog.Error("Error sending 'stopped playback' message", err)
 	}
 
 	return msg
