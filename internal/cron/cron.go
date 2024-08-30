@@ -10,7 +10,7 @@ import (
 	"github.com/gookit/slog"
 
 	"github.com/keshon/melodix-player/internal/db"
-	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/media"
 	"github.com/robfig/cron/v3"
 )
 
@@ -66,7 +66,7 @@ func (ct *CronTasks) dbInvalidTracks() error {
 	}
 
 	for _, track := range tracks {
-		if track.Source == player.SourceYouTube.String() {
+		if track.Source == media.SourceYouTube.String() {
 			if track.URL == "" {
 				err = db.DeleteTrack(&track)
 				if err != nil {
@@ -84,7 +84,7 @@ func (ct *CronTasks) dbInvalidTracks() error {
 			}
 		}
 
-		if track.Source == player.SourceLocalFile.String() {
+		if track.Source == media.SourceLocalFile.String() {
 			if track.Filepath == "" {
 				err = db.DeleteTrack(&track)
 				if err != nil {

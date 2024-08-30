@@ -3,19 +3,19 @@ package player
 
 import (
 	"sync"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 
 	"github.com/keshon/melodix-player/mods/music/history"
+	"github.com/keshon/melodix-player/mods/music/media"
 	"github.com/keshon/melodix-player/mods/music/third_party/dca"
 )
 
 type IPlayer interface {
-	Play(startAt int, song *Song) error
+	Play(startAt int, song *media.Song) error
 	Skip() error
-	Enqueue(song *Song)
-	Dequeue() (*Song, error)
+	Enqueue(song *media.Song)
+	Dequeue() (*media.Song, error)
 	ClearQueue() error
 	Stop() error
 	Pause() error
@@ -24,14 +24,14 @@ type IPlayer interface {
 	Unlock()
 	GetCurrentStatus() PlaybackStatus
 	SetCurrentStatus(status PlaybackStatus)
-	GetSongQueue() []*Song
-	SetSongQueue(queue []*Song)
+	GetSongQueue() []*media.Song
+	SetSongQueue(queue []*media.Song)
 	GetVoiceConnection() *discordgo.VoiceConnection
 	SetVoiceConnection(voiceConnection *discordgo.VoiceConnection)
 	GetEncodingSession() *dca.EncodeSession
 	GetStreamingSession() *dca.StreamingSession
-	GetCurrentSong() *Song
-	SetCurrentSong(song *Song)
+	GetCurrentSong() *media.Song
+	SetCurrentSong(song *media.Song)
 	GetChannelID() string
 	SetChannelID(channelID string)
 	GetDiscordSession() *discordgo.Session
@@ -45,8 +45,8 @@ type Player struct {
 	vc                     *discordgo.VoiceConnection
 	stream                 *dca.StreamingSession
 	encoding               *dca.EncodeSession
-	song                   *Song
-	queue                  []*Song
+	song                   *media.Song
+	queue                  []*media.Song
 	status                 PlaybackStatus
 	channelID              string
 	guildID                string
@@ -55,40 +55,6 @@ type Player struct {
 	SkipInterrupt          chan bool
 	StopInterrupt          chan bool
 	SwitchChannelInterrupt chan bool
-}
-
-type Song struct {
-	Title     string        // Title of the song
-	URL       string        // URL provided by the user
-	Filepath  string        // Path/URL for downloading the song
-	Thumbnail Thumbnail     // Thumbnail image for the song
-	Duration  time.Duration // Duration of the song
-	SongID    string        // Unique ID for the song
-	Source    SongSource    // Source type of the song
-}
-
-type Thumbnail struct {
-	URL    string
-	Width  uint
-	Height uint
-}
-
-type SongSource int32
-
-const (
-	SourceYouTube SongSource = iota
-	SourceStream
-	SourceLocalFile
-)
-
-func (source SongSource) String() string {
-	sources := map[SongSource]string{
-		SourceYouTube:   "YouTube",
-		SourceStream:    "Stream",
-		SourceLocalFile: "LocalFile",
-	}
-
-	return sources[source]
 }
 
 type PlaybackStatus int32
@@ -127,7 +93,7 @@ func NewPlayer(guildID string, session *discordgo.Session) IPlayer {
 		stream:                 nil,
 		encoding:               nil,
 		song:                   nil,
-		queue:                  make([]*Song, 0),
+		queue:                  make([]*media.Song, 0),
 		status:                 StatusResting,
 		guildID:                guildID,
 		session:                session,
@@ -158,11 +124,11 @@ func (p *Player) SetCurrentStatus(status PlaybackStatus) {
 	p.status = status
 }
 
-func (p *Player) GetSongQueue() []*Song {
+func (p *Player) GetSongQueue() []*media.Song {
 	return p.queue
 }
 
-func (p *Player) SetSongQueue(queue []*Song) {
+func (p *Player) SetSongQueue(queue []*media.Song) {
 	p.queue = queue
 }
 
@@ -176,11 +142,11 @@ func (p *Player) SetVoiceConnection(vc *discordgo.VoiceConnection) {
 	p.vc = vc
 }
 
-func (p *Player) GetCurrentSong() *Song {
+func (p *Player) GetCurrentSong() *media.Song {
 	return p.song
 }
 
-func (p *Player) SetCurrentSong(song *Song) {
+func (p *Player) SetCurrentSong(song *media.Song) {
 	p.song = song
 }
 

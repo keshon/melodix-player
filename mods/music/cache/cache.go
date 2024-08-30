@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/keshon/melodix-player/internal/db"
-	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/media"
 	"github.com/keshon/melodix-player/mods/music/sources"
 	"github.com/keshon/melodix-player/mods/music/utils"
 )
@@ -96,7 +96,7 @@ func (c *Cache) Curl(url string) (string, error) {
 	existingTrack, err := db.GetTrackBySongID(song.SongID)
 	if err == nil {
 		existingTrack.Filepath = audioFilePath
-		existingTrack.Source = player.SourceLocalFile.String()
+		existingTrack.Source = media.SourceLocalFile.String()
 		err := db.UpdateTrack(existingTrack)
 		if err != nil {
 			return "", fmt.Errorf("error updating track in database %v", err)
@@ -106,7 +106,7 @@ func (c *Cache) Curl(url string) (string, error) {
 			SongID:   song.SongID,
 			Title:    song.Title,
 			URL:      song.URL,
-			Source:   player.SourceLocalFile.String(),
+			Source:   media.SourceLocalFile.String(),
 			Filepath: audioFilePath,
 		}
 		err = db.CreateTrack(newTrack)
@@ -172,7 +172,7 @@ func (c *Cache) SyncCachedDir() (int, int, int, error) {
 				SongID:   songIDStr,
 				Title:    file.Name(),
 				Filepath: filepath,
-				Source:   player.SourceLocalFile.String(),
+				Source:   media.SourceLocalFile.String(),
 			})
 			if err != nil {
 				return 0, 0, 0, fmt.Errorf("error creating track in database %v", err)
@@ -181,7 +181,7 @@ func (c *Cache) SyncCachedDir() (int, int, int, error) {
 		} else {
 			if track.Filepath != filepath {
 				track.Filepath = filepath
-				track.Source = player.SourceLocalFile.String()
+				track.Source = media.SourceLocalFile.String()
 				err = db.UpdateTrack(track)
 				if err != nil {
 					return 0, 0, 0, fmt.Errorf("error updating track in database %v", err)
@@ -198,7 +198,7 @@ func (c *Cache) SyncCachedDir() (int, int, int, error) {
 		return 0, 0, 0, fmt.Errorf("error getting all tracks %v", err)
 	}
 	for _, track := range tracks {
-		if track.Source != player.SourceLocalFile.String() {
+		if track.Source != media.SourceLocalFile.String() {
 			continue
 		}
 
@@ -216,7 +216,7 @@ func (c *Cache) SyncCachedDir() (int, int, int, error) {
 			} else {
 				if utils.IsYouTubeURL(track.URL) {
 					track.Filepath = ""
-					track.Source = player.SourceYouTube.String()
+					track.Source = media.SourceYouTube.String()
 					err = db.UpdateTrack(&track)
 					if err != nil {
 						return 0, 0, 0, fmt.Errorf("error updating track in database %v", err)
@@ -346,7 +346,7 @@ func (c *Cache) ExtractAudioFromVideo() ([]string, error) {
 			} else {
 				newTrack := &db.Track{
 					Title:    audioFilename,
-					Source:   player.SourceLocalFile.String(),
+					Source:   media.SourceLocalFile.String(),
 					Filepath: audioFilePath,
 				}
 				err = db.CreateTrack(newTrack)
@@ -493,12 +493,12 @@ func (c *Cache) syncFilesToDB(guildID string, files []os.FileInfo, cacheGuildFol
 			db.CreateTrack(&db.Track{
 				Title:    file.Name(),
 				Filepath: filepath,
-				Source:   player.SourceLocalFile.String(),
+				Source:   media.SourceLocalFile.String(),
 			})
 		} else {
 			db.UpdateTrack(&db.Track{
 				Filepath: filepath,
-				Source:   player.SourceLocalFile.String(),
+				Source:   media.SourceLocalFile.String(),
 			})
 		}
 	}

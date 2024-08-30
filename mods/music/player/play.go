@@ -13,6 +13,8 @@ import (
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/config"
 	"github.com/keshon/melodix-player/mods/music/history"
+	"github.com/keshon/melodix-player/mods/music/media"
+	"github.com/keshon/melodix-player/mods/music/sources"
 	"github.com/keshon/melodix-player/mods/music/third_party/dca"
 	"github.com/keshon/melodix-player/mods/music/utils"
 )
@@ -20,9 +22,9 @@ import (
 // Down below is One Big Fat Function to play a song
 // The reason it's not split and is so logging verbose is due its complex logic flow
 
-func (p *Player) Play(startAt int, song *Song) error {
+func (p *Player) Play(startAt int, song *media.Song) error {
 	// Get current song (from queue / as arg)
-	currentSong, err := func() (*Song, error) {
+	currentSong, err := func() (*media.Song, error) {
 		if song != nil {
 			return song, nil
 		}
@@ -141,7 +143,6 @@ func (p *Player) Play(startAt int, song *Song) error {
 	select {
 	case errDone := <-done:
 		slog.Info("Song is interrupted due to done signal")
-
 		p.SetCurrentStatus(StatusResting)
 
 		if errDone != nil && errDone != io.EOF { // ? Point of interest: handle EOF errors
@@ -178,25 +179,28 @@ func (p *Player) Play(startAt int, song *Song) error {
 		}
 
 		if p.GetCurrentSong() != nil {
-
 			switch {
-			case p.GetCurrentSong().Source == SourceYouTube:
+			case p.GetCurrentSong().Source == media.SourceYouTube:
 				slog.Info("Source is a YouTube video, checking for song metrics if unexpected interruption")
-
 				songDuration, songPosition, err := p.calculateSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
-
 				if err != nil {
 					return fmt.Errorf("error getting song metrics: %w", err)
 				}
 
 				if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
 					startAt := songPosition.Seconds()
-
 					p.GetVoiceConnection().Speaking(false)
-
 					slog.Warnf("Unexpected interruption confirmed, restarting song: \"%v\" from %vs", p.GetCurrentSong().Title, int(startAt))
 
 					go func() {
+						yt := sources.NewYoutube()
+						song, err = yt.FetchOneByURL(p.GetCurrentSong().URL)
+						if err != nil {
+							slog.Errorf("error fetching new song: %w", err)
+						}
+
+						p.SetCurrentSong(song)
+
 						err := p.Play(int(startAt), p.GetCurrentSong())
 						if err != nil {
 							slog.Errorf("error restarting song: %w", err)
@@ -206,11 +210,9 @@ func (p *Player) Play(startAt int, song *Song) error {
 					return nil
 				}
 				// fallthrough
-			case p.GetCurrentSong().Source == SourceStream:
+			case p.GetCurrentSong().Source == media.SourceStream:
 				slog.Info("Source is a stream, should always restart (unless manually interrupted)")
-
 				p.GetVoiceConnection().Speaking(false)
-
 				slog.Infof("Restarting stream %v", p.GetCurrentSong().Title)
 
 				go func() {
@@ -222,20 +224,16 @@ func (p *Player) Play(startAt int, song *Song) error {
 
 				return nil
 
-			case p.GetCurrentSong().Source == SourceLocalFile:
+			case p.GetCurrentSong().Source == media.SourceLocalFile:
 				slog.Info("Source is a local file, checking for song metrics if unexpected interruption")
-
 				songDuration, songPosition, err := p.calculateSongMetrics(p.GetEncodingSession(), p.GetStreamingSession(), p.GetCurrentSong())
-
 				if err != nil {
 					return fmt.Errorf("error getting song metrics: %w", err)
 				}
 
 				if p.GetEncodingSession().Stats().Duration.Seconds() > 0 && songPosition.Seconds() > 0 && songPosition < songDuration {
 					startAt := songPosition.Seconds()
-
 					p.GetVoiceConnection().Speaking(false)
-
 					slog.Warnf("Unexpected interruption confirmed, restarting song: \"%v\" from %vs", p.GetCurrentSong().Title, int(startAt))
 
 					go func() {
@@ -271,7 +269,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 			p.SetStreamingSession(nil)
 
 			p.SetCurrentStatus(StatusResting)
-			p.SetSongQueue(make([]*Song, 0))
+			p.SetSongQueue(make([]*media.Song, 0))
 			p.SetCurrentSong(nil)
 			p.SkipInterrupt = make(chan bool, 1)
 			p.StopInterrupt = make(chan bool, 1)
@@ -315,7 +313,7 @@ func (p *Player) Play(startAt int, song *Song) error {
 		p.SetStreamingSession(nil)
 
 		p.SetCurrentStatus(StatusResting)
-		p.SetSongQueue(make([]*Song, 0))
+		p.SetSongQueue(make([]*media.Song, 0))
 		p.SetCurrentSong(nil)
 		p.SkipInterrupt = make(chan bool, 1)
 		p.StopInterrupt = make(chan bool, 1)
@@ -379,7 +377,7 @@ func (p *Player) setupVoiceConnection() (*discordgo.VoiceConnection, error) {
 	return voiceConnection, nil
 }
 
-func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, streamingSession *dca.StreamingSession, song *Song) (duration, position time.Duration, err error) {
+func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, streamingSession *dca.StreamingSession, song *media.Song) (duration, position time.Duration, err error) {
 	encodingDuration := encodingSession.Stats().Duration
 	encodingStartTime := time.Duration(encodingSession.Options().StartTime) * time.Second
 
@@ -388,7 +386,7 @@ func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, stream
 
 	var dur float64
 	switch song.Source {
-	case SourceYouTube:
+	case media.SourceYouTube:
 		parsedURL, err := url.Parse(song.Filepath)
 		if err != nil {
 			return 0, 0, fmt.Errorf("failed to parse URL: %v", err)
@@ -398,7 +396,7 @@ func (p *Player) calculateSongMetrics(encodingSession *dca.EncodeSession, stream
 		if err != nil {
 			return 0, 0, fmt.Errorf("failed to parse duration: %v", err)
 		}
-	case SourceLocalFile:
+	case media.SourceLocalFile:
 		dur, err = getMP3Duration(song.Filepath)
 		if err != nil {
 			return 0, 0, fmt.Errorf("failed to parse duration: %v", err)

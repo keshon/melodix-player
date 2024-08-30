@@ -14,17 +14,17 @@ import (
 
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/mods/music/history"
-	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/media"
 
 	kkdai_youtube "github.com/kkdai/youtube/v2"
 )
 
 type IYoutube interface {
-	FetchOneByURL(url string) (*player.Song, error)
-	FetchManyByURL(url string) ([]*player.Song, error)
-	FetchManyByManyURLs(urls []string) ([]*player.Song, error)
-	FetchManyByManyIDs(guildID string, ids []int) ([]*player.Song, error)
-	FetchManyByTitle(title string) ([]*player.Song, error)
+	FetchOneByURL(url string) (*media.Song, error)
+	FetchManyByURL(url string) ([]*media.Song, error)
+	FetchManyByManyURLs(urls []string) ([]*media.Song, error)
+	FetchManyByManyIDs(guildID string, ids []int) ([]*media.Song, error)
+	FetchManyByTitle(title string) ([]*media.Song, error)
 }
 
 type Youtube struct {
@@ -37,7 +37,7 @@ func NewYoutube() IYoutube {
 	}
 }
 
-func (y *Youtube) parseSongInfo(url string) (*player.Song, error) {
+func (y *Youtube) parseSongInfo(url string) (*media.Song, error) {
 	// Experimental
 	y.youtubeClient.HTTPClient = &http.Client{
 		Transport: &http.Transport{
@@ -58,24 +58,24 @@ func (y *Youtube) parseSongInfo(url string) (*player.Song, error) {
 		return nil, err
 	}
 
-	var thumbnail player.Thumbnail
+	var thumbnail media.Thumbnail
 	if len(song.Thumbnails) > 0 {
-		thumbnail = player.Thumbnail(song.Thumbnails[0])
+		thumbnail = media.Thumbnail(song.Thumbnails[0])
 	}
 
-	return &player.Song{
+	return &media.Song{
 		Title:     song.Title,
 		URL:       url,
 		Filepath:  song.Formats.WithAudioChannels()[0].URL,
 		Duration:  song.Duration,
 		Thumbnail: thumbnail,
 		SongID:    song.ID,
-		Source:    player.SourceYouTube,
+		Source:    media.SourceYouTube,
 	}, nil
 }
 
-func (y *Youtube) parseSongOrPlaylistInfo(url string) ([]*player.Song, error) {
-	var songs []*player.Song
+func (y *Youtube) parseSongOrPlaylistInfo(url string) ([]*media.Song, error) {
+	var songs []*media.Song
 
 	if strings.Contains(url, "list=") {
 		// It's a playlist
@@ -180,7 +180,7 @@ func extractVideoIDs(videoURLs []string) []string {
 }
 
 // -- URL --
-func (y *Youtube) FetchOneByURL(url string) (*player.Song, error) {
+func (y *Youtube) FetchOneByURL(url string) (*media.Song, error) {
 	song, err := y.parseSongInfo(url)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching new songs from URL: %v", err)
@@ -188,8 +188,8 @@ func (y *Youtube) FetchOneByURL(url string) (*player.Song, error) {
 	return song, nil
 }
 
-func (y *Youtube) FetchManyByURL(url string) ([]*player.Song, error) {
-	var songs []*player.Song
+func (y *Youtube) FetchManyByURL(url string) ([]*media.Song, error) {
+	var songs []*media.Song
 
 	song, err := y.parseSongOrPlaylistInfo(url)
 	if err != nil {
@@ -201,8 +201,8 @@ func (y *Youtube) FetchManyByURL(url string) ([]*player.Song, error) {
 	return songs, nil
 }
 
-func (y *Youtube) FetchManyByManyURLs(urls []string) ([]*player.Song, error) {
-	var songs []*player.Song
+func (y *Youtube) FetchManyByManyURLs(urls []string) ([]*media.Song, error) {
+	var songs []*media.Song
 
 	for _, url := range urls {
 		song, err := y.parseSongOrPlaylistInfo(url)
@@ -217,9 +217,9 @@ func (y *Youtube) FetchManyByManyURLs(urls []string) ([]*player.Song, error) {
 }
 
 // -- ID --
-func (y *Youtube) FetchManyByManyIDs(guildID string, ids []int) ([]*player.Song, error) {
+func (y *Youtube) FetchManyByManyIDs(guildID string, ids []int) ([]*media.Song, error) {
 	h := history.NewHistory()
-	var songs []*player.Song
+	var songs []*media.Song
 
 	for _, id := range ids {
 		track, err := h.GetTrackFromHistory(guildID, uint(id))
@@ -239,8 +239,8 @@ func (y *Youtube) FetchManyByManyIDs(guildID string, ids []int) ([]*player.Song,
 }
 
 // -- Title --
-func (y *Youtube) FetchManyByTitle(title string) ([]*player.Song, error) {
-	var songs []*player.Song
+func (y *Youtube) FetchManyByTitle(title string) ([]*media.Song, error) {
+	var songs []*media.Song
 
 	url, err := y.getVideoURLFromTitle(title)
 	if err != nil {

@@ -4,14 +4,15 @@ import (
 	"errors"
 
 	"github.com/gookit/slog"
+	"github.com/keshon/melodix-player/mods/music/media"
 )
 
-func (p *Player) Enqueue(song *Song) {
+func (p *Player) Enqueue(song *media.Song) {
 	slog.Info("Enqueuing:", song.Title)
 	p.SetSongQueue(append(p.GetSongQueue(), song))
 }
 
-func (p *Player) Dequeue() (*Song, error) {
+func (p *Player) Dequeue() (*media.Song, error) {
 	if len(p.GetSongQueue()) == 0 {
 		return nil, errors.New("queue is empty")
 	}
@@ -37,6 +38,6 @@ func (p *Player) ClearQueue() error {
 		return nil
 	}
 
-	p.SetSongQueue(make([]*Song, 0))
+	p.SetSongQueue(make([]*media.Song, 0))
 	return nil
 }

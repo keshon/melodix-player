@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gookit/slog"
+	"github.com/keshon/melodix-player/mods/music/media"
 	"github.com/keshon/melodix-player/mods/music/player"
 )
 
@@ -20,7 +21,7 @@ func (d *Discord) handleNowPlayngCommand() {
 	var title string
 	var err error
 
-	if d.Player.GetCurrentSong().Source == player.SourceStream {
+	if d.Player.GetCurrentSong().Source == media.SourceStream {
 		url := d.Player.GetCurrentSong().Filepath
 		title, err = fetchMetadata(url)
 		if err != nil {

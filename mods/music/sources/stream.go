@@ -9,11 +9,11 @@ import (
 	"github.com/gookit/slog"
 
 	"github.com/keshon/melodix-player/internal/config"
-	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/media"
 )
 
 type IStream interface {
-	FetchManyByManyURLs(urls []string) ([]*player.Song, error)
+	FetchManyByManyURLs(urls []string) ([]*media.Song, error)
 }
 
 type Stream struct{}
@@ -22,11 +22,11 @@ func NewStream() IStream {
 	return &Stream{}
 }
 
-func (s *Stream) FetchManyByManyURLs(urls []string) ([]*player.Song, error) {
-	var songs []*player.Song
+func (s *Stream) FetchManyByManyURLs(urls []string) ([]*media.Song, error) {
+	var songs []*media.Song
 
 	for _, elem := range urls {
-		var song *player.Song
+		var song *media.Song
 
 		u, err := url.Parse(elem)
 		if err != nil {
@@ -44,14 +44,14 @@ func (s *Stream) FetchManyByManyURLs(urls []string) ([]*player.Song, error) {
 		}
 
 		if isValidStream(contentType) {
-			song = &player.Song{
+			song = &media.Song{
 				Title:     u.Host,
 				URL:       u.String(),
 				Filepath:  u.String(),
-				Thumbnail: player.Thumbnail{},
+				Thumbnail: media.Thumbnail{},
 				Duration:  -1,
 				SongID:    fmt.Sprintf("%d", hash),
-				Source:    player.SourceStream,
+				Source:    media.SourceStream,
 			}
 			songs = append(songs, song)
 		} else {

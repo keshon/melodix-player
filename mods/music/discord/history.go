@@ -7,7 +7,7 @@ import (
 	embed "github.com/Clinet/discordgo-embed"
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/mods/music/history"
-	"github.com/keshon/melodix-player/mods/music/player"
+	"github.com/keshon/melodix-player/mods/music/media"
 	"github.com/keshon/melodix-player/mods/music/utils"
 )
 
@@ -50,7 +50,7 @@ func (d *Discord) handleHistoryCommand(param string) {
 
 		duration := utils.FormatDurationHHMMSS(elem.History.Duration)
 		var sourceLabels string
-		if elem.Track.Source == player.SourceLocalFile.String() && utils.IsYouTubeURL(elem.Track.URL) {
+		if elem.Track.Source == media.SourceLocalFile.String() && utils.IsYouTubeURL(elem.Track.URL) {
 			sourceLabels = "`youtube cached`"
 		} else {
 			sourceLabels = "`" + strings.ToLower(elem.Track.Source) + "`"

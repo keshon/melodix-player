@@ -15,6 +15,7 @@ import (
 	"github.com/gookit/slog"
 	"github.com/keshon/melodix-player/internal/db"
 	"github.com/keshon/melodix-player/mods/music/history"
+	"github.com/keshon/melodix-player/mods/music/media"
 	"github.com/keshon/melodix-player/mods/music/player"
 	"github.com/keshon/melodix-player/mods/music/sources"
 	"github.com/keshon/melodix-player/mods/music/utils"
@@ -110,8 +111,8 @@ func (d *Discord) handlePlayCommand(param string, enqueueOnly bool) {
 	}
 }
 
-func getSongsFromSources(originType string, songsOrigins []string, guildID string) ([]*player.Song, error) {
-	var songsList []*player.Song
+func getSongsFromSources(originType string, songsOrigins []string, guildID string) ([]*media.Song, error) {
+	var songsList []*media.Song
 	var allErrors []error // Slice to store all encountered errors
 
 	youtube := sources.NewYoutube()
@@ -124,7 +125,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 
 	for _, songOrigin := range songsOrigins {
 
-		var songs []*player.Song
+		var songs []*media.Song
 		var err error
 
 		switch originType {
@@ -138,23 +139,23 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 				continue
 			}
 
-			var song *player.Song
+			var song *media.Song
 			existingTrack, err := db.GetTrackByFilepath(songPath)
 			if err == nil {
-				song = &player.Song{
+				song = &media.Song{
 					SongID:   existingTrack.SongID,
 					Title:    existingTrack.Title,
 					URL:      existingTrack.URL,
 					Filepath: existingTrack.Filepath,
 				}
 			} else {
-				song = &player.Song{
+				song = &media.Song{
 					Title:    songOrigin,
 					Filepath: songPath,
 				}
 			}
 
-			song.Source = player.SourceLocalFile
+			song.Source = media.SourceLocalFile
 
 			songs = append(songs, song)
 		case "history_id":
@@ -173,7 +174,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 				continue
 			}
 
-			var song []*player.Song
+			var song []*media.Song
 
 			switch track.Source {
 			case "YouTube":
@@ -192,12 +193,12 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 				}
 			case "LocalFile":
 				slog.Info("Track is from LocalFile")
-				song = []*player.Song{{
+				song = []*media.Song{{
 					SongID:   track.SongID,
 					Title:    track.Title,
 					URL:      track.URL,
 					Filepath: track.Filepath,
-					Source:   player.SourceLocalFile,
+					Source:   media.SourceLocalFile,
 				}}
 			}
 
@@ -245,7 +246,7 @@ func getSongsFromSources(originType string, songsOrigins []string, guildID strin
 	return songsList, nil
 }
 
-func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
+func playOrEnqueue(d *Discord, playlist []*media.Song, s *discordgo.Session, m *discordgo.MessageCreate, enqueueOnly bool, prevMessageID string) (err error) {
 	channel, err := s.State.Channel(m.Message.ChannelID)
 	if err != nil {
 		return err
@@ -321,7 +322,7 @@ func playOrEnqueue(d *Discord, playlist []*player.Song, s *discordgo.Session, m 
 	return nil
 }
 
-func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*player.Song, previousPlaylistExist int, skipFirst bool) {
+func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageID string, playlist []*media.Song, previousPlaylistExist int, skipFirst bool) {
 	embedMsg := embed.NewEmbed().
 		SetColor(0x9f00d4)
 
@@ -333,7 +334,7 @@ func showStatusMessage(d *Discord, s *discordgo.Session, channelID, prevMessageI
 		var sourceLabels string
 		if len(currentSong.URL) > 0 {
 
-			if currentSong.Source == player.SourceLocalFile && utils.IsYouTubeURL(currentSong.URL) {
+			if currentSong.Source == media.SourceLocalFile && utils.IsYouTubeURL(currentSong.URL) {
 				sourceLabels = "`youtube cached`"
 			} else {
 				sourceLabels = "`" + strings.ToLower(currentSong.Source.String()) + "`"
