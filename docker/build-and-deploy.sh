@@ -1,9 +1,9 @@
 #!/bin/bash
 
 if [ "$1" == "traefik" ]; then
-    DOCKER_COMPOSE_COMMAND="docker-compose -f docker-compose.yml -f docker-compose.traefik.yml up -d"
+    DOCKER_COMPOSE_COMMAND="docker compose -f docker-compose.yml -f docker-compose.traefik.yml up -d"
 else
-    DOCKER_COMPOSE_COMMAND="docker-compose -f docker-compose.yml up -d"
+    DOCKER_COMPOSE_COMMAND="docker compose -f docker-compose.yml up -d"
 fi
 
 if [ -f .env ]; then

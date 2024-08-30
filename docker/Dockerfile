@@ -1,5 +1,5 @@
 # First stage: build the Go application
-FROM golang:1.21.1-alpine3.17 AS build
+FROM golang:1.23.0-alpine3.20 AS build
 
 RUN apk add --no-cache build-base
 ADD src /usr/project
@@ -17,7 +17,7 @@ RUN GO_VERSION=$(go version | awk '{print $3}') && \
     rm -rf /usr/share/man
 
 # Second stage: create the final image
-FROM alpine:3.17
+FROM alpine:3.20
 
 RUN apk update && \
     apk add --no-cache ffmpeg
