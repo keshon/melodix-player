@@ -1,3 +1,7 @@
+# ⚠️ Project Deprecated ⚠️
+
+**Notice:** This project is no longer actively supported. Development has moved to a new repository: [Melodix](https://github.com/keshon/melodix). Please visit the new project for the latest updates and support.
+
 ![# Header](https://raw.githubusercontent.com/keshon/melodix-player/master/assets/banner-readme.png)
 
 [![Español](https://img.shields.io/badge/Español-README-blue)](./README_ES.md) [![Français](https://img.shields.io/badge/Français-README-blue)](./README_FR.md) [![中文](https://img.shields.io/badge/中文-README-blue)](./README_CN.md) [![日本語](https://img.shields.io/badge/日本語-README-blue)](./README_JP.md)
